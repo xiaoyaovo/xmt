@@ -40,16 +40,24 @@ const savedAt = shallowRef('')
 const messageCount = shallowRef(0)
 const iframeKey = shallowRef(0)
 const syncAfterNextExport = shallowRef(false)
+const syncingExport = shallowRef(false)
 const accountSync = useAccountSync('drawio')
 
 const xmlCharacters = computed(() => savedXml.value.length)
 const savedAtText = computed(() => savedAt.value || '尚未保存')
 const editorStatus = computed(() => (editorReady.value ? '已连接' : '初始化中'))
 const syncStatusText = computed(() => {
+  if (syncingExport.value) return '准备同步'
   if (accountSync.saving.value) return '正在同步'
   if (accountSync.loading.value) return '正在读取云端'
   return accountSync.activeItem.value ? '已加载云端草稿' : accountSync.syncLabel.value
 })
+const syncButtonText = computed(() => {
+  if (syncingExport.value) return '准备同步...'
+  if (accountSync.saving.value) return '同步中...'
+  return accountSync.auth.authenticated ? '同步到账号' : '登录后同步'
+})
+const syncButtonDisabled = computed(() => syncingExport.value || accountSync.saving.value)
 const stats = computed(() => [
   { label: '连接', value: editorStatus.value },
   { label: '消息', value: messageCount.value },
@@ -59,6 +67,16 @@ const stats = computed(() => [
 
 function sendDrawioMessage(message) {
   iframeRef.value?.contentWindow?.postMessage(JSON.stringify(message), drawioOrigin)
+}
+
+function sendSavedStatus(message = '已保存到账号') {
+  if (!editorReady.value) return
+
+  sendDrawioMessage({
+    action: 'status',
+    message,
+    modified: false
+  })
 }
 
 function loadXml(xml = savedXml.value) {
@@ -112,7 +130,10 @@ async function persistSyncedDiagram(xml = savedXml.value) {
 
   if (item) {
     lastEvent.value = '已同步 Draw.io 草稿到账号。'
+    sendSavedStatus()
   }
+
+  return item
 }
 
 async function saveSyncedDiagram() {
@@ -126,6 +147,7 @@ async function saveSyncedDiagram() {
 
   if (editorReady.value) {
     syncAfterNextExport.value = true
+    syncingExport.value = true
     requestExport()
     return
   }
@@ -149,6 +171,7 @@ function resetDemo() {
   iframeKey.value += 1
   editorReady.value = false
   syncAfterNextExport.value = false
+  syncingExport.value = false
   lastEvent.value = '已恢复示例图，正在重新载入编辑器。'
 }
 
@@ -192,6 +215,9 @@ function handleDrawioMessage(event) {
     lastEvent.value = message.event === 'autosave' ? '已收到自动保存 XML。' : '已收到 draw.io XML。'
     if (syncAfterNextExport.value) {
       syncAfterNextExport.value = false
+      syncingExport.value = false
+      persistSyncedDiagram(xmlPayload)
+    } else if (message.event === 'save' && accountSync.auth.authenticated) {
       persistSyncedDiagram(xmlPayload)
     }
     return
@@ -199,6 +225,7 @@ function handleDrawioMessage(event) {
 
   if (message.error) {
     syncAfterNextExport.value = false
+    syncingExport.value = false
     lastEvent.value = `draw.io 返回错误：${message.error}`
     return
   }
@@ -278,10 +305,10 @@ onUnmounted(() => {
               <button
                 class="drawio-primary-action"
                 type="button"
-                :disabled="accountSync.saving.value"
+                :disabled="syncButtonDisabled"
                 @click="saveSyncedDiagram"
               >
-                {{ accountSync.saving.value ? '同步中...' : accountSync.auth.authenticated ? '同步到账号' : '登录后同步' }}
+                {{ syncButtonText }}
               </button>
               <button
                 class="drawio-ghost-action"

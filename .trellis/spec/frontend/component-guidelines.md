@@ -68,6 +68,7 @@ For iframe-based third-party editors, keep the iframe protocol boundary explicit
 - Ignore messages whose `event.origin` does not match the configured editor origin.
 - Parse message payloads defensively because editor protocols may return error payloads for unsupported actions.
 - For diagrams.net/draw.io embed mode, load XML after the `init` event. To fetch the current XML from the host page, send `{ action: 'export', format: 'xml' }`; `save` is an editor-emitted event, not a host action.
+- After the host app persists draw.io XML, send a `{ action: 'status', modified: false }` message back to the iframe so diagrams.net clears its unsaved-change state.
 
 ## Avoid
 
