@@ -434,3 +434,36 @@ Removed the visible Draw.io XML preview so the page shows a single canvas/editor
 ### Next Steps
 
 - None - task complete
+
+
+## Session 14: Restore CSV preview as read only
+
+**Date**: 2026-05-25
+**Task**: Restore CSV preview as read only
+**Branch**: `main`
+
+### Summary
+
+Clarified that the left-edit/right-preview split applies to CSV. Removed the CSV right-side text reverse-editing path, restored the right pane to a read-only CSV preview, and kept left table edits driving preview and save output. Verified lint/build and browser behavior.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `25daca7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
