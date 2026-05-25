@@ -158,7 +158,6 @@ function scheduleRender() {
 
 function useExample(example) {
   source.value = example.source
-  actionMessage.value = `已切换到${example.name}示例。`
 }
 
 function resetSource() {
