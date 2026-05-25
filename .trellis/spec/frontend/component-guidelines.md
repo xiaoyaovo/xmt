@@ -48,9 +48,13 @@ Local component styles should use stable class names and responsive media querie
 
 Avoid nested card-like containers unless they represent genuinely separate repeated items or overlays. Keep tool workspaces structured with panels, sidebars, and main content areas like `CsvPage.vue` and `MermaidPage.vue`.
 
-For tool history/archive sections, use `ToolArchivePanel.vue` for the shared login-checking, logged-out, authenticated header, refresh, and empty states. Keep item row rendering in page-level slots when metadata or row actions differ by tool.
+For tools with an editable source and rendered/read-only preview, use `ToolWorkbench.vue` so the page keeps one top toolbar and two lower panes (`source-title`, `preview-title`, `toolbar`, `source`, `preview`). Put save, archive, examples, and secondary controls in the toolbar slot; put the editor and preview content in the pane slots.
 
-For tool save/add-new sections, use `ToolSavePanel.vue` for the shared card shell, primary save action, optional save-as/new action, helper copy, and account sync prompt. Put tool-specific pickers, examples, status summaries, and secondary actions in slots. Keep save cards aligned across tools: the shared top line should read as a save surface (`保存` kicker, `云端存档` title, right-side archive/sync status), and tool state summaries should appear before picker/example controls when useful.
+Keep tool pages concise. Toolbar copy should be labels, counts, statuses, and commands, not instructional paragraphs. Success toasts or inline confirmations should only appear when users need feedback beyond an obvious button state; error and destructive-action warnings should remain visible.
+
+For tool history/archive sections that are not inside `ToolWorkbench.vue`, use `ToolArchivePanel.vue` for the shared login-checking, logged-out, authenticated header, refresh, and empty states. Keep item row rendering in page-level slots when metadata or row actions differ by tool.
+
+For tool save/add-new sections that are not inside `ToolWorkbench.vue`, use `ToolSavePanel.vue` for the shared card shell, primary save action, optional save-as/new action, helper copy, and account sync prompt. Put tool-specific pickers, examples, status summaries, and secondary actions in slots. Keep save cards aligned across tools: the shared top line should read as a save surface (`保存` kicker, `云端存档` title, right-side archive/sync status), and tool state summaries should appear before picker/example controls when useful.
 
 ## Accessibility
 

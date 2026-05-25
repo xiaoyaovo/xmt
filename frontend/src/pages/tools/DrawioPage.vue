@@ -1,8 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
 
-import ToolArchivePanel from 'src/components/tools/ToolArchivePanel.vue'
-import ToolSavePanel from 'src/components/tools/ToolSavePanel.vue'
+import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
+import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
 const drawioOrigin = 'https://embed.diagrams.net'
@@ -36,7 +36,7 @@ const starterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:00:00.0
 const iframeRef = useTemplateRef('drawioFrame')
 const savedXml = shallowRef(starterXml)
 const editorReady = shallowRef(false)
-const lastEvent = shallowRef('等待编辑器初始化')
+const drawioError = shallowRef('')
 const savedAt = shallowRef('')
 const messageCount = shallowRef(0)
 const iframeKey = shallowRef(0)
@@ -101,10 +101,7 @@ function sendSavedStatus(message = '已保存到账号') {
 }
 
 function loadXml(xml = savedXml.value) {
-  if (!editorReady.value) {
-    lastEvent.value = '编辑器尚未初始化，稍后会自动载入。'
-    return
-  }
+  if (!editorReady.value) return
 
   sendDrawioMessage({
     action: 'load',
@@ -112,17 +109,14 @@ function loadXml(xml = savedXml.value) {
     title: 'xinming-drawio-demo.drawio',
     xml
   })
-  lastEvent.value = '已把当前 XML 载入 draw.io。'
+  drawioError.value = ''
 }
 
 function requestExport() {
-  if (!editorReady.value) {
-    lastEvent.value = '编辑器尚未初始化，暂时不能导出 XML。'
-    return
-  }
+  if (!editorReady.value) return
 
   sendDrawioMessage({ action: 'export', format: 'xml', spinKey: 'saving' })
-  lastEvent.value = '已向 draw.io 请求导出 XML。'
+  drawioError.value = ''
 }
 
 async function persistSyncedDiagram(xml = savedXml.value) {
@@ -139,7 +133,7 @@ async function persistSyncedDiagram(xml = savedXml.value) {
   })
 
   if (item) {
-    lastEvent.value = '已保存为 Draw.io 云端存档。'
+    drawioError.value = ''
     sendSavedStatus()
   }
 
@@ -168,7 +162,7 @@ async function saveSyncedDiagram() {
 async function openArchive(item) {
   const xml = item?.payload?.xml
   if (typeof xml !== 'string' || !xml.trim()) {
-    lastEvent.value = '这个存档没有可读取的 XML。'
+    drawioError.value = '存档 XML 为空'
     return
   }
 
@@ -176,7 +170,7 @@ async function openArchive(item) {
   savedXml.value = xml
   savedAt.value = ''
   loadXml(xml)
-  lastEvent.value = '已载入 Draw.io 云端存档。'
+  drawioError.value = ''
 }
 
 async function deleteSyncedDiagram(item) {
@@ -188,7 +182,7 @@ async function deleteSyncedDiagram(item) {
     if (accountSync.activeItem.value?.item_key === item.item_key) {
       accountSync.activeItem.value = null
     }
-    lastEvent.value = '已删除 Draw.io 云端存档。'
+    drawioError.value = ''
   }
   deletingArchiveKey.value = ''
 }
@@ -200,7 +194,7 @@ function resetDemo() {
   editorReady.value = false
   syncAfterNextExport.value = false
   syncingExport.value = false
-  lastEvent.value = '已恢复示例图，正在重新载入编辑器。'
+  drawioError.value = ''
 }
 
 function openStandalone() {
@@ -227,7 +221,6 @@ function handleDrawioMessage(event) {
 
   if (message.event === 'init') {
     editorReady.value = true
-    lastEvent.value = 'draw.io 已初始化。'
     loadXml()
     return
   }
@@ -240,7 +233,7 @@ function handleDrawioMessage(event) {
       minute: '2-digit',
       second: '2-digit'
     }).format(new Date())
-    lastEvent.value = message.event === 'autosave' ? '已收到自动保存 XML。' : '已收到 draw.io XML。'
+    drawioError.value = ''
     if (syncAfterNextExport.value) {
       syncAfterNextExport.value = false
       syncingExport.value = false
@@ -254,16 +247,9 @@ function handleDrawioMessage(event) {
   if (message.error) {
     syncAfterNextExport.value = false
     syncingExport.value = false
-    lastEvent.value = `draw.io 返回错误：${message.error}`
+    drawioError.value = `draw.io 返回错误：${message.error}`
     return
   }
-
-  if (message.event === 'exit') {
-    lastEvent.value = 'draw.io 发送了退出事件，demo 会保留当前页面。'
-    return
-  }
-
-  lastEvent.value = `收到 draw.io 事件：${message.event || 'unknown'}`
 }
 
 onMounted(async () => {
@@ -282,29 +268,24 @@ onUnmounted(() => {
       <div class="tool-detail-header">
         <div>
           <div class="section-kicker">Draw.io · iframe embed demo</div>
-          <h1 class="section-title">把完整画图编辑器嵌进工具台。</h1>
+          <h1 class="section-title">Draw.io</h1>
         </div>
-        <p class="section-text">
-          这个 demo 使用官方 diagrams.net embed 页面运行 draw.io，当前页面负责载入 XML、接收保存结果和展示通信状态。
-        </p>
       </div>
 
-      <section class="drawio-workspace">
-        <aside class="drawio-sidebar">
-          <ToolSavePanel
-            title="云端存档"
-            kicker="保存"
-            :status="syncStatusText"
-            :save-label="syncButtonText"
-            :save-disabled="syncButtonDisabled"
-            helper="保存会先从 draw.io 取回最新 XML，再保存为一条新的云端存档。"
-            :authenticated="accountSync.auth.authenticated"
-            :auth-loading="accountSync.auth.loading"
-            :sync-label="accountSync.syncLabel.value"
-            sync-description="登录后可把当前 Draw.io 图表 XML 保存为云端存档，下次继续编辑。"
-            @save="saveSyncedDiagram"
-            @login="accountSync.login"
-          >
+      <ToolWorkbench
+        source-title="源"
+        preview-title="预览"
+      >
+        <template #toolbar>
+          <section class="drawio-toolbar-block drawio-toolbar-save">
+            <div class="drawio-toolbar-head">
+              <div>
+                <div class="section-kicker">保存</div>
+                <h2 class="drawio-toolbar-title">云端存档</h2>
+              </div>
+              <span class="drawio-toolbar-status">{{ syncStatusText }}</span>
+            </div>
+
             <div class="drawio-summary-grid">
               <div
                 v-for="item in stats"
@@ -316,17 +297,22 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <div class="drawio-notice">
-              {{ lastEvent }}
-            </div>
             <div
-              v-if="accountSync.errorMessage.value"
+              v-if="drawioError || accountSync.errorMessage.value"
               class="drawio-notice drawio-notice-error"
             >
-              {{ accountSync.errorMessage.value }}
+              {{ drawioError || accountSync.errorMessage.value }}
             </div>
 
-            <template #actions>
+            <div class="drawio-toolbar-actions">
+              <button
+                class="drawio-primary-action"
+                type="button"
+                :disabled="syncButtonDisabled"
+                @click="saveSyncedDiagram"
+              >
+                {{ syncButtonText }}
+              </button>
               <button
                 class="drawio-ghost-action"
                 type="button"
@@ -350,21 +336,55 @@ onUnmounted(() => {
               >
                 重置 Demo
               </button>
-            </template>
-          </ToolSavePanel>
+            </div>
 
-          <ToolArchivePanel
-            :initialized="accountSync.auth.initialized"
-            :authenticated="accountSync.auth.authenticated"
-            :auth-loading="accountSync.auth.loading"
-            :loading="accountSync.loading.value"
-            :has-items="Boolean(accountSync.items.value.length)"
-            loading-description="编辑器和本地导出可直接使用，登录状态只影响云端存档。"
-            login-description="每次保存都会新增一条 Draw.io 存档，便于保留不同版本或不同图表。"
-            empty-text="还没有 Draw.io 云端存档。"
-            @login="accountSync.login"
-            @refresh="accountSync.loadItems"
-          >
+            <AccountSyncPanel
+              class="drawio-toolbar-sync"
+              :authenticated="accountSync.auth.authenticated"
+              :loading="accountSync.auth.loading"
+              :label="accountSync.syncLabel.value"
+              @login="accountSync.login"
+            />
+          </section>
+
+          <section class="drawio-toolbar-block drawio-toolbar-archive">
+            <div class="drawio-toolbar-head">
+              <div>
+                <div class="section-kicker">历史</div>
+                <h2 class="drawio-toolbar-title">云端存档</h2>
+              </div>
+              <button
+                class="drawio-ghost-action"
+                type="button"
+                :disabled="accountSync.loading.value"
+                @click="accountSync.loadItems"
+              >
+                {{ accountSync.loading.value ? '刷新中' : '刷新' }}
+              </button>
+            </div>
+
+            <div
+              v-if="!accountSync.auth.initialized || accountSync.auth.loading"
+              class="drawio-toolbar-empty"
+            >
+              检查登录中
+            </div>
+            <div
+              v-else-if="!accountSync.auth.authenticated"
+              class="drawio-toolbar-empty"
+            >
+              未登录
+            </div>
+            <div
+              v-else-if="!accountSync.items.value.length && !accountSync.loading.value"
+              class="drawio-toolbar-empty"
+            >
+              无存档
+            </div>
+            <div
+              v-else
+              class="drawio-archive-strip"
+            >
             <div
               v-for="item in accountSync.items.value"
               :key="item.item_key"
@@ -390,24 +410,11 @@ onUnmounted(() => {
                 {{ deletingArchiveKey === item.item_key ? '删除中' : '删除' }}
               </button>
             </div>
-          </ToolArchivePanel>
+            </div>
+          </section>
+        </template>
 
-          <article class="drawio-panel">
-            <div class="section-kicker">本地数据</div>
-            <h2 class="bench-title">最近导出的 XML</h2>
-            <p class="drawio-helper">
-              当前页面会保留最近一次从 draw.io 导出的 XML；登录后可保存为云端存档。
-            </p>
-            <textarea
-              class="drawio-xml-preview"
-              :value="savedXml"
-              readonly
-              aria-label="最近保存的 draw.io XML"
-            />
-          </article>
-        </aside>
-
-        <main class="drawio-main">
+        <template #source>
           <article class="drawio-panel drawio-editor-panel">
             <div class="drawio-editor-header">
               <div>
@@ -432,8 +439,26 @@ onUnmounted(() => {
               allow="clipboard-read; clipboard-write"
             />
           </article>
-        </main>
-      </section>
+        </template>
+
+        <template #preview>
+          <article class="drawio-panel">
+            <div class="drawio-editor-header">
+              <div>
+                <div class="section-kicker">本地数据</div>
+                <h2 class="drawio-file-title">最近导出的 XML</h2>
+              </div>
+              <span class="drawio-toolbar-status">{{ savedAtText }}</span>
+            </div>
+            <textarea
+              class="drawio-xml-preview"
+              :value="savedXml"
+              readonly
+              aria-label="最近保存的 draw.io XML"
+            />
+          </article>
+        </template>
+      </ToolWorkbench>
     </section>
   </div>
 </template>
@@ -443,28 +468,8 @@ onUnmounted(() => {
   max-width: 1380px;
 }
 
-.drawio-workspace {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(320px, 0.34fr) minmax(0, 0.66fr);
-  margin-top: 28px;
-}
-
-.drawio-sidebar,
-.drawio-main {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-width: 0;
-}
-
 .drawio-panel {
-  background: var(--shell-panel);
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: var(--brand-radius-lg, 24px);
-  box-shadow: var(--brand-shadow-card, var(--shell-shadow));
   min-width: 0;
-  padding: 22px;
 }
 
 .drawio-panel-topline,
@@ -475,9 +480,63 @@ onUnmounted(() => {
   justify-content: space-between;
 }
 
-.drawio-helper {
+.drawio-toolbar-block {
+  border: 1px solid var(--shell-line);
+  border-radius: var(--brand-radius-md, 16px);
+  min-width: 280px;
+  padding: 14px;
+}
+
+.drawio-toolbar-save {
+  flex: 1.2 1 520px;
+}
+
+.drawio-toolbar-archive {
+  flex: 1 1 380px;
+}
+
+.drawio-toolbar-head,
+.drawio-toolbar-actions,
+.drawio-archive-strip {
+  display: flex;
+  gap: 10px;
+}
+
+.drawio-toolbar-head {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drawio-toolbar-title {
+  color: var(--shell-navy);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 7px 0 0;
+}
+
+.drawio-toolbar-status,
+.drawio-toolbar-empty {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
+}
+
+.drawio-toolbar-actions,
+.drawio-archive-strip {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.drawio-toolbar-sync {
+  margin-top: 12px;
+}
+
+.drawio-toolbar-empty {
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px dashed rgba(16, 37, 66, 0.16);
+  border-radius: var(--brand-radius-md, 16px);
+  margin-top: 12px;
+  padding: 12px;
 }
 
 .drawio-summary-grid {
@@ -525,6 +584,7 @@ onUnmounted(() => {
   color: #8d1120;
 }
 
+.drawio-primary-action,
 .drawio-ghost-action {
   align-items: center;
   border-radius: var(--brand-radius-pill, 999px);
@@ -536,6 +596,12 @@ onUnmounted(() => {
   justify-content: center;
   min-height: 38px;
   padding: 0 14px;
+}
+
+.drawio-primary-action {
+  background: var(--brand-color-accent, #102542);
+  border: 1px solid var(--brand-color-accent, #102542);
+  color: #ffffff;
 }
 
 .drawio-ghost-action {
@@ -554,9 +620,9 @@ onUnmounted(() => {
   opacity: 0.62;
 }
 
-.drawio-helper {
-  line-height: 1.6;
-  margin: 12px 0 0;
+.drawio-primary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .drawio-danger-action {
@@ -568,7 +634,7 @@ onUnmounted(() => {
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) auto;
-  margin-top: 12px;
+  width: min(380px, 100%);
 }
 
 .drawio-sync-item {
@@ -582,7 +648,7 @@ onUnmounted(() => {
   gap: 8px;
   padding: 14px;
   text-align: left;
-  width: 100%;
+  width: min(280px, 100%);
 }
 
 .drawio-sync-item-active {
@@ -611,15 +677,11 @@ onUnmounted(() => {
   color: #edf6ff;
   font: 0.82rem/1.55 "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
   margin-top: 14px;
-  min-height: 220px;
+  min-height: 620px;
   outline: none;
   padding: 14px;
   resize: vertical;
   width: 100%;
-}
-
-.drawio-editor-panel {
-  min-height: 760px;
 }
 
 .drawio-file-title {
@@ -640,26 +702,15 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1023px) {
-  .drawio-workspace {
-    grid-template-columns: 1fr;
-  }
-
-  .drawio-editor-panel {
-    min-height: 660px;
-  }
-
   .drawio-frame {
     height: 580px;
   }
 }
 
 @media (max-width: 599px) {
-  .drawio-panel {
-    padding: 18px;
-  }
-
   .drawio-panel-topline,
-  .drawio-editor-header {
+  .drawio-editor-header,
+  .drawio-toolbar-head {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -678,6 +729,11 @@ onUnmounted(() => {
 
   .drawio-archive-delete {
     align-self: stretch;
+  }
+
+  .drawio-toolbar-block {
+    min-width: 0;
+    width: 100%;
   }
 }
 </style>

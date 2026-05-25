@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package context and required lint/build commands for Vue tool-page changes."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Shared Vue component, tool-page layout, slot, styling, and iframe integration conventions."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Composable state conventions for extending CSV preview editing behavior."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Quality gate and review checklist before commit."}

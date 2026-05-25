@@ -2,8 +2,8 @@
 import mermaid from 'mermaid'
 import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 
-import ToolArchivePanel from 'src/components/tools/ToolArchivePanel.vue'
-import ToolSavePanel from 'src/components/tools/ToolSavePanel.vue'
+import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
+import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
 const defaultSource = `flowchart LR
@@ -19,12 +19,10 @@ const defaultSource = `flowchart LR
 const examples = [
   {
     name: '流程图',
-    description: '适合梳理产品流程、状态流转和任务路径。',
     source: defaultSource
   },
   {
     name: '时序图',
-    description: '快速描述前后端、用户和第三方服务的调用关系。',
     source: `sequenceDiagram
   participant U as 用户
   participant F as 前端
@@ -37,7 +35,6 @@ const examples = [
   },
   {
     name: '甘特图',
-    description: '把阶段计划和交付节点放进一张轻量排期图。',
     source: `gantt
   title Mermaid 预览功能
   dateFormat  YYYY-MM-DD
@@ -51,7 +48,7 @@ const examples = [
 const source = shallowRef(defaultSource)
 const renderedSvg = shallowRef('')
 const renderError = shallowRef('')
-const actionMessage = shallowRef('')
+const actionError = shallowRef('')
 const copied = shallowRef(false)
 const rendering = shallowRef(false)
 const deletingArchiveKey = shallowRef('')
@@ -152,7 +149,6 @@ async function renderDiagram() {
   const currentSequence = ++renderSequence
   rendering.value = true
   renderError.value = ''
-  actionMessage.value = ''
   cleanupMermaidArtifacts()
 
   try {
@@ -189,11 +185,12 @@ function scheduleRender() {
 
 function useExample(example) {
   source.value = example.source
+  actionError.value = ''
 }
 
 function resetSource() {
   source.value = defaultSource
-  actionMessage.value = '已恢复默认流程图示例。'
+  actionError.value = ''
 }
 
 function openArchive(item) {
@@ -201,9 +198,9 @@ function openArchive(item) {
   if (typeof syncedSource === 'string' && syncedSource.trim()) {
     accountSync.activeItem.value = item
     source.value = syncedSource
-    actionMessage.value = '已载入 Mermaid 云端存档。'
+    actionError.value = ''
   } else {
-    actionMessage.value = '这个存档没有可读取的 Mermaid 源码。'
+    actionError.value = '存档源码为空'
   }
 }
 
@@ -216,9 +213,7 @@ async function persistSyncedSource({ forceNew = false } = {}) {
     nextItemKey,
     payload: createArchivePayload(nextItemKey)
   })
-  if (item) {
-    actionMessage.value = isNewArchive ? '已另存为 Mermaid 云端存档。' : '已保存当前 Mermaid 云端存档。'
-  }
+  if (item) actionError.value = ''
 }
 
 async function saveSyncedSource() {
@@ -238,7 +233,7 @@ async function deleteSyncedSource(item) {
     if (accountSync.activeItem.value?.item_key === item.item_key) {
       accountSync.activeItem.value = null
     }
-    actionMessage.value = '已删除 Mermaid 云端存档。'
+    actionError.value = ''
   }
   deletingArchiveKey.value = ''
 }
@@ -247,12 +242,12 @@ async function copySource() {
   try {
     await navigator.clipboard.writeText(source.value)
     copied.value = true
-    actionMessage.value = '源码已复制到剪贴板。'
+    actionError.value = ''
     window.setTimeout(() => {
       copied.value = false
     }, 1400)
   } catch (error) {
-    actionMessage.value = formatMermaidError(error) || '复制失败，请检查浏览器剪贴板权限。'
+    actionError.value = formatMermaidError(error) || '复制失败'
   }
 }
 
@@ -267,9 +262,9 @@ function downloadSvg() {
     link.download = 'mermaid-preview.svg'
     link.click()
     URL.revokeObjectURL(url)
-    actionMessage.value = 'SVG 已开始下载。'
+    actionError.value = ''
   } catch (error) {
-    actionMessage.value = formatMermaidError(error) || '下载失败，请稍后重试。'
+    actionError.value = formatMermaidError(error) || '下载失败'
   }
 }
 
@@ -288,29 +283,24 @@ onMounted(async () => {
       <div class="tool-detail-header">
         <div>
           <div class="section-kicker">Mermaid · 实时预览</div>
-          <h1 class="section-title">先写清图表，再决定是否保存。</h1>
+          <h1 class="section-title">Mermaid</h1>
         </div>
       </div>
 
-      <section class="mermaid-workspace">
-        <aside class="mermaid-sidebar">
-          <ToolSavePanel
-            title="云端存档"
-            kicker="保存"
-            :status="syncStatusText"
-            :save-label="accountSync.saving.value ? '保存中...' : accountSync.auth.authenticated ? '保存' : '登录后保存'"
-            save-as-label="另存为新存档"
-            :save-disabled="accountSync.saving.value"
-            :save-as-disabled="accountSync.saving.value"
-            helper="保存会更新当前打开的云端存档；未打开存档时会创建第一条。需要保留副本时使用另存为新存档。"
-            :authenticated="accountSync.auth.authenticated"
-            :auth-loading="accountSync.auth.loading"
-            :sync-label="accountSync.syncLabel.value"
-            sync-description="登录后可把当前 Mermaid 源码保存为云端存档，并在其他设备继续编辑。"
-            @save="saveSyncedSource"
-            @save-as="saveSyncedSourceAsNew"
-            @login="accountSync.login"
-          >
+      <ToolWorkbench
+        source-title="源"
+        preview-title="预览"
+      >
+        <template #toolbar>
+          <section class="mermaid-toolbar-block mermaid-toolbar-save">
+            <div class="mermaid-toolbar-head">
+              <div>
+                <div class="section-kicker">保存</div>
+                <h2 class="mermaid-toolbar-title">云端存档</h2>
+              </div>
+              <span class="mermaid-table-status">{{ syncStatusText }}</span>
+            </div>
+
             <div class="mermaid-summary-grid">
               <div
                 v-for="item in previewStats"
@@ -322,19 +312,23 @@ onMounted(async () => {
               </div>
             </div>
 
-            <button
-              v-for="example in examples"
-              :key="example.name"
-              class="mermaid-example-item"
-              :class="{ 'mermaid-example-item-active': activeExampleName === example.name }"
-              type="button"
-              @click="useExample(example)"
-            >
-              <span class="mermaid-example-name">{{ example.name }}</span>
-              <span class="mermaid-example-meta">{{ example.description }}</span>
-            </button>
-
-            <template #actions>
+            <div class="mermaid-toolbar-actions">
+              <button
+                class="mermaid-primary-action"
+                type="button"
+                :disabled="accountSync.saving.value"
+                @click="saveSyncedSource"
+              >
+                {{ accountSync.saving.value ? '保存中...' : accountSync.auth.authenticated ? '保存' : '登录后保存' }}
+              </button>
+              <button
+                class="mermaid-ghost-action"
+                type="button"
+                :disabled="accountSync.saving.value"
+                @click="saveSyncedSourceAsNew"
+              >
+                另存为新存档
+              </button>
               <button
                 class="mermaid-ghost-action"
                 type="button"
@@ -342,20 +336,76 @@ onMounted(async () => {
               >
                 重置示例
               </button>
-            </template>
-          </ToolSavePanel>
+            </div>
 
-          <ToolArchivePanel
-            :initialized="accountSync.auth.initialized"
-            :authenticated="accountSync.auth.authenticated"
-            :auth-loading="accountSync.auth.loading"
-            :loading="accountSync.loading.value"
-            :has-items="Boolean(accountSync.items.value.length)"
-            login-description="可以保存当前 Mermaid 源码，也可以另存为新存档来保留不同图表或不同版本。"
-            empty-text="还没有 Mermaid 云端存档。"
-            @login="accountSync.login"
-            @refresh="accountSync.loadItems"
-          >
+            <AccountSyncPanel
+              class="mermaid-toolbar-sync"
+              :authenticated="accountSync.auth.authenticated"
+              :loading="accountSync.auth.loading"
+              :label="accountSync.syncLabel.value"
+              @login="accountSync.login"
+            />
+          </section>
+
+          <section class="mermaid-toolbar-block mermaid-toolbar-examples">
+            <div class="mermaid-toolbar-head">
+              <div>
+                <div class="section-kicker">示例</div>
+                <h2 class="mermaid-toolbar-title">图表类型</h2>
+              </div>
+            </div>
+            <div class="mermaid-example-strip">
+              <button
+                v-for="example in examples"
+                :key="example.name"
+                class="mermaid-example-item"
+                :class="{ 'mermaid-example-item-active': activeExampleName === example.name }"
+                type="button"
+                @click="useExample(example)"
+              >
+                <span class="mermaid-example-name">{{ example.name }}</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="mermaid-toolbar-block mermaid-toolbar-archive">
+            <div class="mermaid-toolbar-head">
+              <div>
+                <div class="section-kicker">历史</div>
+                <h2 class="mermaid-toolbar-title">云端存档</h2>
+              </div>
+              <button
+                class="mermaid-ghost-action"
+                type="button"
+                :disabled="accountSync.loading.value"
+                @click="accountSync.loadItems"
+              >
+                {{ accountSync.loading.value ? '刷新中' : '刷新' }}
+              </button>
+            </div>
+
+            <div
+              v-if="!accountSync.auth.initialized || accountSync.auth.loading"
+              class="mermaid-toolbar-empty"
+            >
+              检查登录中
+            </div>
+            <div
+              v-else-if="!accountSync.auth.authenticated"
+              class="mermaid-toolbar-empty"
+            >
+              未登录
+            </div>
+            <div
+              v-else-if="!accountSync.items.value.length && !accountSync.loading.value"
+              class="mermaid-toolbar-empty"
+            >
+              无存档
+            </div>
+            <div
+              v-else
+              class="mermaid-archive-strip"
+            >
             <div
               v-for="item in accountSync.items.value"
               :key="item.item_key"
@@ -381,10 +431,11 @@ onMounted(async () => {
                 {{ deletingArchiveKey === item.item_key ? '删除中' : '删除' }}
               </button>
             </div>
-          </ToolArchivePanel>
-        </aside>
+            </div>
+          </section>
+        </template>
 
-        <main class="mermaid-main">
+        <template #source>
           <div
             v-if="accountSync.errorMessage.value"
             class="csv-notice csv-notice-error"
@@ -392,10 +443,10 @@ onMounted(async () => {
             {{ accountSync.errorMessage.value }}
           </div>
           <div
-            v-if="actionMessage"
-            class="csv-notice"
+            v-if="actionError"
+            class="csv-notice csv-notice-error"
           >
-            {{ actionMessage }}
+            {{ actionError }}
           </div>
 
           <article class="mermaid-panel mermaid-editor-panel">
@@ -430,7 +481,9 @@ onMounted(async () => {
               aria-label="Mermaid source"
             />
           </article>
+        </template>
 
+        <template #preview>
           <article
             class="mermaid-panel mermaid-preview-panel"
           >
@@ -455,9 +508,6 @@ onMounted(async () => {
             >
               <div class="section-kicker">预览</div>
               <h2 class="content-title">输入 Mermaid 源码</h2>
-              <p class="section-text">
-                预览区会显示渲染结果。空内容不会触发 Mermaid 解析。
-              </p>
             </div>
 
             <div
@@ -473,13 +523,10 @@ onMounted(async () => {
             >
               <div class="section-kicker">预览</div>
               <h2 class="content-title">等待可渲染的图表源码</h2>
-              <p class="section-text">
-                修正语法后，预览会自动恢复。
-              </p>
             </div>
           </article>
-        </main>
-      </section>
+        </template>
+      </ToolWorkbench>
     </section>
   </div>
 </template>
@@ -490,26 +537,6 @@ onMounted(async () => {
 }
 
 .mermaid-panel {
-  background: var(--shell-panel);
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: var(--brand-radius-lg, 24px);
-  box-shadow: var(--brand-shadow-card, var(--shell-shadow));
-  min-width: 0;
-  padding: 22px;
-}
-
-.mermaid-workspace {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(280px, 0.35fr) minmax(0, 0.65fr);
-  margin-top: 28px;
-}
-
-.mermaid-sidebar,
-.mermaid-main {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
   min-width: 0;
 }
 
@@ -529,12 +556,71 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.mermaid-helper,
 .mermaid-example-meta,
 .mermaid-sync-meta,
+.mermaid-toolbar-empty,
 .mermaid-table-status {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
+}
+
+.mermaid-toolbar-block {
+  border: 1px solid var(--shell-line);
+  border-radius: var(--brand-radius-md, 16px);
+  min-width: 280px;
+  padding: 14px;
+}
+
+.mermaid-toolbar-save {
+  flex: 1.1 1 420px;
+}
+
+.mermaid-toolbar-examples {
+  flex: 1 1 360px;
+}
+
+.mermaid-toolbar-archive {
+  flex: 1 1 360px;
+}
+
+.mermaid-toolbar-head,
+.mermaid-toolbar-actions,
+.mermaid-example-strip,
+.mermaid-archive-strip {
+  display: flex;
+  gap: 10px;
+}
+
+.mermaid-toolbar-head {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mermaid-toolbar-title {
+  color: var(--shell-navy);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 7px 0 0;
+}
+
+.mermaid-toolbar-actions,
+.mermaid-example-strip,
+.mermaid-archive-strip {
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.mermaid-toolbar-sync {
+  margin-top: 12px;
+}
+
+.mermaid-toolbar-empty {
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px dashed rgba(16, 37, 66, 0.16);
+  border-radius: var(--brand-radius-md, 16px);
+  margin-top: 12px;
+  padding: 12px;
 }
 
 .mermaid-example-item,
@@ -548,12 +634,11 @@ onMounted(async () => {
   gap: 8px;
   padding: 14px;
   text-align: left;
-  width: 100%;
+  width: min(260px, 100%);
 }
 
 .mermaid-example-item {
   cursor: pointer;
-  margin-top: 12px;
 }
 
 .mermaid-example-item:hover {
@@ -579,6 +664,7 @@ onMounted(async () => {
   overflow-wrap: anywhere;
 }
 
+.mermaid-primary-action,
 .mermaid-ghost-action {
   align-items: center;
   background: rgba(255, 255, 255, 0.62);
@@ -596,11 +682,18 @@ onMounted(async () => {
   text-decoration: none;
 }
 
+.mermaid-primary-action {
+  background: var(--brand-color-accent, #102542);
+  border-color: var(--brand-color-accent, #102542);
+  color: #ffffff;
+}
+
 .mermaid-ghost-action:hover {
   background: rgba(255, 255, 255, 0.9);
   border-color: rgba(16, 37, 66, 0.18);
 }
 
+.mermaid-primary-action:disabled,
 .mermaid-ghost-action:disabled {
   cursor: not-allowed;
   opacity: 0.62;
@@ -610,17 +703,12 @@ onMounted(async () => {
   color: #9b2f25;
 }
 
-.mermaid-helper {
-  line-height: 1.6;
-  margin: 14px 0 0;
-}
-
 .mermaid-archive-row {
   align-items: stretch;
   display: grid;
   gap: 10px;
   grid-template-columns: minmax(0, 1fr) auto;
-  margin-top: 12px;
+  width: min(360px, 100%);
 }
 
 .mermaid-sync-item {
@@ -720,10 +808,6 @@ onMounted(async () => {
 }
 
 @media (max-width: 1023px) {
-  .mermaid-workspace {
-    grid-template-columns: 1fr;
-  }
-
   .mermaid-editor,
   .mermaid-preview-canvas {
     min-height: 420px;
@@ -731,11 +815,8 @@ onMounted(async () => {
 }
 
 @media (max-width: 599px) {
-  .mermaid-panel {
-    padding: 18px;
-  }
-
-  .mermaid-preview-header {
+  .mermaid-preview-header,
+  .mermaid-toolbar-head {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -754,6 +835,11 @@ onMounted(async () => {
 
   .mermaid-archive-delete {
     align-self: stretch;
+  }
+
+  .mermaid-toolbar-block {
+    min-width: 0;
+    width: 100%;
   }
 }
 </style>

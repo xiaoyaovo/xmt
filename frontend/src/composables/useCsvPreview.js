@@ -25,6 +25,7 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
   const parseErrors = shallowRef([])
   const loading = shallowRef(false)
   const errorMessage = shallowRef('')
+  const dirty = shallowRef(false)
 
   const rowCount = computed(() => rows.value.length)
 
@@ -49,6 +50,35 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
     parseErrors.value = []
     errorMessage.value = ''
     loading.value = false
+    dirty.value = false
+  }
+
+  function updateCell(rowIndex, columnIndex, value) {
+    const nextRows = rows.value.map((row, index) => {
+      if (index !== rowIndex) return row
+
+      const nextRow = [...row]
+      nextRow[columnIndex] = value
+      return nextRow
+    })
+
+    rows.value = nextRows
+    dirty.value = true
+  }
+
+  function toCsvText() {
+    return Papa.unparse({
+      fields: columns.value,
+      data: rows.value
+    }, {
+      delimiter: delimiter.value || ',',
+      newline: '\n'
+    })
+  }
+
+  function createCsvFile(filename) {
+    const safeFilename = filename?.toLowerCase().endsWith('.csv') ? filename : `${filename || 'edited'}.csv`
+    return new File([toCsvText()], safeFilename, { type: 'text/csv;charset=utf-8' })
   }
 
   async function previewFile(file) {
@@ -79,6 +109,7 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
           delimiter.value = results.meta?.delimiter || ','
           parseErrors.value = (results.errors || []).slice(0, maxErrors)
           loading.value = false
+          dirty.value = false
 
           resolve(fileSummary.value)
         },
@@ -100,8 +131,12 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
     parseErrors,
     loading,
     errorMessage,
+    dirty,
     fileSummary,
     previewFile,
+    updateCell,
+    toCsvText,
+    createCsvFile,
     resetPreview
   }
 }

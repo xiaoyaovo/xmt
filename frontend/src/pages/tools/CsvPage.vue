@@ -11,8 +11,8 @@ import {
 } from 'reka-ui'
 import { computed, onMounted, shallowRef } from 'vue'
 
-import ToolArchivePanel from 'src/components/tools/ToolArchivePanel.vue'
-import ToolSavePanel from 'src/components/tools/ToolSavePanel.vue'
+import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
+import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 import { useCsvPreview } from 'src/composables/useCsvPreview'
 import {
@@ -31,7 +31,6 @@ const accountSync = useAccountSync('csv')
 const files = shallowRef([])
 const activeFile = shallowRef(null)
 const activeSource = shallowRef('')
-const historyRows = shallowRef([])
 const loadingFiles = shallowRef(false)
 const loadingRows = shallowRef(false)
 const uploading = shallowRef(false)
@@ -51,11 +50,7 @@ const offset = computed(() => (page.value - 1) * rowsPerPage.value)
 const activeColumns = computed(() => activeFile.value?.columns || [])
 
 const previewRows = computed(() => {
-  if (activeSource.value === 'local') {
-    return localPreview.rows.value.slice(offset.value, offset.value + rowsPerPage.value)
-  }
-
-  return historyRows.value
+  return localPreview.rows.value.slice(offset.value, offset.value + rowsPerPage.value)
 })
 
 const fileStats = computed(() => {
@@ -81,11 +76,28 @@ const savePanelStats = computed(() => [
   { label: '大小', value: activeFile.value ? formatBytes(activeFile.value.size) : '0 B' },
   {
     label: '保存',
-    value: activeSource.value === 'history' ? '已保存' : activeSource.value === 'local' ? '待保存' : '未选择'
+    value: localPreview.dirty.value ? '待另存' : activeSource.value === 'history' ? '已保存' : activeSource.value === 'local' ? '待保存' : '未选择'
   }
 ])
 
-const canSaveLocalFile = computed(() => activeSource.value === 'local' && localPreview.selectedFile.value)
+const canSaveCsv = computed(() => Boolean(activeFile.value && activeColumns.value.length))
+
+const csvTextPreview = computed(() => {
+  if (!activeFile.value) return ''
+  return localPreview.toCsvText()
+})
+
+const sourceLabel = computed(() => {
+  if (activeSource.value === 'history') return '云端存档'
+  if (activeSource.value === 'local') return '本地文件'
+  return '等待选择'
+})
+
+const saveButtonText = computed(() => {
+  if (uploading.value) return '保存中...'
+  if (!auth.authenticated) return '登录后保存'
+  return localPreview.dirty.value ? '另存为新版本' : '保存为新版本'
+})
 
 function formatBytes(bytes) {
   if (!bytes) return '0 B'
@@ -123,24 +135,20 @@ async function refreshFiles() {
 }
 
 async function selectHistoryFile(file) {
-  activeFile.value = file
-  activeSource.value = 'history'
-  page.value = 1
-  await loadRows()
-}
-
-async function loadRows() {
-  if (!activeFile.value) return
-
   loadingRows.value = true
   errorMessage.value = ''
   try {
-    const response = await getCsvRows(activeFile.value.id, {
-      offset: offset.value,
-      limit: rowsPerPage.value
-    })
+    const response = await loadAllHistoryRows(file)
+    localPreview.selectedFile.value = new File([], file.original_filename, { type: file.content_type || 'text/csv' })
+    localPreview.columns.value = response.columns
+    localPreview.rows.value = response.rows
+    localPreview.delimiter.value = file.delimiter || ','
+    localPreview.parseErrors.value = []
+    localPreview.errorMessage.value = ''
+    localPreview.dirty.value = false
     activeFile.value = response.file
-    historyRows.value = response.rows
+    activeSource.value = 'history'
+    page.value = 1
   } catch (error) {
     errorMessage.value = error.message
   } finally {
@@ -148,18 +156,69 @@ async function loadRows() {
   }
 }
 
-async function saveLocalFile() {
-  if (!localPreview.selectedFile.value) return
+async function loadAllHistoryRows(file) {
+  const limit = 1000
+  let nextOffset = 0
+  let latestFile = file
+  let columns = file.columns || []
+  const rows = []
+
+  do {
+    const response = await getCsvRows(file.id, {
+      offset: nextOffset,
+      limit
+    })
+
+    latestFile = response.file
+    columns = response.columns || columns
+    rows.push(...(response.rows || []))
+    nextOffset += response.rows?.length || 0
+
+    if (!response.has_more || !response.rows?.length) break
+  } while (nextOffset < (latestFile.row_count || 0))
+
+  return {
+    file: latestFile,
+    columns,
+    rows
+  }
+}
+
+function createEditedFilename() {
+  const originalName = activeFile.value?.original_filename || localPreview.selectedFile.value?.name || 'edited.csv'
+  const extensionIndex = originalName.toLowerCase().lastIndexOf('.csv')
+  const baseName = extensionIndex > -1 ? originalName.slice(0, extensionIndex) : originalName
+  const timestamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')
+  return `${baseName}-edited-${timestamp}.csv`
+}
+
+function syncActiveFileFromPreview(file) {
+  const csvText = localPreview.toCsvText()
+  activeFile.value = {
+    ...(activeFile.value || {}),
+    id: activeSource.value === 'history' ? activeFile.value?.id : null,
+    original_filename: file.name,
+    size: new Blob([csvText]).size,
+    columns: localPreview.columns.value,
+    row_count: localPreview.rowCount.value,
+    delimiter: localPreview.delimiter.value,
+    source: activeSource.value || 'local'
+  }
+}
+
+async function saveCsvVersion() {
+  if (!canSaveCsv.value) return
 
   if (!auth.authenticated) {
     accountSync.login()
     return
   }
 
+  const editedFile = localPreview.createCsvFile(createEditedFilename())
   uploading.value = true
   errorMessage.value = ''
   try {
-    const uploaded = await uploadCsvFile(localPreview.selectedFile.value)
+    const uploaded = await uploadCsvFile(editedFile)
     await refreshFiles()
     await selectHistoryFile(uploaded)
   } catch (error) {
@@ -167,6 +226,10 @@ async function saveLocalFile() {
   } finally {
     uploading.value = false
   }
+}
+
+async function saveLocalFile() {
+  await saveCsvVersion()
 }
 
 async function handleFileInput(event) {
@@ -177,7 +240,6 @@ async function handleFileInput(event) {
     if (preview) {
       activeFile.value = preview
       activeSource.value = 'local'
-      historyRows.value = []
       page.value = 1
     }
   }
@@ -188,7 +250,6 @@ function clearLocalPreview() {
   localPreview.resetPreview()
   activeFile.value = null
   activeSource.value = ''
-  historyRows.value = []
   page.value = 1
 }
 
@@ -202,7 +263,7 @@ async function removeFile(file) {
     if (activeFile.value?.id === file.id) {
       activeFile.value = null
       activeSource.value = ''
-      historyRows.value = []
+      localPreview.resetPreview()
       page.value = 1
     }
     await refreshFiles()
@@ -215,16 +276,17 @@ async function removeFile(file) {
 
 async function goToPage(nextPage) {
   page.value = Math.min(Math.max(nextPage, 1), totalPages.value)
-  if (activeSource.value === 'history') {
-    await loadRows()
-  }
 }
 
 async function changeRowsPerPage(value) {
   rowsPerPage.value = Number(value)
   page.value = 1
-  if (activeSource.value === 'history') {
-    await loadRows()
+}
+
+function updateCell(rowIndex, columnIndex, event) {
+  localPreview.updateCell(offset.value + rowIndex, columnIndex, event.target.value)
+  if (localPreview.selectedFile.value) {
+    syncActiveFileFromPreview(localPreview.selectedFile.value)
   }
 }
 
@@ -240,99 +302,134 @@ onMounted(async () => {
       <div class="tool-detail-header">
         <div>
           <div class="section-kicker">CSV · 表格预览</div>
-          <h1 class="section-title">先看清 CSV，再决定是否保存。</h1>
+          <h1 class="section-title">CSV</h1>
         </div>
-        <p class="section-text">
-          选择本地 CSV 后会直接在浏览器里解析预览。登录 GitHub 后，可以把文件保存为云端存档并在 30 天内继续查看。
-        </p>
       </div>
 
-      <section
-        class="csv-workspace"
+      <ToolWorkbench
+        source-title="源"
+        preview-title="预览"
       >
-        <aside class="csv-sidebar">
-          <ToolSavePanel
-            title="云端存档"
-            kicker="保存"
-            :status="savePanelStatus"
-            :save-label="uploading ? '保存中...' : auth.authenticated ? '保存' : '登录后保存'"
-            :save-disabled="!canSaveLocalFile || uploading || localPreview.loading.value"
-            helper="先选择 CSV 文件进行本地预览，再保存为云端存档。单个文件最多 20 MB，每个账号最多保留 50 个文件，总容量 500 MB。"
-            :authenticated="accountSync.auth.authenticated"
-            :auth-loading="accountSync.auth.loading"
-            :sync-label="accountSync.syncLabel.value"
-            sync-description="登录后可把当前 CSV 保存为云端存档，后续继续预览和下载。"
-            @save="saveLocalFile"
-            @login="accountSync.login"
-          >
-            <div class="csv-summary-grid csv-save-summary-grid">
-              <div
-                v-for="item in savePanelStats"
-                :key="item.label"
-                class="csv-summary-card"
-              >
-                <div class="csv-summary-value">{{ item.value }}</div>
-                <div class="csv-summary-label">{{ item.label }}</div>
+        <template #toolbar>
+          <section class="csv-toolbar-block csv-toolbar-save">
+            <div class="csv-toolbar-head">
+              <div>
+                <div class="section-kicker">保存</div>
+                <h2 class="csv-toolbar-title">云端存档</h2>
               </div>
+              <span class="csv-toolbar-status">{{ savePanelStatus }}</span>
             </div>
 
-            <label
-              class="csv-file-picker"
-              :class="{ 'csv-file-picker-disabled': uploading || localPreview.loading.value }"
-            >
-              <input
-                class="csv-file-input"
-                type="file"
-                accept=".csv,text/csv"
-                :disabled="uploading || localPreview.loading.value"
-                @change="handleFileInput"
+            <div class="csv-toolbar-stats">
+              <span
+                v-for="item in savePanelStats"
+                :key="item.label"
+                class="csv-toolbar-stat"
               >
-              <span class="csv-file-picker-title">
-                {{ localPreview.loading.value ? '正在解析...' : '选择 CSV 文件' }}
+                <strong>{{ item.value }}</strong>
+                {{ item.label }}
               </span>
-              <span class="csv-file-picker-caption">本地解析，不登录也可以预览；保存需要 GitHub 登录。</span>
-            </label>
+            </div>
 
-            <template #actions>
+            <div class="csv-toolbar-actions">
+              <label
+                class="csv-file-picker"
+                :class="{ 'csv-file-picker-disabled': uploading || localPreview.loading.value }"
+              >
+                <input
+                  class="csv-file-input"
+                  type="file"
+                  accept=".csv,text/csv"
+                  :disabled="uploading || localPreview.loading.value"
+                  @change="handleFileInput"
+                >
+                <span class="csv-file-picker-title">
+                  {{ localPreview.loading.value ? '正在解析...' : '选择 CSV' }}
+                </span>
+              </label>
+              <button
+                class="csv-primary-action"
+                type="button"
+                :disabled="!canSaveCsv || uploading || localPreview.loading.value"
+                @click="saveLocalFile"
+              >
+                {{ saveButtonText }}
+              </button>
               <button
                 class="csv-ghost-action"
                 type="button"
                 :disabled="!activeFile || uploading || localPreview.loading.value"
                 @click="clearLocalPreview"
               >
-                清空预览
+                清空
               </button>
-            </template>
-          </ToolSavePanel>
+            </div>
 
-          <ToolArchivePanel
-            :initialized="auth.initialized"
-            :authenticated="auth.authenticated"
-            :auth-loading="auth.loading"
-            :loading="loadingFiles"
-            :has-items="Boolean(files.length)"
-            login-description="登录后可把 CSV 文件保存为云端存档，后续继续预览和下载。"
-            empty-text="还没有 CSV 云端存档。"
-            @login="accountSync.login"
-            @refresh="refreshFiles"
-          >
-            <button
-              v-for="file in files"
-              :key="file.id"
-              class="csv-history-item"
-              :class="{ 'csv-history-item-active': activeSource === 'history' && activeFile?.id === file.id }"
-              type="button"
-              @click="selectHistoryFile(file)"
+            <AccountSyncPanel
+              class="csv-toolbar-sync"
+              :authenticated="accountSync.auth.authenticated"
+              :loading="accountSync.auth.loading"
+              :label="accountSync.syncLabel.value"
+              @login="accountSync.login"
+            />
+          </section>
+
+          <section class="csv-toolbar-block csv-toolbar-archive">
+            <div class="csv-toolbar-head">
+              <div>
+                <div class="section-kicker">历史</div>
+                <h2 class="csv-toolbar-title">云端存档</h2>
+              </div>
+              <button
+                class="csv-ghost-action"
+                type="button"
+                :disabled="loadingFiles"
+                @click="refreshFiles"
+              >
+                {{ loadingFiles ? '刷新中' : '刷新' }}
+              </button>
+            </div>
+
+            <div
+              v-if="!auth.initialized || auth.loading"
+              class="csv-toolbar-empty"
             >
-              <span class="csv-history-name">{{ file.original_filename }}</span>
-              <span class="csv-history-meta">
-                {{ file.row_count }} 行 · {{ formatBytes(file.size) }} · {{ formatDate(file.created_at) }}
-              </span>
-            </button>
-          </ToolArchivePanel>
-        </aside>
+              检查登录中
+            </div>
+            <div
+              v-else-if="!auth.authenticated"
+              class="csv-toolbar-empty"
+            >
+              未登录
+            </div>
+            <div
+              v-else-if="!files.length && !loadingFiles"
+              class="csv-toolbar-empty"
+            >
+              无存档
+            </div>
+            <div
+              v-else
+              class="csv-history-strip"
+            >
+              <button
+                v-for="file in files"
+                :key="file.id"
+                class="csv-history-item"
+                :class="{ 'csv-history-item-active': activeSource === 'history' && activeFile?.id === file.id }"
+                type="button"
+                @click="selectHistoryFile(file)"
+              >
+                <span class="csv-history-name">{{ file.original_filename }}</span>
+                <span class="csv-history-meta">
+                  {{ file.row_count }} 行 · {{ formatBytes(file.size) }} · {{ formatDate(file.created_at) }}
+                </span>
+              </button>
+            </div>
+          </section>
+        </template>
 
-        <main class="csv-preview">
+        <template #source>
           <div
             v-if="errorMessage || localPreview.errorMessage.value"
             class="csv-notice csv-notice-error"
@@ -344,11 +441,8 @@ onMounted(async () => {
             v-if="!activeFile"
             class="csv-panel csv-preview-empty"
           >
-            <div class="section-kicker">预览</div>
+            <div class="section-kicker">编辑</div>
             <h2 class="content-title">选择或上传一个 CSV 文件</h2>
-            <p class="section-text">
-              预览区会显示字段、统计信息和分页表格。
-            </p>
           </article>
 
           <article
@@ -358,7 +452,7 @@ onMounted(async () => {
             <div class="csv-preview-header">
               <div>
                 <div class="section-kicker">
-                  {{ activeSource === 'local' ? '本地预览' : '云端存档' }}
+                  {{ sourceLabel }}
                 </div>
                 <h2 class="csv-file-title">{{ activeFile.original_filename }}</h2>
               </div>
@@ -383,17 +477,10 @@ onMounted(async () => {
             </div>
 
             <div
-              v-if="activeSource === 'local'"
-              class="csv-notice"
-            >
-              当前展示的是浏览器本地解析结果，文件还没有上传。需要跨设备继续查看时，可以保存为云端存档。
-            </div>
-
-            <div
               v-if="localPreview.parseErrors.value.length"
               class="csv-notice csv-notice-warning"
             >
-              已读取文件，但发现 {{ localPreview.parseErrors.value.length }} 条解析提示；表格会尽量展示可读取内容。
+              解析提示：{{ localPreview.parseErrors.value.length }} 条
             </div>
 
             <div class="csv-summary-grid">
@@ -493,7 +580,12 @@ onMounted(async () => {
                       v-for="(column, columnIndex) in activeColumns"
                       :key="`${column}-${columnIndex}`"
                     >
-                      {{ row[columnIndex] ?? '' }}
+                      <input
+                        class="csv-cell-input"
+                        :value="row[columnIndex] ?? ''"
+                        :aria-label="`${column} 第 ${offset + rowIndex + 1} 行`"
+                        @input="updateCell(rowIndex, columnIndex, $event)"
+                      >
                     </td>
                   </tr>
                 </tbody>
@@ -507,52 +599,44 @@ onMounted(async () => {
               正在读取数据...
             </div>
           </article>
-        </main>
-      </section>
+        </template>
+
+        <template #preview>
+          <article class="csv-panel csv-preview-panel">
+            <div class="csv-preview-header">
+              <div>
+                <div class="section-kicker">CSV 输出</div>
+                <h2 class="csv-file-title">编辑后的 CSV 文本</h2>
+              </div>
+              <span class="csv-table-toolbar">{{ localPreview.dirty.value ? '有未保存编辑' : '已同步' }}</span>
+            </div>
+
+            <textarea
+              class="csv-text-preview"
+              :value="csvTextPreview"
+              readonly
+              aria-label="编辑后的 CSV 文本预览"
+            />
+          </article>
+        </template>
+      </ToolWorkbench>
     </section>
   </div>
 </template>
 
 <style scoped>
-.csv-workspace {
-  margin-top: 28px;
-}
-
 .csv-panel {
-  background: var(--shell-panel);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: var(--brand-radius-lg, 24px);
-  box-shadow: var(--brand-shadow-card, var(--shell-shadow));
-}
-
-.csv-ghost-action:disabled,
-.csv-file-picker-disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.csv-workspace {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(280px, 0.35fr) minmax(0, 0.65fr);
-}
-
-.csv-sidebar,
-.csv-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
   min-width: 0;
 }
 
-.csv-panel {
-  padding: 22px;
+.csv-preview-panel,
+.csv-preview-empty {
+  min-height: 0;
 }
 
 .csv-preview-header,
 .csv-table-toolbar,
-.csv-table-controls,
-.csv-actions {
+.csv-table-controls {
   align-items: center;
   display: flex;
   gap: 12px;
@@ -563,23 +647,97 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
-.csv-helper,
 .csv-history-meta,
+.csv-toolbar-empty,
+.csv-toolbar-status,
 .csv-table-toolbar {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
 }
 
-.csv-file-picker {
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.72);
+.csv-toolbar-block {
   border: 1px solid var(--shell-line);
   border-radius: var(--brand-radius-md, 16px);
-  margin-top: 16px;
-  padding: 16px;
+  min-width: 280px;
+  padding: 14px;
+}
+
+.csv-toolbar-save {
+  flex: 1.1 1 420px;
+}
+
+.csv-toolbar-archive {
+  flex: 1 1 360px;
+}
+
+.csv-toolbar-head,
+.csv-toolbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.csv-toolbar-head {
+  justify-content: space-between;
+}
+
+.csv-toolbar-title {
+  color: var(--shell-navy);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin: 7px 0 0;
+}
+
+.csv-toolbar-status {
+  text-align: right;
+}
+
+.csv-toolbar-stats,
+.csv-toolbar-actions,
+.csv-history-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.csv-toolbar-stat {
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--brand-radius-sm, 12px);
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.82rem;
+  padding: 8px 10px;
+}
+
+.csv-toolbar-stat strong {
+  color: var(--shell-navy);
+  display: block;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.csv-toolbar-sync {
+  margin-top: 12px;
+}
+
+.csv-toolbar-empty {
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px dashed rgba(16, 37, 66, 0.16);
+  border-radius: var(--brand-radius-md, 16px);
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.csv-file-picker {
+  cursor: pointer;
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--brand-radius-pill, 999px);
+  min-height: 38px;
+  padding: 0 13px;
 }
 
 .csv-file-input {
@@ -590,15 +748,14 @@ onMounted(async () => {
 }
 
 .csv-file-picker-title {
+  align-items: center;
   color: var(--shell-navy);
+  display: inline-flex;
+  font-size: 0.88rem;
   font-weight: 800;
 }
 
-.csv-file-picker-caption {
-  color: rgba(15, 23, 35, 0.58);
-  font-size: 0.86rem;
-}
-
+.csv-primary-action,
 .csv-ghost-action,
 .csv-page-size-trigger {
   align-items: center;
@@ -615,6 +772,19 @@ onMounted(async () => {
   min-height: 38px;
   padding: 0 13px;
   text-decoration: none;
+}
+
+.csv-primary-action {
+  background: var(--brand-color-accent, #102542);
+  border-color: var(--brand-color-accent, #102542);
+  color: #ffffff;
+}
+
+.csv-primary-action:disabled,
+.csv-ghost-action:disabled,
+.csv-file-picker-disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .csv-ghost-action:hover,
@@ -657,11 +827,6 @@ onMounted(async () => {
   background: rgba(16, 37, 66, 0.07);
 }
 
-.csv-helper {
-  line-height: 1.6;
-  margin: 14px 0 0;
-}
-
 .csv-history-item {
   background: rgba(255, 255, 255, 0.66);
   border: 1px solid var(--shell-line);
@@ -671,10 +836,9 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 12px;
   padding: 14px;
   text-align: left;
-  width: 100%;
+  width: min(260px, 100%);
 }
 
 .csv-history-item-active {
@@ -703,10 +867,6 @@ onMounted(async () => {
   margin-top: 18px;
 }
 
-.csv-save-summary-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .csv-chip-row {
   margin-top: 18px;
   max-height: 96px;
@@ -724,6 +884,7 @@ onMounted(async () => {
 
 .csv-table-wrap {
   margin-top: 14px;
+  overflow: auto;
 }
 
 .csv-table th:first-child,
@@ -740,34 +901,53 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.96);
 }
 
+.csv-cell-input {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--shell-navy);
+  font: inherit;
+  min-width: 140px;
+  padding: 8px 9px;
+  width: 100%;
+}
+
+.csv-cell-input:focus {
+  border-color: rgba(16, 37, 66, 0.22);
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
+  outline: none;
+}
+
+.csv-text-preview {
+  background: #0f1723;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--brand-radius-md, 16px);
+  color: #edf6ff;
+  font: 0.9rem/1.65 "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+  margin-top: 16px;
+  min-height: 560px;
+  outline: none;
+  padding: 18px;
+  resize: vertical;
+  width: 100%;
+}
+
 .csv-loading {
   color: rgba(15, 23, 35, 0.62);
   margin-top: 14px;
 }
 
-@media (max-width: 1023px) {
-  .csv-workspace {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 599px) {
-  .csv-panel {
-    padding: 18px;
-  }
-
   .csv-preview-header,
-  .csv-table-toolbar {
+  .csv-table-toolbar,
+  .csv-toolbar-head {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .csv-actions {
-    flex-wrap: wrap;
-  }
-
-  .csv-save-summary-grid {
-    grid-template-columns: 1fr;
+  .csv-toolbar-block {
+    min-width: 0;
+    width: 100%;
   }
 }
 </style>
