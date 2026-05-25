@@ -41,3 +41,11 @@ Create a reusable logged-in account sync layer that preview tools can share. Mer
 * Backend model: `ToolSyncItem`.
 * Backend route prefix: `/sync/items`.
 * Frontend files: `src/lib/accountSync.js`, `src/composables/useAccountSync.js`, Mermaid/CSV pages.
+
+## Completion Notes
+
+* Backend generic sync API is implemented at `/api/v1/sync/items` with authenticated list, get, upsert, and delete operations.
+* `ToolSyncItem` stores per-user `tool_key` + `item_key` JSON payloads with optional titles.
+* Frontend helpers live in `frontend/src/lib/accountSync.js`; reusable state lives in `frontend/src/composables/useAccountSync.js`.
+* Mermaid uses generic sync for source content; CSV keeps its file-history backend while reusing the login/sync UI abstraction.
+* Verification: `pnpm lint` passed in `frontend/`; `pnpm build` passed in `frontend/` using Node v24.15.0; backend import check passed with `uv run python -m compileall app`.

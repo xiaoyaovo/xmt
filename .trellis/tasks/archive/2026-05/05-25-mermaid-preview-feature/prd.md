@@ -43,3 +43,9 @@ Implement a usable Mermaid live preview page inspired by the official Mermaid Li
 * Primary file: `frontend/src/pages/tools/MermaidPage.vue`.
 * Expected dependency addition: `mermaid`.
 * Official references: Mermaid usage docs, getting started/live editor guide.
+
+## Completion Notes
+
+* `/tools/mermaid` has a Mermaid source editor, live SVG preview, syntax error display, example presets, reset, copy, and SVG download actions.
+* Mermaid source is wired to reusable account sync so logged-in users can load/save/delete their synced source.
+* Verification: `pnpm lint` passed in `frontend/`; `pnpm build` passed in `frontend/` using Node v24.15.0.

@@ -47,3 +47,10 @@ Implement an immediately usable CSV preview flow in the frontend so users can se
 * Primary files: `frontend/src/pages/tools/CsvPage.vue`, `frontend/src/composables/useCsvPreview.js`.
 * Existing backend source inspected: `backend/app/services/csv_service.py`, `backend/app/api/v1/csv_files.py`.
 * Relevant guidance read: Vue best practices, frontend design skill, Trellis frontend index and quality/component/hook specs, code reuse thinking guide.
+
+## Completion Notes
+
+* Local CSV preview is implemented with `papaparse` in `useCsvPreview()`.
+* `/tools/csv` allows local preview without login and preserves authenticated history upload/list/rows/download/delete.
+* CSV now reuses the account sync/login state abstraction via `useAccountSync('csv')` and `AccountSyncPanel`.
+* Verification: `pnpm lint` passed in `frontend/`; `pnpm build` passed in `frontend/` using Node v24.15.0; backend import check passed with `uv run python -m compileall app`.
