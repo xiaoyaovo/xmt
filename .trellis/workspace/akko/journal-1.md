@@ -137,3 +137,36 @@ Adjusted Draw.io save handling so the left-side account save exports fresh XML, 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Add Draw.io multi archive
+
+**Date**: 2026-05-25
+**Task**: Add Draw.io multi archive
+**Branch**: `main`
+
+### Summary
+
+Changed Draw.io sync from a single default draft to a multi-entry archive using unique sync item keys, with archive list load/delete controls and local export preserved.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bb15374` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
