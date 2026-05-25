@@ -1,5 +1,11 @@
 <script setup>
 import mermaid from 'mermaid'
+import {
+  PopoverContent,
+  PopoverPortal,
+  PopoverRoot,
+  PopoverTrigger
+} from 'reka-ui'
 import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
@@ -53,6 +59,7 @@ const actionError = shallowRef('')
 const copied = shallowRef(false)
 const rendering = shallowRef(false)
 const deletingArchiveKey = shallowRef('')
+const historyOpen = shallowRef(false)
 const previewRef = useTemplateRef('preview')
 const accountSync = useAccountSync('mermaid')
 
@@ -77,6 +84,21 @@ const syncStatusText = computed(() => {
 const archiveCountText = computed(() => {
   if (accountSync.loading.value) return '读取中'
   return accountSync.items.value.length ? String(accountSync.items.value.length) : ''
+})
+const historyTriggerLabel = computed(() => {
+  if (!accountSync.auth.initialized || accountSync.auth.loading) return '检查登录中'
+  if (!accountSync.auth.authenticated) return '未登录 · 登录后同步'
+  if (accountSync.loading.value) return '读取中'
+  const active = accountSync.activeItem.value
+  if (active?.updated_at) return `历史 · ${formatArchiveDate(active.updated_at)}`
+  if (!accountSync.items.value.length) return '无存档'
+  return `历史存档 · ${accountSync.items.value.length}`
+})
+const historyTriggerDisabled = computed(() => {
+  if (!accountSync.auth.initialized || accountSync.auth.loading) return true
+  if (!accountSync.auth.authenticated) return true
+  if (accountSync.loading.value) return false
+  return !accountSync.items.value.length
 })
 const activeExampleName = computed(() => {
   const activeExample = examples.find(example => example.source === source.value)
@@ -202,6 +224,7 @@ function openArchive(item) {
     accountSync.activeItem.value = item
     source.value = syncedSource
     actionError.value = ''
+    historyOpen.value = false
   } else {
     actionError.value = '存档源码为空'
   }
@@ -325,6 +348,88 @@ onMounted(async () => {
               >
                 重置示例
               </button>
+
+              <PopoverRoot v-model:open="historyOpen">
+                <PopoverTrigger
+                  class="mermaid-ghost-action mermaid-history-trigger"
+                  :disabled="historyTriggerDisabled"
+                  aria-label="历史存档"
+                >
+                  <span>{{ historyTriggerLabel }}</span>
+                  <span
+                    class="mermaid-history-trigger-caret"
+                    aria-hidden="true"
+                  >▾</span>
+                </PopoverTrigger>
+
+                <PopoverPortal>
+                  <PopoverContent
+                    class="mermaid-history-popover"
+                    align="end"
+                    :side-offset="8"
+                  >
+                    <div class="mermaid-history-popover-head">
+                      <div class="mermaid-toolbar-head-left">
+                        <div class="section-kicker">历史</div>
+                        <span
+                          v-if="archiveCountText"
+                          class="mermaid-archive-count"
+                        >· {{ archiveCountText }}</span>
+                      </div>
+                      <button
+                        class="mermaid-ghost-action mermaid-history-refresh"
+                        type="button"
+                        :disabled="accountSync.loading.value"
+                        @click="accountSync.loadItems"
+                      >
+                        {{ accountSync.loading.value ? '刷新中' : '刷新' }}
+                      </button>
+                    </div>
+
+                    <div
+                      v-if="accountSync.loading.value && !accountSync.items.value.length"
+                      class="mermaid-history-popover-empty"
+                    >
+                      读取中
+                    </div>
+                    <div
+                      v-else-if="!accountSync.items.value.length"
+                      class="mermaid-history-popover-empty"
+                    >
+                      无存档
+                    </div>
+                    <div
+                      v-else
+                      class="mermaid-archive-list"
+                    >
+                      <div
+                        v-for="item in accountSync.items.value"
+                        :key="item.item_key"
+                        class="mermaid-archive-row"
+                        :class="{ 'mermaid-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
+                      >
+                        <button
+                          class="mermaid-archive-open"
+                          type="button"
+                          @click="openArchive(item)"
+                        >
+                          <span class="mermaid-archive-time">{{ formatArchiveDate(item.updated_at) }}</span>
+                          <span class="mermaid-archive-meta">{{ item.payload?.character_count || 0 }} 字符</span>
+                        </button>
+                        <button
+                          class="mermaid-archive-delete"
+                          type="button"
+                          :disabled="deletingArchiveKey === item.item_key"
+                          :aria-label="`删除 ${formatArchiveDate(item.updated_at)} 的存档`"
+                          @click.stop="deleteSyncedSource(item)"
+                        >
+                          {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
+                        </button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </PopoverPortal>
+              </PopoverRoot>
             </div>
 
             <div class="mermaid-example-strip">
@@ -347,74 +452,6 @@ onMounted(async () => {
               :label="accountSync.syncLabel.value"
               @login="accountSync.login"
             />
-          </section>
-
-          <section class="mermaid-toolbar-block mermaid-toolbar-archive">
-            <div class="mermaid-toolbar-head">
-              <div class="mermaid-toolbar-head-left">
-                <div class="section-kicker">历史</div>
-                <span
-                  v-if="archiveCountText"
-                  class="mermaid-archive-count"
-                >· {{ archiveCountText }}</span>
-              </div>
-              <button
-                class="mermaid-ghost-action"
-                type="button"
-                :disabled="accountSync.loading.value"
-                @click="accountSync.loadItems"
-              >
-                {{ accountSync.loading.value ? '刷新中' : '刷新' }}
-              </button>
-            </div>
-
-            <div
-              v-if="!accountSync.auth.initialized || accountSync.auth.loading"
-              class="mermaid-toolbar-empty"
-            >
-              检查登录中
-            </div>
-            <div
-              v-else-if="!accountSync.auth.authenticated"
-              class="mermaid-toolbar-empty"
-            >
-              未登录
-            </div>
-            <div
-              v-else-if="!accountSync.items.value.length && !accountSync.loading.value"
-              class="mermaid-toolbar-empty"
-            >
-              无存档
-            </div>
-            <div
-              v-else
-              class="mermaid-archive-list"
-            >
-              <div
-                v-for="item in accountSync.items.value"
-                :key="item.item_key"
-                class="mermaid-archive-row"
-                :class="{ 'mermaid-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
-              >
-                <button
-                  class="mermaid-archive-open"
-                  type="button"
-                  @click="openArchive(item)"
-                >
-                  <span class="mermaid-archive-time">{{ formatArchiveDate(item.updated_at) }}</span>
-                  <span class="mermaid-archive-meta">{{ item.payload?.character_count || 0 }} 字符</span>
-                </button>
-                <button
-                  class="mermaid-archive-delete"
-                  type="button"
-                  :disabled="deletingArchiveKey === item.item_key"
-                  :aria-label="`删除 ${formatArchiveDate(item.updated_at)} 的存档`"
-                  @click="deleteSyncedSource(item)"
-                >
-                  {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
-                </button>
-              </div>
-            </div>
           </section>
         </template>
 
@@ -529,7 +566,6 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.mermaid-toolbar-empty,
 .mermaid-table-status {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
@@ -543,11 +579,52 @@ onMounted(async () => {
 }
 
 .mermaid-toolbar-save {
-  flex: 1.1 1 420px;
+  flex: 1 1 100%;
 }
 
-.mermaid-toolbar-archive {
-  flex: 1 1 360px;
+.mermaid-history-trigger {
+  display: inline-flex;
+}
+
+.mermaid-history-trigger-caret {
+  font-size: 0.78rem;
+  margin-left: 2px;
+}
+
+.mermaid-history-popover {
+  background: rgba(250, 252, 255, 0.98);
+  border: 1px solid rgba(16, 37, 66, 0.1);
+  border-radius: var(--brand-radius-md, 16px);
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
+  color: var(--shell-navy);
+  min-width: 320px;
+  padding: 12px;
+  z-index: 90;
+}
+
+.mermaid-history-popover-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.mermaid-history-popover-empty {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.9rem;
+  margin-top: 10px;
+  padding: 6px 4px;
+}
+
+.mermaid-history-refresh {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.mermaid-history-popover:focus-visible {
+  outline: none;
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
 }
 
 .mermaid-source-meta {
@@ -587,14 +664,6 @@ onMounted(async () => {
 
 .mermaid-toolbar-sync {
   margin-top: 12px;
-}
-
-.mermaid-toolbar-empty {
-  background: rgba(255, 255, 255, 0.54);
-  border: 1px dashed rgba(16, 37, 66, 0.16);
-  border-radius: var(--brand-radius-md, 16px);
-  margin-top: 12px;
-  padding: 12px;
 }
 
 .mermaid-archive-list {
@@ -787,6 +856,12 @@ onMounted(async () => {
 .mermaid-ghost-action:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.mermaid-primary-action:focus-visible,
+.mermaid-ghost-action:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  outline: none;
 }
 
 .mermaid-editor {

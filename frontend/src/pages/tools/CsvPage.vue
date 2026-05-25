@@ -1,6 +1,10 @@
 <script setup>
 import Papa from 'papaparse'
 import {
+  PopoverContent,
+  PopoverPortal,
+  PopoverRoot,
+  PopoverTrigger,
   SelectContent,
   SelectItem,
   SelectItemText,
@@ -41,6 +45,7 @@ const errorMessage = shallowRef('')
 const page = shallowRef(1)
 const rowsPerPage = shallowRef(200)
 const rowsPerPageOptions = [200, 500, 1000]
+const historyOpen = shallowRef(false)
 
 const totalPages = computed(() => {
   if (!activeFile.value?.row_count) return 1
@@ -83,6 +88,24 @@ const saveMetaText = computed(() => {
 const archiveCountText = computed(() => {
   if (loadingFiles.value) return '读取中'
   return files.value.length ? String(files.value.length) : ''
+})
+
+const historyTriggerLabel = computed(() => {
+  if (!auth.initialized || auth.loading) return '检查登录中'
+  if (!auth.authenticated) return '未登录 · 登录后同步'
+  if (loadingFiles.value) return '读取中'
+  if (activeSource.value === 'history' && activeFile.value?.created_at) {
+    return `历史 · ${formatDate(activeFile.value.created_at)}`
+  }
+  if (!files.value.length) return '无存档'
+  return `历史存档 · ${files.value.length}`
+})
+
+const historyTriggerDisabled = computed(() => {
+  if (!auth.initialized || auth.loading) return true
+  if (!auth.authenticated) return true
+  if (loadingFiles.value) return false
+  return !files.value.length
 })
 
 const canSaveCsv = computed(() => Boolean(activeFile.value && activeColumns.value.length))
@@ -156,6 +179,7 @@ async function selectHistoryFile(file) {
     activeFile.value = response.file
     activeSource.value = 'history'
     page.value = 1
+    historyOpen.value = false
   } catch (error) {
     errorMessage.value = error.message
   } finally {
@@ -365,6 +389,90 @@ onMounted(async () => {
               >
                 清空
               </button>
+
+              <PopoverRoot v-model:open="historyOpen">
+                <PopoverTrigger
+                  class="csv-ghost-action csv-history-trigger"
+                  :disabled="historyTriggerDisabled"
+                  aria-label="历史存档"
+                >
+                  <span>{{ historyTriggerLabel }}</span>
+                  <span
+                    class="csv-history-trigger-caret"
+                    aria-hidden="true"
+                  >▾</span>
+                </PopoverTrigger>
+
+                <PopoverPortal>
+                  <PopoverContent
+                    class="csv-history-popover"
+                    align="end"
+                    :side-offset="8"
+                  >
+                    <div class="csv-history-popover-head">
+                      <div class="csv-toolbar-head-left">
+                        <div class="section-kicker">历史</div>
+                        <span
+                          v-if="archiveCountText"
+                          class="csv-archive-count"
+                        >· {{ archiveCountText }}</span>
+                      </div>
+                      <button
+                        class="csv-ghost-action csv-history-refresh"
+                        type="button"
+                        :disabled="loadingFiles"
+                        @click="refreshFiles"
+                      >
+                        {{ loadingFiles ? '刷新中' : '刷新' }}
+                      </button>
+                    </div>
+
+                    <div
+                      v-if="loadingFiles && !files.length"
+                      class="csv-history-popover-empty"
+                    >
+                      读取中
+                    </div>
+                    <div
+                      v-else-if="!files.length"
+                      class="csv-history-popover-empty"
+                    >
+                      无存档
+                    </div>
+                    <div
+                      v-else
+                      class="csv-history-list"
+                    >
+                      <div
+                        v-for="file in files"
+                        :key="file.id"
+                        class="csv-history-row"
+                        :class="{ 'csv-history-row-active': activeSource === 'history' && activeFile?.id === file.id }"
+                      >
+                        <button
+                          class="csv-history-open"
+                          type="button"
+                          @click="selectHistoryFile(file)"
+                        >
+                          <span class="csv-history-time">{{ formatDate(file.created_at) }}</span>
+                          <span class="csv-history-meta">
+                            {{ file.row_count }} 行 · {{ formatBytes(file.size) }}
+                          </span>
+                        </button>
+                        <button
+                          class="csv-history-delete"
+                          type="button"
+                          :disabled="deletingId === file.id"
+                          :aria-label="`删除 ${file.original_filename || formatDate(file.created_at)}`"
+                          @click.stop="removeFile(file)"
+                        >
+                          {{ deletingId === file.id ? '...' : '×' }}
+                        </button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </PopoverPortal>
+              </PopoverRoot>
             </div>
 
             <AccountSyncPanel
@@ -374,76 +482,6 @@ onMounted(async () => {
               :label="accountSync.syncLabel.value"
               @login="accountSync.login"
             />
-          </section>
-
-          <section class="csv-toolbar-block csv-toolbar-archive">
-            <div class="csv-toolbar-head">
-              <div class="csv-toolbar-head-left">
-                <div class="section-kicker">历史</div>
-                <span
-                  v-if="archiveCountText"
-                  class="csv-archive-count"
-                >· {{ archiveCountText }}</span>
-              </div>
-              <button
-                class="csv-ghost-action"
-                type="button"
-                :disabled="loadingFiles"
-                @click="refreshFiles"
-              >
-                {{ loadingFiles ? '刷新中' : '刷新' }}
-              </button>
-            </div>
-
-            <div
-              v-if="!auth.initialized || auth.loading"
-              class="csv-toolbar-empty"
-            >
-              检查登录中
-            </div>
-            <div
-              v-else-if="!auth.authenticated"
-              class="csv-toolbar-empty"
-            >
-              未登录
-            </div>
-            <div
-              v-else-if="!files.length && !loadingFiles"
-              class="csv-toolbar-empty"
-            >
-              无存档
-            </div>
-            <div
-              v-else
-              class="csv-history-list"
-            >
-              <div
-                v-for="file in files"
-                :key="file.id"
-                class="csv-history-row"
-                :class="{ 'csv-history-row-active': activeSource === 'history' && activeFile?.id === file.id }"
-              >
-                <button
-                  class="csv-history-open"
-                  type="button"
-                  @click="selectHistoryFile(file)"
-                >
-                  <span class="csv-history-time">{{ formatDate(file.created_at) }}</span>
-                  <span class="csv-history-meta">
-                    {{ file.row_count }} 行 · {{ formatBytes(file.size) }}
-                  </span>
-                </button>
-                <button
-                  class="csv-history-delete"
-                  type="button"
-                  :disabled="deletingId === file.id"
-                  :aria-label="`删除 ${file.original_filename || formatDate(file.created_at)}`"
-                  @click="removeFile(file)"
-                >
-                  {{ deletingId === file.id ? '...' : '×' }}
-                </button>
-              </div>
-            </div>
           </section>
         </template>
 
@@ -658,7 +696,6 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
-.csv-toolbar-empty,
 .csv-toolbar-status,
 .csv-table-toolbar {
   color: rgba(15, 23, 35, 0.62);
@@ -673,11 +710,52 @@ onMounted(async () => {
 }
 
 .csv-toolbar-save {
-  flex: 1.1 1 420px;
+  flex: 1 1 100%;
 }
 
-.csv-toolbar-archive {
-  flex: 1 1 360px;
+.csv-history-trigger {
+  display: inline-flex;
+}
+
+.csv-history-trigger-caret {
+  font-size: 0.78rem;
+  margin-left: 2px;
+}
+
+.csv-history-popover {
+  background: rgba(250, 252, 255, 0.98);
+  border: 1px solid rgba(16, 37, 66, 0.1);
+  border-radius: var(--brand-radius-md, 16px);
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
+  color: var(--shell-navy);
+  min-width: 320px;
+  padding: 12px;
+  z-index: 90;
+}
+
+.csv-history-popover-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.csv-history-popover-empty {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.9rem;
+  margin-top: 10px;
+  padding: 6px 4px;
+}
+
+.csv-history-refresh {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.csv-history-popover:focus-visible {
+  outline: none;
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
 }
 
 .csv-toolbar-head,
@@ -750,14 +828,6 @@ onMounted(async () => {
   margin: 0;
 }
 
-.csv-toolbar-empty {
-  background: rgba(255, 255, 255, 0.54);
-  border: 1px dashed rgba(16, 37, 66, 0.16);
-  border-radius: var(--brand-radius-md, 16px);
-  margin-top: 12px;
-  padding: 12px;
-}
-
 .csv-file-picker {
   cursor: pointer;
   display: inline-flex;
@@ -813,6 +883,14 @@ onMounted(async () => {
 .csv-file-picker-disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.csv-primary-action:focus-visible,
+.csv-ghost-action:focus-visible,
+.csv-page-size-trigger:focus-visible,
+.csv-file-picker:focus-within {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  outline: none;
 }
 
 .csv-ghost-action:hover,

@@ -1,4 +1,10 @@
 <script setup>
+import {
+  PopoverContent,
+  PopoverPortal,
+  PopoverRoot,
+  PopoverTrigger
+} from 'reka-ui'
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
@@ -42,6 +48,7 @@ const iframeKey = shallowRef(0)
 const syncAfterNextExport = shallowRef(false)
 const syncingExport = shallowRef(false)
 const deletingArchiveKey = shallowRef('')
+const historyOpen = shallowRef(false)
 const accountSync = useAccountSync('drawio')
 
 const xmlCharacters = computed(() => savedXml.value.length)
@@ -54,6 +61,21 @@ const syncStatusText = computed(() => {
 const archiveCountText = computed(() => {
   if (accountSync.loading.value) return '读取中'
   return accountSync.items.value.length ? String(accountSync.items.value.length) : ''
+})
+const historyTriggerLabel = computed(() => {
+  if (!accountSync.auth.initialized || accountSync.auth.loading) return '检查登录中'
+  if (!accountSync.auth.authenticated) return '未登录 · 登录后同步'
+  if (accountSync.loading.value) return '读取中'
+  const active = accountSync.activeItem.value
+  if (active?.updated_at) return `历史 · ${formatArchiveDate(active.updated_at)}`
+  if (!accountSync.items.value.length) return '无存档'
+  return `历史存档 · ${accountSync.items.value.length}`
+})
+const historyTriggerDisabled = computed(() => {
+  if (!accountSync.auth.initialized || accountSync.auth.loading) return true
+  if (!accountSync.auth.authenticated) return true
+  if (accountSync.loading.value) return false
+  return !accountSync.items.value.length
 })
 const syncButtonText = computed(() => {
   if (syncingExport.value) return '准备保存...'
@@ -171,6 +193,7 @@ async function openArchive(item) {
   savedAt.value = ''
   loadXml(xml)
   drawioError.value = ''
+  historyOpen.value = false
 }
 
 async function deleteSyncedDiagram(item) {
@@ -320,6 +343,88 @@ onUnmounted(() => {
               >
                 重置 Demo
               </button>
+
+              <PopoverRoot v-model:open="historyOpen">
+                <PopoverTrigger
+                  class="drawio-ghost-action drawio-history-trigger"
+                  :disabled="historyTriggerDisabled"
+                  aria-label="历史存档"
+                >
+                  <span>{{ historyTriggerLabel }}</span>
+                  <span
+                    class="drawio-history-trigger-caret"
+                    aria-hidden="true"
+                  >▾</span>
+                </PopoverTrigger>
+
+                <PopoverPortal>
+                  <PopoverContent
+                    class="drawio-history-popover"
+                    align="end"
+                    :side-offset="8"
+                  >
+                    <div class="drawio-history-popover-head">
+                      <div class="drawio-toolbar-head-left">
+                        <div class="section-kicker">历史</div>
+                        <span
+                          v-if="archiveCountText"
+                          class="drawio-archive-count"
+                        >· {{ archiveCountText }}</span>
+                      </div>
+                      <button
+                        class="drawio-ghost-action drawio-history-refresh"
+                        type="button"
+                        :disabled="accountSync.loading.value"
+                        @click="accountSync.loadItems"
+                      >
+                        {{ accountSync.loading.value ? '刷新中' : '刷新' }}
+                      </button>
+                    </div>
+
+                    <div
+                      v-if="accountSync.loading.value && !accountSync.items.value.length"
+                      class="drawio-history-popover-empty"
+                    >
+                      读取中
+                    </div>
+                    <div
+                      v-else-if="!accountSync.items.value.length"
+                      class="drawio-history-popover-empty"
+                    >
+                      无存档
+                    </div>
+                    <div
+                      v-else
+                      class="drawio-archive-list"
+                    >
+                      <div
+                        v-for="item in accountSync.items.value"
+                        :key="item.item_key"
+                        class="drawio-archive-row"
+                        :class="{ 'drawio-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
+                      >
+                        <button
+                          class="drawio-archive-open"
+                          type="button"
+                          @click="openArchive(item)"
+                        >
+                          <span class="drawio-archive-time">{{ formatArchiveDate(item.updated_at) }}</span>
+                          <span class="drawio-archive-meta">{{ item.payload?.xml_length || 0 }} 字符</span>
+                        </button>
+                        <button
+                          class="drawio-archive-delete"
+                          type="button"
+                          :disabled="deletingArchiveKey === item.item_key"
+                          :aria-label="`删除 ${formatArchiveDate(item.updated_at)} 的存档`"
+                          @click.stop="deleteSyncedDiagram(item)"
+                        >
+                          {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
+                        </button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </PopoverPortal>
+              </PopoverRoot>
             </div>
 
             <AccountSyncPanel
@@ -329,74 +434,6 @@ onUnmounted(() => {
               :label="accountSync.syncLabel.value"
               @login="accountSync.login"
             />
-          </section>
-
-          <section class="drawio-toolbar-block drawio-toolbar-archive">
-            <div class="drawio-toolbar-head">
-              <div class="drawio-toolbar-head-left">
-                <div class="section-kicker">历史</div>
-                <span
-                  v-if="archiveCountText"
-                  class="drawio-archive-count"
-                >· {{ archiveCountText }}</span>
-              </div>
-              <button
-                class="drawio-ghost-action"
-                type="button"
-                :disabled="accountSync.loading.value"
-                @click="accountSync.loadItems"
-              >
-                {{ accountSync.loading.value ? '刷新中' : '刷新' }}
-              </button>
-            </div>
-
-            <div
-              v-if="!accountSync.auth.initialized || accountSync.auth.loading"
-              class="drawio-toolbar-empty"
-            >
-              检查登录中
-            </div>
-            <div
-              v-else-if="!accountSync.auth.authenticated"
-              class="drawio-toolbar-empty"
-            >
-              未登录
-            </div>
-            <div
-              v-else-if="!accountSync.items.value.length && !accountSync.loading.value"
-              class="drawio-toolbar-empty"
-            >
-              无存档
-            </div>
-            <div
-              v-else
-              class="drawio-archive-list"
-            >
-              <div
-                v-for="item in accountSync.items.value"
-                :key="item.item_key"
-                class="drawio-archive-row"
-                :class="{ 'drawio-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
-              >
-                <button
-                  class="drawio-archive-open"
-                  type="button"
-                  @click="openArchive(item)"
-                >
-                  <span class="drawio-archive-time">{{ formatArchiveDate(item.updated_at) }}</span>
-                  <span class="drawio-archive-meta">{{ item.payload?.xml_length || 0 }} 字符</span>
-                </button>
-                <button
-                  class="drawio-archive-delete"
-                  type="button"
-                  :disabled="deletingArchiveKey === item.item_key"
-                  :aria-label="`删除 ${formatArchiveDate(item.updated_at)} 的存档`"
-                  @click="deleteSyncedDiagram(item)"
-                >
-                  {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
-                </button>
-              </div>
-            </div>
           </section>
         </header>
 
@@ -478,11 +515,52 @@ onUnmounted(() => {
 }
 
 .drawio-toolbar-save {
-  flex: 1.2 1 520px;
+  flex: 1 1 100%;
 }
 
-.drawio-toolbar-archive {
-  flex: 1 1 380px;
+.drawio-history-trigger {
+  display: inline-flex;
+}
+
+.drawio-history-trigger-caret {
+  font-size: 0.78rem;
+  margin-left: 2px;
+}
+
+.drawio-history-popover {
+  background: rgba(250, 252, 255, 0.98);
+  border: 1px solid rgba(16, 37, 66, 0.1);
+  border-radius: var(--brand-radius-md, 16px);
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
+  color: var(--shell-navy);
+  min-width: 320px;
+  padding: 12px;
+  z-index: 90;
+}
+
+.drawio-history-popover-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.drawio-history-popover-empty {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.9rem;
+  margin-top: 10px;
+  padding: 6px 4px;
+}
+
+.drawio-history-refresh {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
+
+.drawio-history-popover:focus-visible {
+  outline: none;
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
 }
 
 .drawio-toolbar-head,
@@ -507,8 +585,7 @@ onUnmounted(() => {
   font-size: 0.88rem;
 }
 
-.drawio-toolbar-status,
-.drawio-toolbar-empty {
+.drawio-toolbar-status {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
 }
@@ -526,14 +603,6 @@ onUnmounted(() => {
 
 .drawio-toolbar-sync {
   margin-top: 12px;
-}
-
-.drawio-toolbar-empty {
-  background: rgba(255, 255, 255, 0.54);
-  border: 1px dashed rgba(16, 37, 66, 0.16);
-  border-radius: var(--brand-radius-md, 16px);
-  margin-top: 12px;
-  padding: 12px;
 }
 
 .drawio-notice {
@@ -591,6 +660,12 @@ onUnmounted(() => {
 .drawio-primary-action:disabled {
   cursor: not-allowed;
   opacity: 0.62;
+}
+
+.drawio-primary-action:focus-visible,
+.drawio-ghost-action:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  outline: none;
 }
 
 .drawio-archive-list {

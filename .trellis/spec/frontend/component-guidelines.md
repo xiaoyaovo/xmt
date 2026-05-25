@@ -98,7 +98,11 @@ Every interactive primitive (links, buttons, row entries, chip buttons) must hav
 
 ## Third-Party UI
 
-Reka UI primitives are used for hover cards and selects. Keep imported primitives at the top of `<script setup>` and wrap them in project classes so styles remain local to this app.
+Reka UI primitives are used for hover cards, selects, and popovers. Keep imported primitives at the top of `<script setup>` and wrap them in project classes so styles remain local to this app.
+
+**Popover vs Select.** Reach for `SelectRoot` family when the dropdown represents a single bound value with no secondary actions per option (e.g., the CSV page-size selector). Reach for `PopoverRoot / PopoverTrigger / PopoverPortal / PopoverContent` when items have per-row secondary actions (delete, archive, edit) — `SelectItem`'s Enter-commits-and-closes semantics conflict with focused action buttons inside the row. The history dropdown on each tool page uses Popover for exactly this reason: rows have an inline `×` delete, and `@click.stop` on the delete keeps the popover open so users can delete several in a row.
+
+Trigger label for status-style popovers (not value-bound) should describe the current state, not be wired to a `v-model:value` ref. Common pattern: a computed `*TriggerLabel` returning short strings like `历史存档 · N` / `历史 · {timestamp}` / `读取中` / `未登录 · 登录后同步` / `无存档`, plus a `*TriggerDisabled` computed that the trigger's `:disabled` reads. Bind `v-model:open` so the page can close the popover programmatically after a successful action (e.g., `historyOpen.value = false` inside `openArchive`). Place the refresh / list-management affordance inside the popover header, not next to the trigger — the trigger row stays single-line.
 
 For iframe-based third-party editors, keep the iframe protocol boundary explicit in the page or a focused composable:
 
