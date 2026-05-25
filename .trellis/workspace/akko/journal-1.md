@@ -104,3 +104,36 @@ Connected the Draw.io page to account sync so logged-in users can save, load, an
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Fix Draw.io save flow
+
+**Date**: 2026-05-25
+**Task**: Fix Draw.io save flow
+**Branch**: `main`
+
+### Summary
+
+Adjusted Draw.io save handling so the left-side account save exports fresh XML, draw.io internal save events can persist for authenticated users, and successful host persistence sends status modified=false back to the iframe.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `14977a2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
