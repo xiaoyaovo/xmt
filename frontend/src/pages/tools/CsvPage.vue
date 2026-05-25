@@ -236,12 +236,12 @@ onMounted(async () => {
       >
         <aside class="csv-sidebar">
           <ToolSavePanel
-            title="添加 CSV 文件"
-            kicker="上传"
-            status="20 MB"
+            title="CSV 云端存档"
+            kicker="保存"
+            status="本地预览"
             :save-label="uploading ? '保存中...' : auth.authenticated ? '保存' : '登录后保存'"
             :save-disabled="!canSaveLocalFile || uploading || localPreview.loading.value"
-            helper="本地预览不会上传文件。保存为云端存档需要 GitHub 登录，每个账号最多保留 50 个文件，总容量 500 MB。"
+            helper="先选择 CSV 文件进行本地预览，再保存为云端存档。单个文件最多 20 MB，每个账号最多保留 50 个文件，总容量 500 MB。"
             :authenticated="accountSync.auth.authenticated"
             :auth-loading="accountSync.auth.loading"
             :sync-label="accountSync.syncLabel.value"
@@ -263,7 +263,7 @@ onMounted(async () => {
               <span class="csv-file-picker-title">
                 {{ localPreview.loading.value ? '正在解析...' : '选择 CSV 文件' }}
               </span>
-              <span class="csv-file-picker-caption">本地解析，不登录也可以预览</span>
+              <span class="csv-file-picker-caption">本地解析，不登录也可以预览；保存需要 GitHub 登录。</span>
             </label>
 
             <template #actions>
