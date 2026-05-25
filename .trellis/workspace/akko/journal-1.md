@@ -38,3 +38,36 @@ Updated the Tools entry page to present CSV and Mermaid as usable tools, clarifi
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Add Draw.io embed demo
+
+**Date**: 2026-05-25
+**Task**: Add Draw.io embed demo
+**Branch**: `main`
+
+### Summary
+
+Added a /tools/drawio demo page using diagrams.net iframe embed mode, wired the Tools entry and route, verified postMessage XML export, and documented iframe protocol notes in frontend specs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2a1f7ba` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
