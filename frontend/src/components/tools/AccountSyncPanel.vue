@@ -29,8 +29,8 @@ const emit = defineEmits(['login'])
 
 <template>
   <section
+    v-if="!authenticated"
     class="account-sync-panel"
-    :class="{ 'account-sync-panel-ready': authenticated }"
   >
     <div>
       <div class="account-sync-label">{{ label }}</div>
@@ -42,10 +42,7 @@ const emit = defineEmits(['login'])
       </p>
     </div>
 
-    <div
-      v-if="!authenticated"
-      class="account-sync-actions"
-    >
+    <div class="account-sync-actions">
       <button
         class="account-sync-button"
         type="button"
@@ -75,11 +72,6 @@ const emit = defineEmits(['login'])
   grid-template-columns: minmax(0, 1fr) auto;
   margin-top: 14px;
   padding: 13px 15px;
-}
-
-.account-sync-panel-ready {
-  background: rgba(34, 197, 94, 0.08);
-  border-color: rgba(34, 197, 94, 0.18);
 }
 
 .account-sync-label {
@@ -121,6 +113,12 @@ const emit = defineEmits(['login'])
   border: 0;
   color: #ffffff;
   cursor: pointer;
+}
+
+.account-sync-button:focus-visible,
+.account-sync-link:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  outline: none;
 }
 
 .account-sync-button:disabled {

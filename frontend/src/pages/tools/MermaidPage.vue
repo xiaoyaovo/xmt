@@ -70,9 +70,13 @@ const renderStatusText = computed(() => {
   return renderedSvg.value ? '预览就绪' : '待渲染'
 })
 const syncStatusText = computed(() => {
-  if (accountSync.saving.value) return '正在同步'
-  if (accountSync.loading.value) return '正在读取云端'
-  return accountSync.items.value.length ? `${accountSync.items.value.length} 个云端存档` : accountSync.syncLabel.value
+  if (accountSync.saving.value) return '同步中'
+  if (accountSync.loading.value) return '读取中'
+  return ''
+})
+const archiveCountText = computed(() => {
+  if (accountSync.loading.value) return '读取中'
+  return accountSync.items.value.length ? String(accountSync.items.value.length) : ''
 })
 const activeExampleName = computed(() => {
   const activeExample = examples.find(example => example.source === source.value)
@@ -80,9 +84,7 @@ const activeExampleName = computed(() => {
 })
 const sourceMetaText = computed(() => [
   `${sourceLines.value} 行`,
-  `${sourceCharacters.value} 字符`,
-  renderStatusText.value,
-  `示例：${activeExampleName.value}`
+  `${sourceCharacters.value} 字符`
 ].join(' · '))
 
 function configureMermaid() {
@@ -291,7 +293,10 @@ onMounted(async () => {
           <section class="mermaid-toolbar-block mermaid-toolbar-save">
             <div class="mermaid-toolbar-head">
               <div class="section-kicker">保存</div>
-              <span class="mermaid-table-status">{{ syncStatusText }}</span>
+              <span
+                v-if="syncStatusText"
+                class="mermaid-table-status"
+              >{{ syncStatusText }}</span>
             </div>
 
             <p class="mermaid-source-meta">{{ sourceMetaText }}</p>
@@ -346,7 +351,13 @@ onMounted(async () => {
 
           <section class="mermaid-toolbar-block mermaid-toolbar-archive">
             <div class="mermaid-toolbar-head">
-              <div class="section-kicker">历史</div>
+              <div class="mermaid-toolbar-head-left">
+                <div class="section-kicker">历史</div>
+                <span
+                  v-if="archiveCountText"
+                  class="mermaid-archive-count"
+                >· {{ archiveCountText }}</span>
+              </div>
               <button
                 class="mermaid-ghost-action"
                 type="button"
@@ -377,33 +388,32 @@ onMounted(async () => {
             </div>
             <div
               v-else
-              class="mermaid-archive-strip"
+              class="mermaid-archive-list"
             >
-            <div
-              v-for="item in accountSync.items.value"
-              :key="item.item_key"
-              class="mermaid-archive-row"
-            >
-              <button
-                class="mermaid-sync-item"
-                :class="{ 'mermaid-sync-item-active': accountSync.activeItem.value?.item_key === item.item_key }"
-                type="button"
-                @click="openArchive(item)"
+              <div
+                v-for="item in accountSync.items.value"
+                :key="item.item_key"
+                class="mermaid-archive-row"
+                :class="{ 'mermaid-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
               >
-                <span class="mermaid-sync-name">{{ item.title || 'Mermaid 图表' }}</span>
-                <span class="mermaid-sync-meta">
-                  {{ item.payload?.character_count || 0 }} 字符 · {{ formatArchiveDate(item.updated_at) }}
-                </span>
-              </button>
-              <button
-                class="mermaid-ghost-action mermaid-danger-action mermaid-archive-delete"
-                type="button"
-                :disabled="deletingArchiveKey === item.item_key"
-                @click="deleteSyncedSource(item)"
-              >
-                {{ deletingArchiveKey === item.item_key ? '删除中' : '删除' }}
-              </button>
-            </div>
+                <button
+                  class="mermaid-archive-open"
+                  type="button"
+                  @click="openArchive(item)"
+                >
+                  <span class="mermaid-archive-time">{{ formatArchiveDate(item.updated_at) }}</span>
+                  <span class="mermaid-archive-meta">{{ item.payload?.character_count || 0 }} 字符</span>
+                </button>
+                <button
+                  class="mermaid-archive-delete"
+                  type="button"
+                  :disabled="deletingArchiveKey === item.item_key"
+                  :aria-label="`删除 ${formatArchiveDate(item.updated_at)} 的存档`"
+                  @click="deleteSyncedSource(item)"
+                >
+                  {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
+                </button>
+              </div>
             </div>
           </section>
         </template>
@@ -519,7 +529,6 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.mermaid-sync-meta,
 .mermaid-toolbar-empty,
 .mermaid-table-status {
   color: rgba(15, 23, 35, 0.62);
@@ -549,8 +558,7 @@ onMounted(async () => {
 
 .mermaid-toolbar-head,
 .mermaid-toolbar-actions,
-.mermaid-example-strip,
-.mermaid-archive-strip {
+.mermaid-example-strip {
   display: flex;
   gap: 10px;
 }
@@ -560,9 +568,19 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
+.mermaid-toolbar-head-left {
+  align-items: baseline;
+  display: flex;
+  gap: 6px;
+}
+
+.mermaid-archive-count {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.88rem;
+}
+
 .mermaid-toolbar-actions,
-.mermaid-example-strip,
-.mermaid-archive-strip {
+.mermaid-example-strip {
   flex-wrap: wrap;
   margin-top: 12px;
 }
@@ -579,18 +597,128 @@ onMounted(async () => {
   padding: 12px;
 }
 
-.mermaid-sync-item {
-  background: rgba(255, 255, 255, 0.66);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-md, 16px);
-  color: inherit;
+.mermaid-archive-list {
   display: flex;
   flex-direction: column;
+  margin-top: 12px;
+  max-height: min(60vh, 360px);
+  overflow-y: auto;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--brand-radius-md, 16px);
+  background: rgba(255, 255, 255, 0.5);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
+}
+
+.mermaid-archive-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mermaid-archive-list::-webkit-scrollbar-thumb {
+  background: rgba(16, 37, 66, 0.2);
+  border-radius: 999px;
+}
+
+.mermaid-archive-row {
+  align-items: center;
+  border-top: 1px solid rgba(16, 37, 66, 0.06);
+  display: grid;
   gap: 8px;
-  padding: 14px;
-  text-align: left;
-  width: min(260px, 100%);
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 32px;
+  padding: 4px 8px 4px 10px;
+  position: relative;
+  transition: background 120ms ease;
+}
+
+.mermaid-archive-row:first-child {
+  border-top: 0;
+}
+
+.mermaid-archive-row:hover {
+  background: rgba(16, 37, 66, 0.04);
+}
+
+.mermaid-archive-row:focus-within {
+  background: rgba(16, 37, 66, 0.04);
+}
+
+.mermaid-archive-row-active {
+  background: rgba(16, 37, 66, 0.06);
+  box-shadow: inset 3px 0 0 0 var(--brand-color-accent, #102542);
+}
+
+.mermaid-archive-open {
+  align-items: baseline;
+  background: transparent;
+  border: 0;
+  color: inherit;
   cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  font: inherit;
+  gap: 10px;
+  min-height: 28px;
+  padding: 2px 0;
+  text-align: left;
+  width: 100%;
+}
+
+.mermaid-archive-open:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  border-radius: var(--brand-radius-sm, 8px);
+  outline: none;
+}
+
+.mermaid-archive-time {
+  color: var(--shell-navy);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.mermaid-archive-meta {
+  color: rgba(15, 23, 35, 0.55);
+  font-size: 0.82rem;
+}
+
+.mermaid-archive-delete {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--brand-radius-pill, 999px);
+  color: rgba(15, 23, 35, 0.4);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: color 120ms ease, background 120ms ease;
+  width: 24px;
+}
+
+.mermaid-archive-row:hover .mermaid-archive-delete,
+.mermaid-archive-row:focus-within .mermaid-archive-delete {
+  color: var(--shell-coral, #ff7a59);
+}
+
+.mermaid-archive-delete:hover {
+  background: rgba(255, 122, 89, 0.12);
+  color: var(--shell-coral, #ff7a59);
+}
+
+.mermaid-archive-delete:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  color: var(--shell-coral, #ff7a59);
+  outline: none;
+}
+
+.mermaid-archive-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .mermaid-example-item {
@@ -616,13 +744,14 @@ onMounted(async () => {
 }
 
 .mermaid-example-item-active {
-  background: rgba(16, 37, 66, 0.08);
+  background: var(--brand-color-accent, #102542);
   border-color: var(--brand-color-accent, #102542);
+  color: #ffffff;
 }
 
-.mermaid-sync-name {
-  color: var(--shell-navy);
-  font-weight: 800;
+.mermaid-example-item-active:hover {
+  background: var(--brand-color-accent-hover, var(--brand-color-accent, #102542));
+  border-color: var(--brand-color-accent-hover, var(--brand-color-accent, #102542));
 }
 
 .mermaid-primary-action,
@@ -658,27 +787,6 @@ onMounted(async () => {
 .mermaid-ghost-action:disabled {
   cursor: not-allowed;
   opacity: 0.62;
-}
-
-.mermaid-danger-action {
-  color: #9b2f25;
-}
-
-.mermaid-archive-row {
-  align-items: stretch;
-  display: grid;
-  gap: 10px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  width: min(360px, 100%);
-}
-
-.mermaid-sync-item-active {
-  border-color: var(--brand-color-accent, #102542);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
-}
-
-.mermaid-archive-delete {
-  align-self: center;
 }
 
 .mermaid-editor {
@@ -760,14 +868,6 @@ onMounted(async () => {
 
   .mermaid-actions {
     justify-content: flex-start;
-  }
-
-  .mermaid-archive-row {
-    grid-template-columns: 1fr;
-  }
-
-  .mermaid-archive-delete {
-    align-self: stretch;
   }
 
   .mermaid-toolbar-block {

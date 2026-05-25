@@ -45,12 +45,15 @@ const deletingArchiveKey = shallowRef('')
 const accountSync = useAccountSync('drawio')
 
 const xmlCharacters = computed(() => savedXml.value.length)
-const editorStatus = computed(() => (editorReady.value ? '已连接' : '初始化中'))
 const syncStatusText = computed(() => {
   if (syncingExport.value) return '准备同步'
-  if (accountSync.saving.value) return '正在同步'
-  if (accountSync.loading.value) return '正在读取云端'
-  return accountSync.items.value.length ? `${accountSync.items.value.length} 个云端存档` : accountSync.syncLabel.value
+  if (accountSync.saving.value) return '同步中'
+  if (accountSync.loading.value) return '读取中'
+  return ''
+})
+const archiveCountText = computed(() => {
+  if (accountSync.loading.value) return '读取中'
+  return accountSync.items.value.length ? String(accountSync.items.value.length) : ''
 })
 const syncButtonText = computed(() => {
   if (syncingExport.value) return '准备保存...'
@@ -58,11 +61,11 @@ const syncButtonText = computed(() => {
   return accountSync.auth.authenticated ? '保存' : '登录后保存'
 })
 const syncButtonDisabled = computed(() => syncingExport.value || accountSync.saving.value)
-const editorMetaText = computed(() => [
-  editorStatus.value,
-  `${xmlCharacters.value} 字符`,
-  savedAt.value ? `已保存 ${savedAt.value}` : '尚未保存'
-].join(' · '))
+const editorMetaText = computed(() => {
+  const parts = [`${xmlCharacters.value} 字符`]
+  if (savedAt.value) parts.push(`已保存 ${savedAt.value}`)
+  return parts.join(' · ')
+})
 
 function formatArchiveDate(value) {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -270,7 +273,10 @@ onUnmounted(() => {
           <section class="drawio-toolbar-block drawio-toolbar-save">
             <div class="drawio-toolbar-head">
               <div class="section-kicker">保存</div>
-              <span class="drawio-toolbar-status">{{ syncStatusText }}</span>
+              <span
+                v-if="syncStatusText"
+                class="drawio-toolbar-status"
+              >{{ syncStatusText }}</span>
             </div>
 
             <p class="drawio-editor-meta">{{ editorMetaText }}</p>
@@ -327,7 +333,13 @@ onUnmounted(() => {
 
           <section class="drawio-toolbar-block drawio-toolbar-archive">
             <div class="drawio-toolbar-head">
-              <div class="section-kicker">历史</div>
+              <div class="drawio-toolbar-head-left">
+                <div class="section-kicker">历史</div>
+                <span
+                  v-if="archiveCountText"
+                  class="drawio-archive-count"
+                >· {{ archiveCountText }}</span>
+              </div>
               <button
                 class="drawio-ghost-action"
                 type="button"
@@ -358,33 +370,32 @@ onUnmounted(() => {
             </div>
             <div
               v-else
-              class="drawio-archive-strip"
+              class="drawio-archive-list"
             >
-            <div
-              v-for="item in accountSync.items.value"
-              :key="item.item_key"
-              class="drawio-archive-row"
-            >
-              <button
-                class="drawio-sync-item"
-                :class="{ 'drawio-sync-item-active': accountSync.activeItem.value?.item_key === item.item_key }"
-                type="button"
-                @click="openArchive(item)"
+              <div
+                v-for="item in accountSync.items.value"
+                :key="item.item_key"
+                class="drawio-archive-row"
+                :class="{ 'drawio-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
               >
-                <span class="drawio-sync-name">{{ item.title || 'Draw.io 图表' }}</span>
-                <span class="drawio-sync-meta">
-                  {{ item.payload?.xml_length || 0 }} 字符 · {{ formatArchiveDate(item.updated_at) }}
-                </span>
-              </button>
-              <button
-                class="drawio-ghost-action drawio-danger-action drawio-archive-delete"
-                type="button"
-                :disabled="deletingArchiveKey === item.item_key"
-                @click="deleteSyncedDiagram(item)"
-              >
-                {{ deletingArchiveKey === item.item_key ? '删除中' : '删除' }}
-              </button>
-            </div>
+                <button
+                  class="drawio-archive-open"
+                  type="button"
+                  @click="openArchive(item)"
+                >
+                  <span class="drawio-archive-time">{{ formatArchiveDate(item.updated_at) }}</span>
+                  <span class="drawio-archive-meta">{{ item.payload?.xml_length || 0 }} 字符</span>
+                </button>
+                <button
+                  class="drawio-archive-delete"
+                  type="button"
+                  :disabled="deletingArchiveKey === item.item_key"
+                  :aria-label="`删除 ${formatArchiveDate(item.updated_at)} 的存档`"
+                  @click="deleteSyncedDiagram(item)"
+                >
+                  {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
+                </button>
+              </div>
             </div>
           </section>
         </header>
@@ -475,8 +486,7 @@ onUnmounted(() => {
 }
 
 .drawio-toolbar-head,
-.drawio-toolbar-actions,
-.drawio-archive-strip {
+.drawio-toolbar-actions {
   display: flex;
   gap: 10px;
 }
@@ -484,6 +494,17 @@ onUnmounted(() => {
 .drawio-toolbar-head {
   align-items: center;
   justify-content: space-between;
+}
+
+.drawio-toolbar-head-left {
+  align-items: baseline;
+  display: flex;
+  gap: 6px;
+}
+
+.drawio-archive-count {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.88rem;
 }
 
 .drawio-toolbar-status,
@@ -498,8 +519,7 @@ onUnmounted(() => {
   margin: 12px 0 0;
 }
 
-.drawio-toolbar-actions,
-.drawio-archive-strip {
+.drawio-toolbar-actions {
   flex-wrap: wrap;
   margin-top: 12px;
 }
@@ -573,49 +593,125 @@ onUnmounted(() => {
   opacity: 0.62;
 }
 
-.drawio-danger-action {
-  color: #9b2f25;
+.drawio-archive-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  max-height: min(60vh, 360px);
+  overflow-y: auto;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--brand-radius-md, 16px);
+  background: rgba(255, 255, 255, 0.5);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
+}
+
+.drawio-archive-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.drawio-archive-list::-webkit-scrollbar-thumb {
+  background: rgba(16, 37, 66, 0.2);
+  border-radius: 999px;
 }
 
 .drawio-archive-row {
-  align-items: stretch;
+  align-items: center;
+  border-top: 1px solid rgba(16, 37, 66, 0.06);
   display: grid;
-  gap: 10px;
+  gap: 8px;
   grid-template-columns: minmax(0, 1fr) auto;
-  width: min(380px, 100%);
+  min-height: 32px;
+  padding: 4px 8px 4px 10px;
+  position: relative;
+  transition: background 120ms ease;
 }
 
-.drawio-sync-item {
-  background: rgba(255, 255, 255, 0.66);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-md, 16px);
+.drawio-archive-row:first-child {
+  border-top: 0;
+}
+
+.drawio-archive-row:hover,
+.drawio-archive-row:focus-within {
+  background: rgba(16, 37, 66, 0.04);
+}
+
+.drawio-archive-row-active {
+  background: rgba(16, 37, 66, 0.06);
+  box-shadow: inset 3px 0 0 0 var(--brand-color-accent, #102542);
+}
+
+.drawio-archive-open {
+  align-items: baseline;
+  background: transparent;
+  border: 0;
   color: inherit;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
+  flex-wrap: wrap;
+  font: inherit;
+  gap: 10px;
+  min-height: 28px;
+  padding: 2px 0;
   text-align: left;
-  width: min(280px, 100%);
+  width: 100%;
 }
 
-.drawio-sync-item-active {
-  border-color: var(--brand-color-accent, #102542);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
+.drawio-archive-open:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  border-radius: var(--brand-radius-sm, 8px);
+  outline: none;
 }
 
-.drawio-sync-name {
+.drawio-archive-time {
   color: var(--shell-navy);
-  font-weight: 800;
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
-.drawio-sync-meta {
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.9rem;
+.drawio-archive-meta {
+  color: rgba(15, 23, 35, 0.55);
+  font-size: 0.82rem;
 }
 
 .drawio-archive-delete {
-  align-self: center;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--brand-radius-pill, 999px);
+  color: rgba(15, 23, 35, 0.4);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: color 120ms ease, background 120ms ease;
+  width: 24px;
+}
+
+.drawio-archive-row:hover .drawio-archive-delete,
+.drawio-archive-row:focus-within .drawio-archive-delete {
+  color: var(--shell-coral, #ff7a59);
+}
+
+.drawio-archive-delete:hover {
+  background: rgba(255, 122, 89, 0.12);
+  color: var(--shell-coral, #ff7a59);
+}
+
+.drawio-archive-delete:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  color: var(--shell-coral, #ff7a59);
+  outline: none;
+}
+
+.drawio-archive-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .drawio-frame {
@@ -644,14 +740,6 @@ onUnmounted(() => {
   .drawio-frame {
     height: 520px;
     min-height: 520px;
-  }
-
-  .drawio-archive-row {
-    grid-template-columns: 1fr;
-  }
-
-  .drawio-archive-delete {
-    align-self: stretch;
   }
 
   .drawio-toolbar-block {

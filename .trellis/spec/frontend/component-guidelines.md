@@ -62,6 +62,14 @@ Workspace stats (row counts, sync time, character length, connection state) belo
 
 Empty / loading states inside a tool pane should be a single short muted sentence (e.g., `选择或拖入一个 CSV 文件`, `粘贴 Mermaid 源码以预览`), not a kicker + h2 block. The pane's surrounding context already tells the user where they are.
 
+History / archive lists across tool pages share one pattern: compact ~32px-tall single rows, two columns (`minmax(0, 1fr) auto`), left = timestamp + muted distinguishing meta only, right = a small muted `×` delete affordance. **Do not repeat the timestamp in both the title and the meta line.** Drop tool-name prefixes (`Mermaid 图表 ...`, `CSV ...`, `Drawio ...`) — the page IS the tool. The delete `×` is muted by default (`color: var(--shell-muted)` or equivalent low-emphasis); it brightens to a danger color only on row `:hover` / `:focus-within`. Active row is a subtle background tint + inset accent left-border, not an outer ring. Wrap the list in `max-height: min(60vh, 360px); overflow-y: auto` so a long history does not stretch the toolbar vertically.
+
+Display resource counts (`8 个存档`, `12 行`) next to the section they describe, not on a sibling section. An archive count goes in the history header (`历史 · 8`), not the save header. This is information architecture: labels should sit on the data they label.
+
+**No permanent success confirmations.** Do not render an always-on "已启用账户同步" / "已保存" / "已同步" banner when the success state is the user's default. Permanent success banners are visual noise users learn to ignore. Render the affordance only in the state that needs action (e.g., `AccountSyncPanel` renders nothing when authenticated; it only renders the login prompt when `!authenticated`). Transient feedback (a short toast or a brief inline `保存中...` while a request is in flight) is fine — it disappears when the action completes.
+
+**Active state via solid fill, not stacked rings.** When indicating selection on chip-style buttons (`example chip`, tab, segmented control), use a solid `background: var(--brand-color-accent)` + contrasting text fill. Avoid stacking a `border` + `box-shadow` ring + accent color all on the same active element — the resulting double outline reads as "stuck/disabled" rather than "selected". `:focus-visible` rings layer on top of either state for keyboard users; that single ring is enough.
+
 ## Narrative Site Primitives
 
 For new site pages outside tool workspaces (landing, tools index, about-style content), compose with the shared narrative primitives instead of rolling new section shells:

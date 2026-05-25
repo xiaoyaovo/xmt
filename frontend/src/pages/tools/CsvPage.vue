@@ -68,17 +68,21 @@ const fileStats = computed(() => {
 
 const savePanelStatus = computed(() => {
   if (uploading.value) return '保存中'
-  if (loadingFiles.value) return '正在读取云端'
-  if (!activeFile.value) return accountSync.syncLabel.value
-  const parts = [
-    activeFile.value.original_filename || '未命名',
-    `${activeFile.value.row_count || 0} 行`,
-    activeFile.value.size ? formatBytes(activeFile.value.size) : '0 B'
-  ]
-  if (localPreview.dirty.value) parts.push('待另存')
-  else if (activeSource.value === 'history') parts.push('已保存')
-  else if (activeSource.value === 'local') parts.push('待保存')
+  if (loadingFiles.value) return '读取中'
+  return ''
+})
+
+const saveMetaText = computed(() => {
+  if (!activeFile.value) return ''
+  const parts = []
+  if (activeFile.value.row_count != null) parts.push(`${activeFile.value.row_count || 0} 行`)
+  if (activeFile.value.size) parts.push(formatBytes(activeFile.value.size))
   return parts.join(' · ')
+})
+
+const archiveCountText = computed(() => {
+  if (loadingFiles.value) return '读取中'
+  return files.value.length ? String(files.value.length) : ''
 })
 
 const canSaveCsv = computed(() => Boolean(activeFile.value && activeColumns.value.length))
@@ -262,7 +266,7 @@ function clearLocalPreview() {
 }
 
 async function removeFile(file) {
-  if (activeSource.value !== 'history') return
+  if (!file?.id) return
 
   deletingId.value = file.id
   errorMessage.value = ''
@@ -318,8 +322,16 @@ onMounted(async () => {
           <section class="csv-toolbar-block csv-toolbar-save">
             <div class="csv-toolbar-head">
               <div class="section-kicker">保存</div>
-              <span class="csv-toolbar-status">{{ savePanelStatus }}</span>
+              <span
+                v-if="savePanelStatus"
+                class="csv-toolbar-status"
+              >{{ savePanelStatus }}</span>
             </div>
+
+            <p
+              v-if="saveMetaText"
+              class="csv-save-meta"
+            >{{ saveMetaText }}</p>
 
             <div class="csv-toolbar-actions">
               <label
@@ -366,7 +378,13 @@ onMounted(async () => {
 
           <section class="csv-toolbar-block csv-toolbar-archive">
             <div class="csv-toolbar-head">
-              <div class="section-kicker">历史</div>
+              <div class="csv-toolbar-head-left">
+                <div class="section-kicker">历史</div>
+                <span
+                  v-if="archiveCountText"
+                  class="csv-archive-count"
+                >· {{ archiveCountText }}</span>
+              </div>
               <button
                 class="csv-ghost-action"
                 type="button"
@@ -397,21 +415,34 @@ onMounted(async () => {
             </div>
             <div
               v-else
-              class="csv-history-strip"
+              class="csv-history-list"
             >
-              <button
+              <div
                 v-for="file in files"
                 :key="file.id"
-                class="csv-history-item"
-                :class="{ 'csv-history-item-active': activeSource === 'history' && activeFile?.id === file.id }"
-                type="button"
-                @click="selectHistoryFile(file)"
+                class="csv-history-row"
+                :class="{ 'csv-history-row-active': activeSource === 'history' && activeFile?.id === file.id }"
               >
-                <span class="csv-history-name">{{ file.original_filename }}</span>
-                <span class="csv-history-meta">
-                  {{ file.row_count }} 行 · {{ formatBytes(file.size) }} · {{ formatDate(file.created_at) }}
-                </span>
-              </button>
+                <button
+                  class="csv-history-open"
+                  type="button"
+                  @click="selectHistoryFile(file)"
+                >
+                  <span class="csv-history-time">{{ formatDate(file.created_at) }}</span>
+                  <span class="csv-history-meta">
+                    {{ file.row_count }} 行 · {{ formatBytes(file.size) }}
+                  </span>
+                </button>
+                <button
+                  class="csv-history-delete"
+                  type="button"
+                  :disabled="deletingId === file.id"
+                  :aria-label="`删除 ${file.original_filename || formatDate(file.created_at)}`"
+                  @click="removeFile(file)"
+                >
+                  {{ deletingId === file.id ? '...' : '×' }}
+                </button>
+              </div>
             </div>
           </section>
         </template>
@@ -627,7 +658,6 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
-.csv-history-meta,
 .csv-toolbar-empty,
 .csv-toolbar-status,
 .csv-table-toolbar {
@@ -661,13 +691,29 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
+.csv-toolbar-head-left {
+  align-items: baseline;
+  display: flex;
+  gap: 6px;
+}
+
+.csv-archive-count {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.88rem;
+}
+
 .csv-toolbar-status {
   text-align: right;
   overflow-wrap: anywhere;
 }
 
-.csv-toolbar-actions,
-.csv-history-strip {
+.csv-save-meta {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.88rem;
+  margin: 12px 0 0;
+}
+
+.csv-toolbar-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -809,32 +855,130 @@ onMounted(async () => {
   background: rgba(16, 37, 66, 0.07);
 }
 
-.csv-history-item {
-  background: rgba(255, 255, 255, 0.66);
+.csv-history-list {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  max-height: min(60vh, 360px);
+  overflow-y: auto;
   border: 1px solid var(--shell-line);
   border-radius: var(--brand-radius-md, 16px);
+  background: rgba(255, 255, 255, 0.5);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
+}
+
+.csv-history-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.csv-history-list::-webkit-scrollbar-thumb {
+  background: rgba(16, 37, 66, 0.2);
+  border-radius: 999px;
+}
+
+.csv-history-row {
+  align-items: center;
+  border-top: 1px solid rgba(16, 37, 66, 0.06);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 32px;
+  padding: 4px 8px 4px 10px;
+  position: relative;
+  transition: background 120ms ease;
+}
+
+.csv-history-row:first-child {
+  border-top: 0;
+}
+
+.csv-history-row:hover,
+.csv-history-row:focus-within {
+  background: rgba(16, 37, 66, 0.04);
+}
+
+.csv-history-row-active {
+  background: rgba(16, 37, 66, 0.06);
+  box-shadow: inset 3px 0 0 0 var(--brand-color-accent, #102542);
+}
+
+.csv-history-open {
+  align-items: baseline;
+  background: transparent;
+  border: 0;
   color: inherit;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
+  flex-wrap: wrap;
+  font: inherit;
+  gap: 10px;
+  min-height: 28px;
+  padding: 2px 0;
   text-align: left;
-  width: min(260px, 100%);
+  width: 100%;
 }
 
-.csv-history-item-active {
-  border-color: var(--brand-color-accent, #102542);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
+.csv-history-open:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  border-radius: var(--brand-radius-sm, 8px);
+  outline: none;
 }
 
-.csv-history-name,
+.csv-history-time {
+  color: var(--shell-navy);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.csv-history-meta {
+  color: rgba(15, 23, 35, 0.55);
+  font-size: 0.82rem;
+}
+
+.csv-history-delete {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--brand-radius-pill, 999px);
+  color: rgba(15, 23, 35, 0.4);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: color 120ms ease, background 120ms ease;
+  width: 24px;
+}
+
+.csv-history-row:hover .csv-history-delete,
+.csv-history-row:focus-within .csv-history-delete {
+  color: var(--shell-coral, #ff7a59);
+}
+
+.csv-history-delete:hover {
+  background: rgba(255, 122, 89, 0.12);
+  color: var(--shell-coral, #ff7a59);
+}
+
+.csv-history-delete:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  color: var(--shell-coral, #ff7a59);
+  outline: none;
+}
+
+.csv-history-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .csv-file-title {
   color: var(--shell-navy);
   font-weight: 800;
-}
-
-.csv-file-title {
   font-family: "Georgia", "Times New Roman", serif;
   font-size: clamp(1.4rem, 2.5vw, 2rem);
   margin: 8px 0 0;
