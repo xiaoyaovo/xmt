@@ -368,3 +368,36 @@ Aligned CSV and Mermaid save panels with Draw.io by standardizing the save-card 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: Unify tool workbench layouts
+
+**Date**: 2026-05-25
+**Task**: Unify tool workbench layouts
+**Branch**: `main`
+
+### Summary
+
+Unified CSV, Mermaid, and Draw.io into a shared ToolWorkbench layout with top toolbar plus source/preview panes. Added CSV browser-side cell editing and edited-content save-as-new archive flow. Trimmed nonessential instructional copy, preserved necessary error states, documented the ToolWorkbench convention, and verified lint/build plus browser snapshots.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b95b51f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
