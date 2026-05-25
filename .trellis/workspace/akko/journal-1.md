@@ -401,3 +401,36 @@ Unified CSV, Mermaid, and Draw.io into a shared ToolWorkbench layout with top to
 ### Next Steps
 
 - None - task complete
+
+
+## Session 13: Fix Draw.io canvas and CSV text editing
+
+**Date**: 2026-05-25
+**Task**: Fix Draw.io canvas and CSV text editing
+**Branch**: `main`
+
+### Summary
+
+Removed the visible Draw.io XML preview so the page shows a single canvas/editor under the toolbar, while keeping XML internal for save/export/archive. Made CSV's right-side text area editable and parse changes back into columns/rows so table state, dirty status, stats, and saved output update from text edits. Verified lint/build and browser interactions.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6e9b87e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
