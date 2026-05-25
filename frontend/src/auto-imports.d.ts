@@ -8,10 +8,9 @@ export {}
 declare global {
   const AUTH_TOKEN_STORAGE_KEY: typeof import('./lib/auth.js').AUTH_TOKEN_STORAGE_KEY
   const EffectScope: typeof import('vue').EffectScope
+  const aboutSection: typeof import('./lib/siteHome.js').aboutSection
   const clearAccessToken: typeof import('./lib/auth.js').clearAccessToken
   const computed: typeof import('vue').computed
-  const contentBlocks: typeof import('./lib/siteHome.js').contentBlocks
-  const contentHeading: typeof import('./lib/siteHome.js').contentHeading
   const createApp: typeof import('vue').createApp
   const createRequest: typeof import('./lib/index.js').createRequest
   const csvDownloadUrl: typeof import('./lib/csvFiles.js').csvDownloadUrl
@@ -21,7 +20,6 @@ declare global {
   const deleteCsvFile: typeof import('./lib/csvFiles.js').deleteCsvFile
   const deleteSyncItem: typeof import('./lib/accountSync.js').deleteSyncItem
   const effectScope: typeof import('vue').effectScope
-  const featureCards: typeof import('./lib/siteHome.js').featureCards
   const getAccessToken: typeof import('./lib/auth.js').getAccessToken
   const getCsvFile: typeof import('./lib/csvFiles.js').getCsvFile
   const getCsvRows: typeof import('./lib/csvFiles.js').getCsvRows
@@ -32,11 +30,9 @@ declare global {
   const getSyncItem: typeof import('./lib/accountSync.js').getSyncItem
   const githubLoginUrl: typeof import('./lib/auth.js').githubLoginUrl
   const h: typeof import('vue').h
-  const heroActions: typeof import('./lib/siteHome.js').heroActions
-  const heroMetrics: typeof import('./lib/siteHome.js').heroMetrics
-  const heroStacks: typeof import('./lib/siteHome.js').heroStacks
-  const heroStatus: typeof import('./lib/siteHome.js').heroStatus
+  const heroAction: typeof import('./lib/siteHome.js').heroAction
   const homeHero: typeof import('./lib/siteHome.js').homeHero
+  const homeRows: typeof import('./lib/siteHome.js').homeRows
   const inject: typeof import('vue').inject
   const isProxy: typeof import('vue').isProxy
   const isReactive: typeof import('vue').isReactive
@@ -76,7 +72,6 @@ declare global {
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
-  const shellStatus: typeof import('./lib/siteNavigation.js').shellStatus
   const toRaw: typeof import('vue').toRaw
   const toRef: typeof import('vue').toRef
   const toRefs: typeof import('vue').toRefs

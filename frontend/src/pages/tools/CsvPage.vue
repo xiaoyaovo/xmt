@@ -13,6 +13,7 @@ import {
 import { computed, onMounted, shallowRef } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
+import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
 import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 import { useCsvPreview } from 'src/composables/useCsvPreview'
@@ -68,18 +69,17 @@ const fileStats = computed(() => {
 const savePanelStatus = computed(() => {
   if (uploading.value) return '保存中'
   if (loadingFiles.value) return '正在读取云端'
-  return files.value.length ? `${files.value.length} 个云端存档` : accountSync.syncLabel.value
+  if (!activeFile.value) return accountSync.syncLabel.value
+  const parts = [
+    activeFile.value.original_filename || '未命名',
+    `${activeFile.value.row_count || 0} 行`,
+    activeFile.value.size ? formatBytes(activeFile.value.size) : '0 B'
+  ]
+  if (localPreview.dirty.value) parts.push('待另存')
+  else if (activeSource.value === 'history') parts.push('已保存')
+  else if (activeSource.value === 'local') parts.push('待保存')
+  return parts.join(' · ')
 })
-
-const savePanelStats = computed(() => [
-  { label: '文件', value: activeFile.value?.original_filename || '未选择' },
-  { label: '行数', value: activeFile.value?.row_count || 0 },
-  { label: '大小', value: activeFile.value ? formatBytes(activeFile.value.size) : '0 B' },
-  {
-    label: '保存',
-    value: localPreview.dirty.value ? '待另存' : activeSource.value === 'history' ? '已保存' : activeSource.value === 'local' ? '待保存' : '未选择'
-  }
-])
 
 const canSaveCsv = computed(() => Boolean(activeFile.value && activeColumns.value.length))
 
@@ -307,37 +307,18 @@ onMounted(async () => {
 
 <template>
   <div class="tool-detail-page csv-tool-page">
-    <section class="tool-detail-shell">
-      <div class="tool-detail-header">
-        <div>
-          <div class="section-kicker">CSV · 表格预览</div>
-          <h1 class="section-title">CSV</h1>
-        </div>
-      </div>
+    <ToolPageHeader
+      title="CSV"
+      kicker="CSV · 表格预览"
+    />
 
-      <ToolWorkbench
-        source-title="源"
-        preview-title="预览"
-      >
+    <section class="tool-detail-shell">
+      <ToolWorkbench>
         <template #toolbar>
           <section class="csv-toolbar-block csv-toolbar-save">
             <div class="csv-toolbar-head">
-              <div>
-                <div class="section-kicker">保存</div>
-                <h2 class="csv-toolbar-title">云端存档</h2>
-              </div>
+              <div class="section-kicker">保存</div>
               <span class="csv-toolbar-status">{{ savePanelStatus }}</span>
-            </div>
-
-            <div class="csv-toolbar-stats">
-              <span
-                v-for="item in savePanelStats"
-                :key="item.label"
-                class="csv-toolbar-stat"
-              >
-                <strong>{{ item.value }}</strong>
-                {{ item.label }}
-              </span>
             </div>
 
             <div class="csv-toolbar-actions">
@@ -385,10 +366,7 @@ onMounted(async () => {
 
           <section class="csv-toolbar-block csv-toolbar-archive">
             <div class="csv-toolbar-head">
-              <div>
-                <div class="section-kicker">历史</div>
-                <h2 class="csv-toolbar-title">云端存档</h2>
-              </div>
+              <div class="section-kicker">历史</div>
               <button
                 class="csv-ghost-action"
                 type="button"
@@ -450,8 +428,7 @@ onMounted(async () => {
             v-if="!activeFile"
             class="csv-panel csv-preview-empty"
           >
-            <div class="section-kicker">源码</div>
-            <h2 class="content-title">选择或上传一个 CSV 文件</h2>
+            <p class="csv-empty-hint">选择或拖入一个 CSV 文件</p>
           </article>
 
           <article
@@ -459,11 +436,9 @@ onMounted(async () => {
             class="csv-panel csv-preview-panel"
           >
             <div class="csv-preview-header">
-              <div>
-                <div class="section-kicker">
-                  {{ sourceLabel }}
-                </div>
-                <h2 class="csv-file-title">{{ activeFile.original_filename }}</h2>
+              <div class="csv-source-meta">
+                <span class="csv-source-name">{{ activeFile.original_filename }}</span>
+                <span class="csv-source-label">{{ sourceLabel }}</span>
               </div>
               <div class="csv-actions">
                 <a
@@ -686,19 +661,11 @@ onMounted(async () => {
   justify-content: space-between;
 }
 
-.csv-toolbar-title {
-  color: var(--shell-navy);
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.2;
-  margin: 7px 0 0;
-}
-
 .csv-toolbar-status {
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
-.csv-toolbar-stats,
 .csv-toolbar-actions,
 .csv-history-strip {
   display: flex;
@@ -707,24 +674,34 @@ onMounted(async () => {
   margin-top: 12px;
 }
 
-.csv-toolbar-stat {
-  background: rgba(255, 255, 255, 0.66);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-sm, 12px);
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.82rem;
-  padding: 8px 10px;
+.csv-toolbar-sync {
+  margin-top: 12px;
 }
 
-.csv-toolbar-stat strong {
+.csv-source-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.csv-source-name {
   color: var(--shell-navy);
-  display: block;
+  font-weight: 800;
   font-size: 0.95rem;
   overflow-wrap: anywhere;
 }
 
-.csv-toolbar-sync {
-  margin-top: 12px;
+.csv-source-label {
+  color: rgba(15, 23, 35, 0.58);
+  font-size: 0.82rem;
+}
+
+.csv-empty-hint {
+  color: rgba(15, 23, 35, 0.6);
+  font-size: 0.95rem;
+  margin: 0;
 }
 
 .csv-toolbar-empty {

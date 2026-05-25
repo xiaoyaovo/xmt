@@ -3,6 +3,7 @@ import mermaid from 'mermaid'
 import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
+import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
 import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
@@ -77,12 +78,12 @@ const activeExampleName = computed(() => {
   const activeExample = examples.find(example => example.source === source.value)
   return activeExample?.name || '自定义'
 })
-const previewStats = computed(() => [
-  { label: '行数', value: sourceLines.value },
-  { label: '字符', value: sourceCharacters.value },
-  { label: '状态', value: renderStatusText.value },
-  { label: '示例', value: activeExampleName.value }
-])
+const sourceMetaText = computed(() => [
+  `${sourceLines.value} 行`,
+  `${sourceCharacters.value} 字符`,
+  renderStatusText.value,
+  `示例：${activeExampleName.value}`
+].join(' · '))
 
 function configureMermaid() {
   mermaid.initialize({
@@ -279,38 +280,21 @@ onMounted(async () => {
 
 <template>
   <div class="tool-detail-page mermaid-page">
-    <section class="tool-detail-shell mermaid-shell">
-      <div class="tool-detail-header">
-        <div>
-          <div class="section-kicker">Mermaid · 实时预览</div>
-          <h1 class="section-title">Mermaid</h1>
-        </div>
-      </div>
+    <ToolPageHeader
+      title="Mermaid"
+      kicker="Mermaid · 实时预览"
+    />
 
-      <ToolWorkbench
-        source-title="源"
-        preview-title="预览"
-      >
+    <section class="tool-detail-shell mermaid-shell">
+      <ToolWorkbench>
         <template #toolbar>
           <section class="mermaid-toolbar-block mermaid-toolbar-save">
             <div class="mermaid-toolbar-head">
-              <div>
-                <div class="section-kicker">保存</div>
-                <h2 class="mermaid-toolbar-title">云端存档</h2>
-              </div>
+              <div class="section-kicker">保存</div>
               <span class="mermaid-table-status">{{ syncStatusText }}</span>
             </div>
 
-            <div class="mermaid-summary-grid">
-              <div
-                v-for="item in previewStats"
-                :key="item.label"
-                class="mermaid-summary-card"
-              >
-                <div class="mermaid-summary-value">{{ item.value }}</div>
-                <div class="mermaid-summary-label">{{ item.label }}</div>
-              </div>
-            </div>
+            <p class="mermaid-source-meta">{{ sourceMetaText }}</p>
 
             <div class="mermaid-toolbar-actions">
               <button
@@ -338,22 +322,6 @@ onMounted(async () => {
               </button>
             </div>
 
-            <AccountSyncPanel
-              class="mermaid-toolbar-sync"
-              :authenticated="accountSync.auth.authenticated"
-              :loading="accountSync.auth.loading"
-              :label="accountSync.syncLabel.value"
-              @login="accountSync.login"
-            />
-          </section>
-
-          <section class="mermaid-toolbar-block mermaid-toolbar-examples">
-            <div class="mermaid-toolbar-head">
-              <div>
-                <div class="section-kicker">示例</div>
-                <h2 class="mermaid-toolbar-title">图表类型</h2>
-              </div>
-            </div>
             <div class="mermaid-example-strip">
               <button
                 v-for="example in examples"
@@ -363,17 +331,22 @@ onMounted(async () => {
                 type="button"
                 @click="useExample(example)"
               >
-                <span class="mermaid-example-name">{{ example.name }}</span>
+                {{ example.name }}
               </button>
             </div>
+
+            <AccountSyncPanel
+              class="mermaid-toolbar-sync"
+              :authenticated="accountSync.auth.authenticated"
+              :loading="accountSync.auth.loading"
+              :label="accountSync.syncLabel.value"
+              @login="accountSync.login"
+            />
           </section>
 
           <section class="mermaid-toolbar-block mermaid-toolbar-archive">
             <div class="mermaid-toolbar-head">
-              <div>
-                <div class="section-kicker">历史</div>
-                <h2 class="mermaid-toolbar-title">云端存档</h2>
-              </div>
+              <div class="section-kicker">历史</div>
               <button
                 class="mermaid-ghost-action"
                 type="button"
@@ -451,10 +424,6 @@ onMounted(async () => {
 
           <article class="mermaid-panel mermaid-editor-panel">
             <div class="mermaid-preview-header">
-              <div>
-                <div class="section-kicker">源码</div>
-                <h2 class="mermaid-file-title">Mermaid 编辑器</h2>
-              </div>
               <div class="mermaid-actions">
                 <button
                   class="mermaid-ghost-action"
@@ -488,10 +457,6 @@ onMounted(async () => {
             class="mermaid-panel mermaid-preview-panel"
           >
             <div class="mermaid-preview-header">
-              <div>
-                <div class="section-kicker">预览</div>
-                <h2 class="mermaid-file-title">实时图表</h2>
-              </div>
               <span class="mermaid-table-status">{{ renderStatusText }}</span>
             </div>
 
@@ -506,8 +471,7 @@ onMounted(async () => {
               v-if="!trimmedSource"
               class="mermaid-preview-empty"
             >
-              <div class="section-kicker">预览</div>
-              <h2 class="content-title">输入 Mermaid 源码</h2>
+              <p class="mermaid-empty-hint">粘贴 Mermaid 源码以预览</p>
             </div>
 
             <div
@@ -521,8 +485,7 @@ onMounted(async () => {
               v-else
               class="mermaid-preview-empty"
             >
-              <div class="section-kicker">预览</div>
-              <h2 class="content-title">等待可渲染的图表源码</h2>
+              <p class="mermaid-empty-hint">等待可渲染的源码</p>
             </div>
           </article>
         </template>
@@ -556,7 +519,6 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.mermaid-example-meta,
 .mermaid-sync-meta,
 .mermaid-toolbar-empty,
 .mermaid-table-status {
@@ -575,12 +537,14 @@ onMounted(async () => {
   flex: 1.1 1 420px;
 }
 
-.mermaid-toolbar-examples {
+.mermaid-toolbar-archive {
   flex: 1 1 360px;
 }
 
-.mermaid-toolbar-archive {
-  flex: 1 1 360px;
+.mermaid-source-meta {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.88rem;
+  margin: 12px 0 0;
 }
 
 .mermaid-toolbar-head,
@@ -594,14 +558,6 @@ onMounted(async () => {
 .mermaid-toolbar-head {
   align-items: center;
   justify-content: space-between;
-}
-
-.mermaid-toolbar-title {
-  color: var(--shell-navy);
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.2;
-  margin: 7px 0 0;
 }
 
 .mermaid-toolbar-actions,
@@ -623,7 +579,6 @@ onMounted(async () => {
   padding: 12px;
 }
 
-.mermaid-example-item,
 .mermaid-sync-item {
   background: rgba(255, 255, 255, 0.66);
   border: 1px solid var(--shell-line);
@@ -635,33 +590,39 @@ onMounted(async () => {
   padding: 14px;
   text-align: left;
   width: min(260px, 100%);
+  cursor: pointer;
 }
 
 .mermaid-example-item {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--brand-radius-pill, 999px);
+  color: var(--shell-navy);
   cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  min-height: 32px;
+  padding: 0 12px;
 }
 
 .mermaid-example-item:hover {
   border-color: rgba(16, 37, 66, 0.18);
 }
 
-.mermaid-example-item-active {
-  border-color: var(--brand-color-accent, #102542);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
+.mermaid-example-item:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  outline: none;
 }
 
-.mermaid-example-name,
-.mermaid-sync-name,
-.mermaid-file-title {
+.mermaid-example-item-active {
+  background: rgba(16, 37, 66, 0.08);
+  border-color: var(--brand-color-accent, #102542);
+}
+
+.mermaid-sync-name {
   color: var(--shell-navy);
   font-weight: 800;
-}
-
-.mermaid-file-title {
-  font-family: "Georgia", "Times New Roman", serif;
-  font-size: clamp(1.4rem, 2.5vw, 2rem);
-  margin: 8px 0 0;
-  overflow-wrap: anywhere;
 }
 
 .mermaid-primary-action,
@@ -711,10 +672,6 @@ onMounted(async () => {
   width: min(360px, 100%);
 }
 
-.mermaid-sync-item {
-  cursor: pointer;
-}
-
 .mermaid-sync-item-active {
   border-color: var(--brand-color-accent, #102542);
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
@@ -740,35 +697,6 @@ onMounted(async () => {
 
 .mermaid-editor:focus {
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
-}
-
-.mermaid-summary-grid {
-  display: grid;
-  gap: 14px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 18px;
-}
-
-.mermaid-summary-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--shell-line);
-  border-radius: 18px;
-  padding: 16px;
-  min-width: 0;
-}
-
-.mermaid-summary-value {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
-  font-size: clamp(1.1rem, 2.2vw, 1.8rem);
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
-.mermaid-summary-label {
-  color: rgba(15, 23, 35, 0.6);
-  font-size: 0.88rem;
-  margin-top: 6px;
 }
 
 .mermaid-render-error {
@@ -799,12 +727,21 @@ onMounted(async () => {
 }
 
 .mermaid-preview-empty {
+  align-items: center;
   background: rgba(16, 37, 66, 0.06);
   border: 1px solid rgba(16, 37, 66, 0.08);
   border-radius: var(--brand-radius-md, 16px);
+  display: flex;
+  justify-content: center;
   margin-top: 18px;
   min-height: 340px;
   padding: 24px;
+}
+
+.mermaid-empty-hint {
+  color: rgba(15, 23, 35, 0.6);
+  font-size: 0.95rem;
+  margin: 0;
 }
 
 @media (max-width: 1023px) {
@@ -823,10 +760,6 @@ onMounted(async () => {
 
   .mermaid-actions {
     justify-content: flex-start;
-  }
-
-  .mermaid-summary-grid {
-    grid-template-columns: 1fr;
   }
 
   .mermaid-archive-row {

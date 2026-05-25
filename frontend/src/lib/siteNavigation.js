@@ -36,8 +36,3 @@ export const workspaceNavItems = [
     detail: '内部区域继续保留务实的后台交互方式，同时不把后台视觉带到公开站点里。'
   }
 ]
-
-export const shellStatus = {
-  label: '前台界面',
-  value: 'Reka UI + UnoCSS'
-}

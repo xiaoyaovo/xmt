@@ -2,11 +2,11 @@
 defineProps({
   sourceTitle: {
     type: String,
-    default: '源'
+    default: ''
   },
   previewTitle: {
     type: String,
-    default: '预览'
+    default: ''
   }
 })
 </script>
@@ -19,12 +19,22 @@ defineProps({
 
     <div class="tool-workbench-panes">
       <section class="tool-workbench-pane">
-        <div class="tool-workbench-pane-kicker">{{ sourceTitle }}</div>
+        <div
+          v-if="sourceTitle"
+          class="tool-workbench-pane-kicker"
+        >
+          {{ sourceTitle }}
+        </div>
         <slot name="source" />
       </section>
 
       <section class="tool-workbench-pane">
-        <div class="tool-workbench-pane-kicker">{{ previewTitle }}</div>
+        <div
+          v-if="previewTitle"
+          class="tool-workbench-pane-kicker"
+        >
+          {{ previewTitle }}
+        </div>
         <slot name="preview" />
       </section>
     </div>

@@ -1,19 +1,18 @@
 <template>
   <div class="app-shell">
     <header class="site-shell-header">
-      <div class="site-shell-bar brand-floating-grid">
+      <div class="site-shell-bar">
         <RouterLink
           to="/"
           class="site-brand"
         >
           <span class="site-brand-mark">XM</span>
           <span class="site-brand-copy">
-            <span class="site-brand-kicker">Xinming</span>
-            <span class="site-brand-title">个人站与工具平台</span>
+            <span class="site-brand-title">Xinming</span>
           </span>
         </RouterLink>
 
-        <div class="gt-sm">
+        <div class="gt-sm site-shell-nav">
           <SiteHeaderNavigation
             :items="primaryNavItems"
             :workspace-items="workspaceNavItems"
@@ -21,11 +20,6 @@
         </div>
 
         <div class="site-shell-actions">
-          <div class="site-shell-status gt-sm brand-panel-inset">
-            <span class="site-shell-status-label">{{ shellStatus.label }}</span>
-            <span class="site-shell-status-value">{{ shellStatus.value }}</span>
-          </div>
-
           <div class="gt-sm">
             <SiteThemeSwitcher />
           </div>
@@ -65,7 +59,17 @@
     </header>
 
     <main class="site-shell-main">
-      <router-view />
+      <router-view v-slot="{ Component, route }">
+        <transition
+          name="page-fade"
+          mode="out-in"
+        >
+          <component
+            :is="Component"
+            :key="route.path"
+          />
+        </transition>
+      </router-view>
     </main>
   </div>
 </template>
@@ -75,7 +79,7 @@ import SiteHeaderNavigation from 'src/components/site/SiteHeaderNavigation.vue'
 import SiteMobileNavigation from 'src/components/site/SiteMobileNavigation.vue'
 import SiteThemeSwitcher from 'src/components/site/SiteThemeSwitcher.vue'
 import SiteUserMenu from 'src/components/site/SiteUserMenu.vue'
-import { primaryNavItems, shellStatus, workspaceNavItems } from 'src/lib/siteNavigation'
+import { primaryNavItems, workspaceNavItems } from 'src/lib/siteNavigation'
 import { useAuthStore } from 'src/stores/auth'
 import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -100,7 +104,7 @@ onMounted(() => {
 }
 
 .site-shell-main {
-  min-height: calc(100vh - 78px);
+  min-height: calc(100vh - 64px);
 }
 
 .site-shell-bar {
@@ -110,7 +114,7 @@ onMounted(() => {
   grid-template-columns: auto 1fr auto;
   margin: 0 auto;
   max-width: 1220px;
-  min-height: 78px;
+  min-height: 64px;
   padding: 0 20px;
   position: relative;
 }
@@ -119,7 +123,7 @@ onMounted(() => {
   align-items: center;
   color: inherit;
   display: inline-flex;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
   text-decoration: none;
 }
@@ -128,18 +132,18 @@ onMounted(() => {
   align-items: center;
   aspect-ratio: 1;
   background: var(--brand-color-accent);
-  border-radius: var(--brand-radius-lg, 24px);
-  box-shadow: 0 18px 34px rgba(16, 37, 66, 0.18);
+  border-radius: var(--brand-radius-md, 16px);
+  box-shadow: 0 10px 24px rgba(16, 37, 66, 0.16);
   color: var(--brand-color-highlight, #ffffff);
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  height: 44px;
+  height: 36px;
   justify-content: center;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  width: 44px;
+  width: 36px;
 }
 
 .site-brand-copy {
@@ -149,42 +153,23 @@ onMounted(() => {
   min-width: 0;
 }
 
-.site-brand-kicker,
-.site-shell-status-label {
-  color: rgba(16, 37, 66, 0.54);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
 .site-brand-title {
   color: var(--shell-navy);
-  font-size: 1rem;
+  font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
+.site-shell-nav {
+  justify-self: center;
+}
+
 .site-shell-actions {
   align-items: center;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
-}
-
-.site-shell-status {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 158px;
-  padding: 9px 13px;
-}
-
-.site-shell-status-value {
-  color: var(--shell-navy);
-  font-size: 0.94rem;
-  font-weight: 700;
 }
 
 .site-auth-button {
@@ -196,10 +181,10 @@ onMounted(() => {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 700;
   gap: 8px;
-  min-height: 40px;
+  min-height: 36px;
   padding: 0 13px;
 }
 
@@ -216,12 +201,50 @@ onMounted(() => {
 
 @media (max-width: 699px) {
   .site-shell-bar {
-    min-height: 74px;
+    min-height: 60px;
     padding: 0 16px;
   }
 
   .site-brand-title {
     font-size: 0.92rem;
+  }
+}
+</style>
+
+<style>
+/* Global so transition applies to teleported route content */
+.page-fade-enter-active {
+  transition:
+    opacity 180ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.page-fade-leave-active {
+  transition:
+    opacity 120ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 120ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-enter-active,
+  .page-fade-leave-active {
+    transition: none;
+  }
+
+  .page-fade-enter-from,
+  .page-fade-leave-to {
+    opacity: 1;
+    transform: none;
   }
 }
 </style>

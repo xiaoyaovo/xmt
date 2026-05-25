@@ -45,6 +45,18 @@ Browser-heavy work belongs in a composable when it is independent of layout. `us
 
 When browser APIs may not exist in SSR or tests, guard with `typeof window === 'undefined'` in lower-level helpers. `themeCssVars.js` and `http/index.js` show this pattern.
 
+## Observer-Based Composables
+
+When a composable wraps `IntersectionObserver`, `ResizeObserver`, `MutationObserver`, or similar long-lived browser objects, follow the `useScrollReveal()` pattern (`frontend/src/composables/useScrollReveal.js`):
+
+- Guard for SSR / missing API with `typeof window === 'undefined'` AND `'IntersectionObserver' in window` (or equivalent). In the missing-API branch, degrade to an immediate / no-op behavior so consumers still see usable state.
+- Honor `prefers-reduced-motion: reduce` at **both** layers:
+  - JS layer: bypass observation and immediately mark elements as "revealed" (or whatever the success state is) so animations don't sit in their initial hidden state.
+  - CSS layer: pair with `@media (prefers-reduced-motion: reduce)` in component styles that zero out the entry transform/opacity transition.
+  Doing only one layer leaves a regression — either content stuck invisible (JS-only) or content briefly hidden before fading in (CSS-only).
+- Disconnect the observer in `onScopeDispose` (or `onUnmounted`) so navigating away does not leak listeners. Store the observer in a module-local ref rather than re-creating it per element.
+- Apply per-element stagger via a CSS custom property the composable sets on the element (`--reveal-delay`) rather than recomputing positions in JS each frame.
+
 ## Derived Data
 
 Use `computed()` for derived values that the template consumes, such as:

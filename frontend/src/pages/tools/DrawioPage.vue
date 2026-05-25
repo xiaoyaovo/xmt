@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
+import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
 const drawioOrigin = 'https://embed.diagrams.net'
@@ -37,7 +38,6 @@ const savedXml = shallowRef(starterXml)
 const editorReady = shallowRef(false)
 const drawioError = shallowRef('')
 const savedAt = shallowRef('')
-const messageCount = shallowRef(0)
 const iframeKey = shallowRef(0)
 const syncAfterNextExport = shallowRef(false)
 const syncingExport = shallowRef(false)
@@ -58,12 +58,11 @@ const syncButtonText = computed(() => {
   return accountSync.auth.authenticated ? '保存' : '登录后保存'
 })
 const syncButtonDisabled = computed(() => syncingExport.value || accountSync.saving.value)
-const stats = computed(() => [
-  { label: '连接', value: editorStatus.value },
-  { label: '消息', value: messageCount.value },
-  { label: 'XML', value: xmlCharacters.value },
-  { label: '保存', value: savedAt.value || '尚未保存' }
-])
+const editorMetaText = computed(() => [
+  editorStatus.value,
+  `${xmlCharacters.value} 字符`,
+  savedAt.value ? `已保存 ${savedAt.value}` : '尚未保存'
+].join(' · '))
 
 function formatArchiveDate(value) {
   return new Intl.DateTimeFormat('zh-CN', {
@@ -215,8 +214,6 @@ function handleDrawioMessage(event) {
   const message = parseDrawioMessage(event.data)
   if (!message) return
 
-  messageCount.value += 1
-
   if (message.event === 'init') {
     editorReady.value = true
     loadXml()
@@ -262,35 +259,21 @@ onUnmounted(() => {
 
 <template>
   <div class="tool-detail-page drawio-page">
-    <section class="tool-detail-shell drawio-shell">
-      <div class="tool-detail-header">
-        <div>
-          <div class="section-kicker">Draw.io · iframe embed demo</div>
-          <h1 class="section-title">Draw.io</h1>
-        </div>
-      </div>
+    <ToolPageHeader
+      title="Draw.io"
+      kicker="Draw.io · iframe embed demo"
+    />
 
+    <section class="tool-detail-shell drawio-shell">
       <section class="drawio-canvas-workbench">
         <header class="drawio-workbench-toolbar">
           <section class="drawio-toolbar-block drawio-toolbar-save">
             <div class="drawio-toolbar-head">
-              <div>
-                <div class="section-kicker">保存</div>
-                <h2 class="drawio-toolbar-title">云端存档</h2>
-              </div>
+              <div class="section-kicker">保存</div>
               <span class="drawio-toolbar-status">{{ syncStatusText }}</span>
             </div>
 
-            <div class="drawio-summary-grid">
-              <div
-                v-for="item in stats"
-                :key="item.label"
-                class="drawio-summary-card"
-              >
-                <div class="drawio-summary-value">{{ item.value }}</div>
-                <div class="drawio-summary-label">{{ item.label }}</div>
-              </div>
-            </div>
+            <p class="drawio-editor-meta">{{ editorMetaText }}</p>
 
             <div
               v-if="drawioError || accountSync.errorMessage.value"
@@ -344,10 +327,7 @@ onUnmounted(() => {
 
           <section class="drawio-toolbar-block drawio-toolbar-archive">
             <div class="drawio-toolbar-head">
-              <div>
-                <div class="section-kicker">历史</div>
-                <h2 class="drawio-toolbar-title">云端存档</h2>
-              </div>
+              <div class="section-kicker">历史</div>
               <button
                 class="drawio-ghost-action"
                 type="button"
@@ -412,10 +392,6 @@ onUnmounted(() => {
         <section class="drawio-canvas-pane">
           <article class="drawio-panel drawio-editor-panel">
             <div class="drawio-editor-header">
-              <div>
-                <div class="section-kicker">编辑器</div>
-                <h2 class="drawio-file-title">diagrams.net embed</h2>
-              </div>
               <button
                 class="drawio-ghost-action"
                 type="button"
@@ -480,7 +456,7 @@ onUnmounted(() => {
   align-items: center;
   display: flex;
   gap: 12px;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 
 .drawio-toolbar-block {
@@ -510,18 +486,16 @@ onUnmounted(() => {
   justify-content: space-between;
 }
 
-.drawio-toolbar-title {
-  color: var(--shell-navy);
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.2;
-  margin: 7px 0 0;
-}
-
 .drawio-toolbar-status,
 .drawio-toolbar-empty {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
+}
+
+.drawio-editor-meta {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.88rem;
+  margin: 12px 0 0;
 }
 
 .drawio-toolbar-actions,
@@ -540,35 +514,6 @@ onUnmounted(() => {
   border-radius: var(--brand-radius-md, 16px);
   margin-top: 12px;
   padding: 12px;
-}
-
-.drawio-summary-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-top: 16px;
-}
-
-.drawio-summary-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--shell-line);
-  border-radius: 18px;
-  min-width: 0;
-  padding: 14px;
-}
-
-.drawio-summary-value {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
-  font-size: clamp(1.1rem, 2vw, 1.55rem);
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
-.drawio-summary-label {
-  color: rgba(15, 23, 35, 0.6);
-  font-size: 0.84rem;
-  margin-top: 6px;
 }
 
 .drawio-notice {
@@ -673,14 +618,6 @@ onUnmounted(() => {
   align-self: center;
 }
 
-.drawio-file-title {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
-  font-size: clamp(1.4rem, 2.5vw, 2rem);
-  font-weight: 800;
-  margin: 8px 0 0;
-}
-
 .drawio-frame {
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid var(--shell-line);
@@ -702,10 +639,6 @@ onUnmounted(() => {
   .drawio-toolbar-head {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .drawio-summary-grid {
-    grid-template-columns: 1fr;
   }
 
   .drawio-frame {
