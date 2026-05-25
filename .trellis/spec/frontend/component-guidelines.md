@@ -62,6 +62,13 @@ Disabled controls should use the native `disabled` attribute when possible.
 
 Reka UI primitives are used for hover cards and selects. Keep imported primitives at the top of `<script setup>` and wrap them in project classes so styles remain local to this app.
 
+For iframe-based third-party editors, keep the iframe protocol boundary explicit in the page or a focused composable:
+
+- Pin `postMessage` calls to the expected origin instead of `*`.
+- Ignore messages whose `event.origin` does not match the configured editor origin.
+- Parse message payloads defensively because editor protocols may return error payloads for unsupported actions.
+- For diagrams.net/draw.io embed mode, load XML after the `init` event. To fetch the current XML from the host page, send `{ action: 'export', format: 'xml' }`; `save` is an editor-emitted event, not a host action.
+
 ## Avoid
 
 - Options API for new components.

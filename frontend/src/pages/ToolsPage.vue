@@ -6,7 +6,7 @@
         <h1 class="section-title">选择一个工具，直接进入工作台。</h1>
       </div>
       <p class="section-text">
-        CSV 和 Mermaid 已经接入统一的工作台节奏：先输入或选择内容，再预览结果，最后按需保存、同步或导出。
+        CSV、Mermaid 和 Draw.io demo 已经接入统一的工作台节奏：先输入或选择内容，再预览结果，最后按需保存、同步或导出。
       </p>
     </div>
 
@@ -34,7 +34,7 @@
         <div class="section-kicker">工作台模式</div>
         <h2 class="content-title">进入后先处理内容，再看结果。</h2>
         <p class="section-text">
-          列表页负责快速分流；详情页把输入、预览、历史和导出动作放在同一个视野里。未登录也能先完成本地预览，登录后再使用账号同步。
+          列表页负责快速分流；详情页把输入、预览、历史和导出动作放在同一个视野里。未登录也能先完成本地预览，后续再接账号同步。
         </p>
       </div>
 
@@ -46,9 +46,9 @@
           </div>
         </div>
         <div class="workspace-pane">
-          <div class="workspace-pane-title">Mermaid 流程</div>
+          <div class="workspace-pane-title">图表流程</div>
           <div class="workspace-pane-body">
-            选择示例 -> 编辑源码 -> 实时预览 -> 复制或下载
+            选择示例 -> 编辑图形或源码 -> 保存 XML -> 导出
           </div>
         </div>
       </div>
@@ -60,6 +60,14 @@
 import { RouterLink } from 'vue-router'
 
 const tools = [
+  {
+    title: 'Draw.io Demo',
+    status: 'Demo',
+    text: '通过 iframe embed 运行 diagrams.net，体验完整流程图和白板编辑器。',
+    meta: '当前保存到页面内存，适合验证集成方式。',
+    action: '查看 Demo',
+    to: '/tools/drawio'
+  },
   {
     title: 'Mermaid 编辑器',
     status: '可用',
@@ -75,14 +83,6 @@ const tools = [
     meta: '登录后可保存历史，继续查看或下载原文件。',
     action: '进入 CSV',
     to: '/tools/csv'
-  },
-  {
-    title: '工具扩展位',
-    status: '预留',
-    text: '后续新增工具会继续沿用同一套入口、状态和操作节奏。',
-    meta: '保持统一，不把每个工具做成孤立页面。',
-    action: '即将开放',
-    to: '/tools'
   }
 ]
 </script>
