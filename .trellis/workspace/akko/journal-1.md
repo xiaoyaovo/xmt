@@ -269,3 +269,36 @@ Added a shared ToolArchivePanel for tool cloud archive login/list/empty states, 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: Unify tool save cards
+
+**Date**: 2026-05-25
+**Task**: Unify tool save cards
+**Branch**: `main`
+
+### Summary
+
+Added a shared ToolSavePanel for CSV, Mermaid, and Draw.io save/add-new areas, preserving tool-specific controls through slots while standardizing save labels, helper copy, and account sync prompts.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5258488` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
