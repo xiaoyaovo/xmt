@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
+- **Total Sessions**: 8
 - **Last Active**: 2026-05-25
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~238 | Active |
+| `journal-1.md` | ~271 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-05-25 | Unify tool archive panels | `4634364` | `main` |
 | 7 | 2026-05-25 | Fix Mermaid archive save action | `c5c5b52` | `main` |
 | 6 | 2026-05-25 | Add Mermaid multi archive | `a2843d2` | `main` |
 | 5 | 2026-05-25 | Add Draw.io multi archive | `bb15374` | `main` |

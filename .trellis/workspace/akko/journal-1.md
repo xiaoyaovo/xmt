@@ -236,3 +236,36 @@ Changed Mermaid's primary archive action to save the currently loaded archive, c
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: Unify tool archive panels
+
+**Date**: 2026-05-25
+**Task**: Unify tool archive panels
+**Branch**: `main`
+
+### Summary
+
+Added a shared ToolArchivePanel for tool cloud archive login/list/empty states, wired CSV, Mermaid, and Draw.io to it, and unified user-facing copy around save and cloud archives.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4634364` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
