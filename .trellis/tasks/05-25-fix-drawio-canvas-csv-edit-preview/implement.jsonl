@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package context and required lint/build commands."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"ToolWorkbench layout and draw.io iframe protocol conventions."}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"Composable state conventions for CSV preview parsing and editing."}

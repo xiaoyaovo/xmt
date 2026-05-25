@@ -2,7 +2,6 @@
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
-import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
 const drawioOrigin = 'https://embed.diagrams.net'
@@ -46,7 +45,6 @@ const deletingArchiveKey = shallowRef('')
 const accountSync = useAccountSync('drawio')
 
 const xmlCharacters = computed(() => savedXml.value.length)
-const savedAtText = computed(() => savedAt.value || '尚未保存')
 const editorStatus = computed(() => (editorReady.value ? '已连接' : '初始化中'))
 const syncStatusText = computed(() => {
   if (syncingExport.value) return '准备同步'
@@ -64,7 +62,7 @@ const stats = computed(() => [
   { label: '连接', value: editorStatus.value },
   { label: '消息', value: messageCount.value },
   { label: 'XML', value: xmlCharacters.value },
-  { label: '保存', value: savedAtText.value }
+  { label: '保存', value: savedAt.value || '尚未保存' }
 ])
 
 function formatArchiveDate(value) {
@@ -272,11 +270,8 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <ToolWorkbench
-        source-title="源"
-        preview-title="预览"
-      >
-        <template #toolbar>
+      <section class="drawio-canvas-workbench">
+        <header class="drawio-workbench-toolbar">
           <section class="drawio-toolbar-block drawio-toolbar-save">
             <div class="drawio-toolbar-head">
               <div>
@@ -412,9 +407,9 @@ onUnmounted(() => {
             </div>
             </div>
           </section>
-        </template>
+        </header>
 
-        <template #source>
+        <section class="drawio-canvas-pane">
           <article class="drawio-panel drawio-editor-panel">
             <div class="drawio-editor-header">
               <div>
@@ -439,26 +434,8 @@ onUnmounted(() => {
               allow="clipboard-read; clipboard-write"
             />
           </article>
-        </template>
-
-        <template #preview>
-          <article class="drawio-panel">
-            <div class="drawio-editor-header">
-              <div>
-                <div class="section-kicker">本地数据</div>
-                <h2 class="drawio-file-title">最近导出的 XML</h2>
-              </div>
-              <span class="drawio-toolbar-status">{{ savedAtText }}</span>
-            </div>
-            <textarea
-              class="drawio-xml-preview"
-              :value="savedXml"
-              readonly
-              aria-label="最近保存的 draw.io XML"
-            />
-          </article>
-        </template>
-      </ToolWorkbench>
+        </section>
+      </section>
     </section>
   </div>
 </template>
@@ -472,7 +449,33 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.drawio-panel-topline,
+.drawio-canvas-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 28px;
+}
+
+.drawio-workbench-toolbar,
+.drawio-canvas-pane {
+  background: var(--shell-panel);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: var(--brand-radius-lg, 24px);
+  box-shadow: var(--brand-shadow-card, var(--shell-shadow));
+  min-width: 0;
+}
+
+.drawio-workbench-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 18px;
+}
+
+.drawio-canvas-pane {
+  padding: 22px;
+}
+
 .drawio-editor-header {
   align-items: center;
   display: flex;
@@ -670,20 +673,6 @@ onUnmounted(() => {
   align-self: center;
 }
 
-.drawio-xml-preview {
-  background: #0f1723;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--brand-radius-md, 16px);
-  color: #edf6ff;
-  font: 0.82rem/1.55 "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
-  margin-top: 14px;
-  min-height: 620px;
-  outline: none;
-  padding: 14px;
-  resize: vertical;
-  width: 100%;
-}
-
 .drawio-file-title {
   color: var(--shell-navy);
   font-family: "Georgia", "Times New Roman", serif;
@@ -696,8 +685,9 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid var(--shell-line);
   border-radius: var(--brand-radius-md, 16px);
-  height: 680px;
+  height: min(72vh, 760px);
   margin-top: 16px;
+  min-height: 620px;
   width: 100%;
 }
 
@@ -708,7 +698,6 @@ onUnmounted(() => {
 }
 
 @media (max-width: 599px) {
-  .drawio-panel-topline,
   .drawio-editor-header,
   .drawio-toolbar-head {
     align-items: flex-start;
@@ -721,6 +710,7 @@ onUnmounted(() => {
 
   .drawio-frame {
     height: 520px;
+    min-height: 520px;
   }
 
   .drawio-archive-row {
@@ -734,6 +724,11 @@ onUnmounted(() => {
   .drawio-toolbar-block {
     min-width: 0;
     width: 100%;
+  }
+
+  .drawio-workbench-toolbar,
+  .drawio-canvas-pane {
+    padding: 18px;
   }
 }
 </style>

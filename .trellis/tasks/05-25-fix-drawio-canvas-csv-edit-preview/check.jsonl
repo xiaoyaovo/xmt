@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend lint/build quality gate."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Checks ToolWorkbench usage, concise tool UI, and draw.io iframe boundary behavior."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Pre-commit review checklist for responsive UI and generated files."}
