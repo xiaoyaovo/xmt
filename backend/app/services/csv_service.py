@@ -88,7 +88,12 @@ def inspect_csv_file(path: Path) -> tuple[list[str], int, str]:
     return columns, row_count, getattr(dialect, "delimiter", ",")
 
 
-async def save_upload_file(user: User, upload: UploadFile) -> CsvFile:
+async def save_upload_file(
+    user: User,
+    upload: UploadFile,
+    title: str | None = None,
+    remark: str | None = None,
+) -> CsvFile:
     filename = upload.filename or "data.csv"
     if not filename.lower().endswith(".csv"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="只支持上传 .csv 文件。")
@@ -113,6 +118,9 @@ async def save_upload_file(user: User, upload: UploadFile) -> CsvFile:
         await ensure_user_quota(user, size)
         columns, row_count, delimiter = inspect_csv_file(target_path)
 
+        cleaned_title = (title or "").strip() or None
+        cleaned_remark = (remark or "").strip() or None
+
         return await CsvFile.create(
             user=user,
             original_filename=os.path.basename(filename),
@@ -125,6 +133,8 @@ async def save_upload_file(user: User, upload: UploadFile) -> CsvFile:
             delimiter=delimiter,
             status="ready",
             expires_at=datetime.now() + timedelta(days=settings.csv_retention_days),
+            title=cleaned_title,
+            remark=cleaned_remark,
         )
     except Exception:
         if target_path.exists():

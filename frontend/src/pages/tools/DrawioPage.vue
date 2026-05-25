@@ -9,6 +9,7 @@ import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vu
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
+import ToolSaveDialog from 'src/components/tools/ToolSaveDialog.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
 const drawioOrigin = 'https://embed.diagrams.net'
@@ -50,6 +51,9 @@ const syncingExport = shallowRef(false)
 const deletingArchiveKey = shallowRef('')
 const historyOpen = shallowRef(false)
 const accountSync = useAccountSync('drawio')
+const saveDialogOpen = shallowRef(false)
+const saveDialogDefaults = shallowRef({ title: '', remark: '' })
+const pendingArchiveMeta = shallowRef({ title: '', remark: '' })
 
 const xmlCharacters = computed(() => savedXml.value.length)
 const syncStatusText = computed(() => {
@@ -67,7 +71,10 @@ const historyTriggerLabel = computed(() => {
   if (!accountSync.auth.authenticated) return '未登录 · 登录后同步'
   if (accountSync.loading.value) return '读取中'
   const active = accountSync.activeItem.value
-  if (active?.updated_at) return `历史 · ${formatArchiveDate(active.updated_at)}`
+  if (active) {
+    const activeLabel = (active.title || '').trim() || formatArchiveDate(active.updated_at)
+    return `历史 · ${activeLabel}`
+  }
   if (!accountSync.items.value.length) return '无存档'
   return `历史存档 · ${accountSync.items.value.length}`
 })
@@ -108,6 +115,16 @@ function createArchiveTitle() {
   return `Draw.io 图表 ${formatArchiveDate(new Date())}`
 }
 
+function archiveDisplayTitle(item) {
+  return (item?.title || '').trim() || `Draw.io 图表 ${formatArchiveDate(item.updated_at)}`
+}
+
+function archiveSecondaryLine(item) {
+  const remark = (item?.payload?.remark || '').trim()
+  const stamp = formatArchiveDate(item.updated_at)
+  return remark ? `${remark} · ${stamp}` : stamp
+}
+
 function sendDrawioMessage(message) {
   iframeRef.value?.contentWindow?.postMessage(JSON.stringify(message), drawioOrigin)
 }
@@ -141,16 +158,19 @@ function requestExport() {
   drawioError.value = ''
 }
 
-async function persistSyncedDiagram(xml = savedXml.value) {
+async function persistSyncedDiagram(xml = savedXml.value, { title = '', remark = '' } = {}) {
   const nextItemKey = createArchiveKey()
+  const trimmedTitle = (title || '').trim()
+  const trimmedRemark = (remark || '').trim()
   const item = await accountSync.saveItem({
-    title: createArchiveTitle(),
+    title: trimmedTitle || createArchiveTitle(),
     nextItemKey,
     payload: {
       xml,
       xml_length: xml.length,
       archive_key: nextItemKey,
-      updated_from: 'diagrams.net'
+      updated_from: 'diagrams.net',
+      remark: trimmedRemark
     }
   })
 
@@ -171,6 +191,18 @@ async function saveSyncedDiagram() {
     }
   }
 
+  const active = accountSync.activeItem.value
+  saveDialogDefaults.value = {
+    title: active?.title || '',
+    remark: active?.payload?.remark || ''
+  }
+  saveDialogOpen.value = true
+}
+
+async function handleSaveDialogConfirm({ title, remark }) {
+  pendingArchiveMeta.value = { title, remark }
+  saveDialogOpen.value = false
+
   if (editorReady.value) {
     syncAfterNextExport.value = true
     syncingExport.value = true
@@ -178,7 +210,8 @@ async function saveSyncedDiagram() {
     return
   }
 
-  await persistSyncedDiagram()
+  await persistSyncedDiagram(savedXml.value, { title, remark })
+  pendingArchiveMeta.value = { title: '', remark: '' }
 }
 
 async function openArchive(item) {
@@ -258,7 +291,9 @@ function handleDrawioMessage(event) {
     if (syncAfterNextExport.value) {
       syncAfterNextExport.value = false
       syncingExport.value = false
-      persistSyncedDiagram(xmlPayload)
+      const meta = pendingArchiveMeta.value
+      pendingArchiveMeta.value = { title: '', remark: '' }
+      persistSyncedDiagram(xmlPayload, meta)
     } else if (message.event === 'save' && accountSync.auth.authenticated) {
       persistSyncedDiagram(xmlPayload)
     }
@@ -408,14 +443,14 @@ onUnmounted(() => {
                           type="button"
                           @click="openArchive(item)"
                         >
-                          <span class="drawio-archive-time">{{ formatArchiveDate(item.updated_at) }}</span>
-                          <span class="drawio-archive-meta">{{ item.payload?.xml_length || 0 }} 字符</span>
+                          <span class="drawio-archive-title">{{ archiveDisplayTitle(item) }}</span>
+                          <span class="drawio-archive-meta">{{ archiveSecondaryLine(item) }}</span>
                         </button>
                         <button
                           class="drawio-archive-delete"
                           type="button"
                           :disabled="deletingArchiveKey === item.item_key"
-                          :aria-label="`删除 ${formatArchiveDate(item.updated_at)} 的存档`"
+                          :aria-label="`删除 ${archiveDisplayTitle(item)}`"
                           @click.stop="deleteSyncedDiagram(item)"
                         >
                           {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
@@ -460,6 +495,15 @@ onUnmounted(() => {
           </article>
         </section>
       </section>
+
+      <ToolSaveDialog
+        v-model:open="saveDialogOpen"
+        :default-title="saveDialogDefaults.title"
+        :default-remark="saveDialogDefaults.remark"
+        :busy="accountSync.saving.value || syncingExport"
+        dialog-title="保存到云端存档"
+        @confirm="handleSaveDialogConfirm"
+      />
     </section>
   </div>
 </template>
@@ -520,6 +564,13 @@ onUnmounted(() => {
 
 .drawio-history-trigger {
   display: inline-flex;
+  max-width: 320px;
+}
+
+.drawio-history-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drawio-history-trigger-caret {
@@ -762,16 +813,17 @@ onUnmounted(() => {
 }
 
 .drawio-archive-open {
-  align-items: baseline;
+  align-items: flex-start;
   background: transparent;
   border: 0;
   color: inherit;
   cursor: pointer;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   font: inherit;
-  gap: 10px;
+  gap: 2px;
   min-height: 28px;
+  min-width: 0;
   padding: 2px 0;
   text-align: left;
   width: 100%;
@@ -783,15 +835,23 @@ onUnmounted(() => {
   outline: none;
 }
 
-.drawio-archive-time {
+.drawio-archive-title {
   color: var(--shell-navy, #102542);
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drawio-archive-meta {
   color: rgba(15, 23, 35, 0.55);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .drawio-archive-delete {

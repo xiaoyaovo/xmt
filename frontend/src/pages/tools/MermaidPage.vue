@@ -10,6 +10,7 @@ import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
+import ToolSaveDialog from 'src/components/tools/ToolSaveDialog.vue'
 import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
@@ -62,6 +63,9 @@ const deletingArchiveKey = shallowRef('')
 const historyOpen = shallowRef(false)
 const previewRef = useTemplateRef('preview')
 const accountSync = useAccountSync('mermaid')
+const saveDialogOpen = shallowRef(false)
+const saveDialogMode = shallowRef('save')
+const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 
 let renderTimer = 0
 let renderSequence = 0
@@ -90,7 +94,10 @@ const historyTriggerLabel = computed(() => {
   if (!accountSync.auth.authenticated) return '未登录 · 登录后同步'
   if (accountSync.loading.value) return '读取中'
   const active = accountSync.activeItem.value
-  if (active?.updated_at) return `历史 · ${formatArchiveDate(active.updated_at)}`
+  if (active) {
+    const activeLabel = (active.title || '').trim() || formatArchiveDate(active.updated_at)
+    return `历史 · ${activeLabel}`
+  }
   if (!accountSync.items.value.length) return '无存档'
   return `历史存档 · ${accountSync.items.value.length}`
 })
@@ -160,14 +167,25 @@ function createArchiveTitle() {
   return `Mermaid 图表 ${formatArchiveDate(new Date())}`
 }
 
-function createArchivePayload(itemKey) {
+function createArchivePayload(itemKey, { remark = '' } = {}) {
   return {
     source: source.value,
     line_count: sourceLines.value,
     character_count: sourceCharacters.value,
     archive_key: itemKey,
-    updated_from: 'mermaid-editor'
+    updated_from: 'mermaid-editor',
+    remark: remark || ''
   }
+}
+
+function archiveDisplayTitle(item) {
+  return (item?.title || '').trim() || `Mermaid 图表 ${formatArchiveDate(item.updated_at)}`
+}
+
+function archiveSecondaryLine(item) {
+  const remark = (item?.payload?.remark || '').trim()
+  const stamp = formatArchiveDate(item.updated_at)
+  return remark ? `${remark} · ${stamp}` : stamp
 }
 
 async function renderDiagram() {
@@ -230,24 +248,65 @@ function openArchive(item) {
   }
 }
 
-async function persistSyncedSource({ forceNew = false } = {}) {
+async function persistSyncedSource({ forceNew = false, title = '', remark = '' } = {}) {
   const activeItemKey = accountSync.activeItem.value?.item_key
   const nextItemKey = forceNew || !activeItemKey ? createArchiveKey() : activeItemKey
   const isNewArchive = nextItemKey !== activeItemKey
+  const trimmedTitle = (title || '').trim()
+  const fallbackTitle = isNewArchive
+    ? createArchiveTitle()
+    : accountSync.activeItem.value?.title || createArchiveTitle()
   const item = await accountSync.saveItem({
-    title: isNewArchive ? createArchiveTitle() : accountSync.activeItem.value?.title || createArchiveTitle(),
+    title: trimmedTitle || fallbackTitle,
     nextItemKey,
-    payload: createArchivePayload(nextItemKey)
+    payload: createArchivePayload(nextItemKey, { remark })
   })
   if (item) actionError.value = ''
 }
 
+function openSaveDialog(mode = 'save') {
+  saveDialogMode.value = mode
+  if (mode === 'save') {
+    const active = accountSync.activeItem.value
+    saveDialogDefaults.value = {
+      title: active?.title || '',
+      remark: active?.payload?.remark || ''
+    }
+  } else {
+    saveDialogDefaults.value = { title: '', remark: '' }
+  }
+  saveDialogOpen.value = true
+}
+
 async function saveSyncedSource() {
-  await persistSyncedSource()
+  if (!accountSync.auth.authenticated) {
+    const authenticated = await accountSync.ensureAuth()
+    if (!authenticated) {
+      accountSync.login()
+      return
+    }
+  }
+  openSaveDialog('save')
 }
 
 async function saveSyncedSourceAsNew() {
-  await persistSyncedSource({ forceNew: true })
+  if (!accountSync.auth.authenticated) {
+    const authenticated = await accountSync.ensureAuth()
+    if (!authenticated) {
+      accountSync.login()
+      return
+    }
+  }
+  openSaveDialog('save-as-new')
+}
+
+async function handleSaveDialogConfirm({ title, remark }) {
+  await persistSyncedSource({
+    forceNew: saveDialogMode.value === 'save-as-new',
+    title,
+    remark
+  })
+  saveDialogOpen.value = false
 }
 
 async function deleteSyncedSource(item) {
@@ -413,14 +472,14 @@ onMounted(async () => {
                           type="button"
                           @click="openArchive(item)"
                         >
-                          <span class="mermaid-archive-time">{{ formatArchiveDate(item.updated_at) }}</span>
-                          <span class="mermaid-archive-meta">{{ item.payload?.character_count || 0 }} 字符</span>
+                          <span class="mermaid-archive-title">{{ archiveDisplayTitle(item) }}</span>
+                          <span class="mermaid-archive-meta">{{ archiveSecondaryLine(item) }}</span>
                         </button>
                         <button
                           class="mermaid-archive-delete"
                           type="button"
                           :disabled="deletingArchiveKey === item.item_key"
-                          :aria-label="`删除 ${formatArchiveDate(item.updated_at)} 的存档`"
+                          :aria-label="`删除 ${archiveDisplayTitle(item)}`"
                           @click.stop="deleteSyncedSource(item)"
                         >
                           {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
@@ -537,6 +596,15 @@ onMounted(async () => {
           </article>
         </template>
       </ToolWorkbench>
+
+      <ToolSaveDialog
+        v-model:open="saveDialogOpen"
+        :default-title="saveDialogDefaults.title"
+        :default-remark="saveDialogDefaults.remark"
+        :busy="accountSync.saving.value"
+        :dialog-title="saveDialogMode === 'save-as-new' ? '另存为新存档' : '保存到云端存档'"
+        @confirm="handleSaveDialogConfirm"
+      />
     </section>
   </div>
 </template>
@@ -584,6 +652,13 @@ onMounted(async () => {
 
 .mermaid-history-trigger {
   display: inline-flex;
+  max-width: 320px;
+}
+
+.mermaid-history-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mermaid-history-trigger-caret {
@@ -882,16 +957,17 @@ onMounted(async () => {
 }
 
 .mermaid-archive-open {
-  align-items: baseline;
+  align-items: flex-start;
   background: transparent;
   border: 0;
   color: inherit;
   cursor: pointer;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   font: inherit;
-  gap: 10px;
+  gap: 2px;
   min-height: 28px;
+  min-width: 0;
   padding: 2px 0;
   text-align: left;
   width: 100%;
@@ -903,15 +979,23 @@ onMounted(async () => {
   outline: none;
 }
 
-.mermaid-archive-time {
+.mermaid-archive-title {
   color: var(--shell-navy, #102542);
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mermaid-archive-meta {
   color: rgba(15, 23, 35, 0.55);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mermaid-archive-delete {

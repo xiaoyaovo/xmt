@@ -18,6 +18,7 @@ import { computed, onMounted, shallowRef } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
+import ToolSaveDialog from 'src/components/tools/ToolSaveDialog.vue'
 import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 import { useCsvPreview } from 'src/composables/useCsvPreview'
@@ -46,6 +47,8 @@ const page = shallowRef(1)
 const rowsPerPage = shallowRef(200)
 const rowsPerPageOptions = [200, 500, 1000]
 const historyOpen = shallowRef(false)
+const saveDialogOpen = shallowRef(false)
+const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 
 const totalPages = computed(() => {
   if (!activeFile.value?.row_count) return 1
@@ -94,12 +97,26 @@ const historyTriggerLabel = computed(() => {
   if (!auth.initialized || auth.loading) return '检查登录中'
   if (!auth.authenticated) return '未登录 · 登录后同步'
   if (loadingFiles.value) return '读取中'
-  if (activeSource.value === 'history' && activeFile.value?.created_at) {
-    return `历史 · ${formatDate(activeFile.value.created_at)}`
+  if (activeSource.value === 'history' && activeFile.value) {
+    const fallback = activeFile.value.created_at ? formatDate(activeFile.value.created_at) : ''
+    const activeLabel = (activeFile.value.title || '').trim()
+      || activeFile.value.original_filename
+      || fallback
+    return `历史 · ${activeLabel}`
   }
   if (!files.value.length) return '无存档'
   return `历史存档 · ${files.value.length}`
 })
+
+function csvFileDisplayTitle(file) {
+  return (file?.title || '').trim() || file?.original_filename || ''
+}
+
+function csvFileSecondaryLine(file) {
+  const remark = (file?.remark || '').trim()
+  const stamp = file?.created_at ? formatDate(file.created_at) : ''
+  return remark ? `${remark} · ${stamp}` : stamp
+}
 
 const historyTriggerDisabled = computed(() => {
   if (!auth.initialized || auth.loading) return true
@@ -242,7 +259,7 @@ function createCsvFileFromSource(filename) {
   return new File([localPreview.sourceText.value], safeFilename, { type: 'text/csv;charset=utf-8' })
 }
 
-async function saveCsvVersion() {
+async function persistCsvVersion({ title = '', remark = '' } = {}) {
   if (!canSaveCsv.value) return
 
   if (!auth.authenticated) {
@@ -254,7 +271,7 @@ async function saveCsvVersion() {
   uploading.value = true
   errorMessage.value = ''
   try {
-    const uploaded = await uploadCsvFile(editedFile)
+    const uploaded = await uploadCsvFile(editedFile, { title, remark })
     await refreshFiles()
     await selectHistoryFile(uploaded)
   } catch (error) {
@@ -265,7 +282,24 @@ async function saveCsvVersion() {
 }
 
 async function saveLocalFile() {
-  await saveCsvVersion()
+  if (!canSaveCsv.value) return
+
+  if (!auth.authenticated) {
+    accountSync.login()
+    return
+  }
+
+  const active = activeSource.value === 'history' ? activeFile.value : null
+  saveDialogDefaults.value = {
+    title: active?.title || '',
+    remark: active?.remark || ''
+  }
+  saveDialogOpen.value = true
+}
+
+async function handleSaveDialogConfirm({ title, remark }) {
+  await persistCsvVersion({ title, remark })
+  saveDialogOpen.value = false
 }
 
 async function handleFileInput(event) {
@@ -454,16 +488,14 @@ onMounted(async () => {
                           type="button"
                           @click="selectHistoryFile(file)"
                         >
-                          <span class="csv-history-time">{{ formatDate(file.created_at) }}</span>
-                          <span class="csv-history-meta">
-                            {{ file.row_count }} 行 · {{ formatBytes(file.size) }}
-                          </span>
+                          <span class="csv-history-title">{{ csvFileDisplayTitle(file) }}</span>
+                          <span class="csv-history-meta">{{ csvFileSecondaryLine(file) }}</span>
                         </button>
                         <button
                           class="csv-history-delete"
                           type="button"
                           :disabled="deletingId === file.id"
-                          :aria-label="`删除 ${file.original_filename || formatDate(file.created_at)}`"
+                          :aria-label="`删除 ${csvFileDisplayTitle(file)}`"
                           @click.stop="removeFile(file)"
                         >
                           {{ deletingId === file.id ? '...' : '×' }}
@@ -669,6 +701,15 @@ onMounted(async () => {
           </article>
         </template>
       </ToolWorkbench>
+
+      <ToolSaveDialog
+        v-model:open="saveDialogOpen"
+        :default-title="saveDialogDefaults.title"
+        :default-remark="saveDialogDefaults.remark"
+        :busy="uploading"
+        dialog-title="保存到云端存档"
+        @confirm="handleSaveDialogConfirm"
+      />
     </section>
   </div>
 </template>
@@ -715,6 +756,13 @@ onMounted(async () => {
 
 .csv-history-trigger {
   display: inline-flex;
+  max-width: 320px;
+}
+
+.csv-history-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .csv-history-trigger-caret {
@@ -1072,16 +1120,17 @@ onMounted(async () => {
 }
 
 .csv-history-open {
-  align-items: baseline;
+  align-items: flex-start;
   background: transparent;
   border: 0;
   color: inherit;
   cursor: pointer;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   font: inherit;
-  gap: 10px;
+  gap: 2px;
   min-height: 28px;
+  min-width: 0;
   padding: 2px 0;
   text-align: left;
   width: 100%;
@@ -1093,15 +1142,23 @@ onMounted(async () => {
   outline: none;
 }
 
-.csv-history-time {
+.csv-history-title {
   color: var(--shell-navy, #102542);
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .csv-history-meta {
   color: rgba(15, 23, 35, 0.55);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .csv-history-delete {

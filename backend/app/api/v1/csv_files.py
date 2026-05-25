@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
 
 from app.api.dependencies import require_current_user
@@ -32,15 +32,19 @@ def serialize_csv_file(item: CsvFile) -> CsvFileResponse:
         expires_at=item.expires_at,
         created_at=item.created_at,
         updated_at=item.updated_at,
+        title=item.title,
+        remark=item.remark,
     )
 
 
 @router.post("/files", response_model=CsvFileResponse, summary="Upload CSV file")
 async def upload_csv_file(
     file: UploadFile = File(...),
+    title: str | None = Form(default=None, max_length=255),
+    remark: str | None = Form(default=None),
     user: User = Depends(require_current_user),
 ) -> CsvFileResponse:
-    item = await save_upload_file(user, file)
+    item = await save_upload_file(user, file, title=title, remark=remark)
     return serialize_csv_file(item)
 
 

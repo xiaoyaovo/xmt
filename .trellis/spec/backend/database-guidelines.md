@@ -64,6 +64,8 @@ When changing models:
 - Include indexes for common access patterns, such as user plus created/updated time.
 - Keep foreign keys cascading when child data has no meaning after the user is removed.
 
+> **Gotcha — `MODELS_STATE` snapshot drifts on hand-written migrations.** Aerich's auto-`migrate` command diffs the current models against the `MODELS_STATE` blob baked into the most recent migration file (see `0_20260519174335_init.py` for the format). The hand-written migrations in this project (`2_...`, `3_...`) do NOT update that blob. The next time someone runs `aerich migrate`, the diff will be computed against the stale snapshot from `1_...` and will re-emit columns that have already been added by `2_...` and `3_...`. When you write a new migration, either: (a) keep hand-writing and accept that future auto-`migrate` runs need manual cleanup, or (b) regenerate the `MODELS_STATE` blob by running `aerich init-db` against a clean DB and copying the resulting snapshot. Pick deliberately; mixing styles invisibly causes duplicate-column errors at deploy time.
+
 ## Runtime File Storage
 
 Uploaded CSV bytes are not stored in the database. `CsvFile.storage_path` points at files under `backend/storage/`, and that directory is ignored by git.
@@ -79,6 +81,16 @@ Use `tool_sync_items` for authenticated, JSON-shaped per-tool state that does no
 - `item_key`
 
 That tuple must stay unique. `tool_key` is the module namespace (`mermaid`, `csv`, future tools). `item_key` is stable inside that module (`default`, a document id, or another deterministic key). Store flexible data in `payload` and optional display text in `title`.
+
+**Conventional `payload` fields.** When multiple tools need the same kind of flexible data, keep the JSON key consistent so frontend code can be shared:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `payload.remark` | `string \| null` | User-supplied free-text note about this archive. Optional. Trimmed by frontend; empty string treated as absent. Surfaced as the second line in history rows. |
+| `payload.character_count` | `int` | Mermaid: source character length. Display-only; do not rely on for ordering. |
+| `payload.source` | `string` | Mermaid: the raw mermaid source. Drawio: the diagram XML. |
+
+When a tool needs a new shared concept that crosses this convention, add a row here before you start using a new key.
 
 Do not use this table for binary or file-backed resources. CSV files keep `csv_files` because they need quotas, file paths, row pagination, and download behavior.
 

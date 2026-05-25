@@ -16,6 +16,8 @@ class CsvFile(BaseModel):
     status = fields.CharField(max_length=32, default="ready")
     error_message = fields.TextField(null=True)
     expires_at = fields.DatetimeField()
+    title = fields.CharField(max_length=255, null=True)
+    remark = fields.TextField(null=True)
 
     class Meta:
         table = "csv_files"

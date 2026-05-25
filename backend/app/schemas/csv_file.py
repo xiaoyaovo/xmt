@@ -16,6 +16,8 @@ class CsvFileResponse(BaseModel):
     expires_at: datetime
     created_at: datetime
     updated_at: datetime
+    title: str | None = None
+    remark: str | None = None
 
 
 class CsvFileListResponse(BaseModel):

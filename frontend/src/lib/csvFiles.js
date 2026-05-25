@@ -1,9 +1,11 @@
 import { request } from './http'
 import { API_BASE_URL } from './http'
 
-export function uploadCsvFile(file) {
+export function uploadCsvFile(file, { title = '', remark = '' } = {}) {
   const formData = new FormData()
   formData.append('file', file)
+  if (title) formData.append('title', title)
+  if (remark) formData.append('remark', remark)
   return request.post('/csv/files', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'

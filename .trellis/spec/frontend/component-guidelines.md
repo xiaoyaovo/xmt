@@ -56,6 +56,15 @@ For tool history/archive sections that are not inside `ToolWorkbench.vue`, use `
 
 For tool save/add-new sections that are not inside `ToolWorkbench.vue`, use `ToolSavePanel.vue` for the shared card shell, primary save action, optional save-as/new action, helper copy, and account sync prompt. Put tool-specific pickers, examples, status summaries, and secondary actions in slots. Keep save cards aligned across tools: the shared top line should read as a save surface (`保存` kicker, right-side archive/sync status). The kicker alone identifies the section — do NOT also render a redundant `<h2>云端存档</h2>` next to a `保存` or `历史` kicker; pick one label per section, not both.
 
+For the actual "save with metadata" UX (collecting an archive name + remark from the user before persisting), use `frontend/src/components/tools/ToolSaveDialog.vue` rather than rolling per-tool inline forms. It is a Reka Dialog wrapper with:
+- `v-model:open` (boolean)
+- Props: `defaultTitle` (string), `defaultRemark` (string), `dialogTitle` (override), `dialogDescription`, `busy`
+- Emits: `update:open`, `confirm({ title: string, remark: string })` (trimmed; empty strings allowed → backend treats as null), `cancel`
+
+Open the dialog from the `保存` / `另存为新存档` button, pre-populating `defaultTitle` / `defaultRemark` with the active archive's existing values in overwrite mode, or empty strings in save-as-new mode. On `confirm`, call the existing persist function with the entered values. Both fields are always optional — never enforce required input. The dialog applies the PopoverPortal-unscoped-styles lesson: its overlay + content styles live in an unscoped block with a solid background. Same gotcha section below covers `DialogPortal`.
+
+When a trigger label (`*-history-trigger`, `*-save-trigger`, etc.) can display user-supplied text, cap it: `max-width: 320px` on the trigger plus `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` on the inner label span. Otherwise a 100-char user title pushes neighboring toolbar buttons off the row. This applies whenever the label content is not under the developer's control.
+
 `ToolWorkbench.vue`'s `source-title` and `preview-title` props default to empty and only render when set. Omit them when the pane's identity is already obvious from its content (a source textarea is a source pane, a rendered diagram is a preview pane). Pass them only when there is a real disambiguation need (e.g., a file name or active diagram label).
 
 Workspace stats (row counts, sync time, character length, connection state) belong as **one** inline muted text line below the toolbar head — not as a 3- or 4-card stat grid. Stat-card chrome (`*-summary-grid`, `*-toolbar-stats`) inflates the toolbar without earning its space. Reserve cards for repeated items (history list rows) or genuinely separate surfaces, not for header decoration.
