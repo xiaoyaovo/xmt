@@ -335,3 +335,36 @@ Updated the CSV ToolSavePanel copy so it presents as a save/archive card rather 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 11: Align tool save cards
+
+**Date**: 2026-05-25
+**Task**: Align tool save cards
+**Branch**: `main`
+
+### Summary
+
+Aligned CSV and Mermaid save panels with Draw.io by standardizing the save-card header, archive status, and summary grid, and documented the shared ToolSavePanel convention.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3844861` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
