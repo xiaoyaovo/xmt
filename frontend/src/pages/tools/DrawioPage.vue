@@ -41,6 +41,7 @@ const messageCount = shallowRef(0)
 const iframeKey = shallowRef(0)
 const syncAfterNextExport = shallowRef(false)
 const syncingExport = shallowRef(false)
+const deletingArchiveKey = shallowRef('')
 const accountSync = useAccountSync('drawio')
 
 const xmlCharacters = computed(() => savedXml.value.length)
@@ -50,7 +51,7 @@ const syncStatusText = computed(() => {
   if (syncingExport.value) return '准备同步'
   if (accountSync.saving.value) return '正在同步'
   if (accountSync.loading.value) return '正在读取云端'
-  return accountSync.activeItem.value ? '已加载云端草稿' : accountSync.syncLabel.value
+  return accountSync.items.value.length ? `${accountSync.items.value.length} 个云端存档` : accountSync.syncLabel.value
 })
 const syncButtonText = computed(() => {
   if (syncingExport.value) return '准备同步...'
@@ -64,6 +65,25 @@ const stats = computed(() => [
   { label: 'XML', value: xmlCharacters.value },
   { label: '保存', value: savedAtText.value }
 ])
+
+function formatArchiveDate(value) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value))
+}
+
+function createArchiveKey() {
+  const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `archive-${timestamp}-${suffix}`
+}
+
+function createArchiveTitle() {
+  return `Draw.io 图表 ${formatArchiveDate(new Date())}`
+}
 
 function sendDrawioMessage(message) {
   iframeRef.value?.contentWindow?.postMessage(JSON.stringify(message), drawioOrigin)
@@ -104,32 +124,21 @@ function requestExport() {
   lastEvent.value = '已向 draw.io 请求导出 XML。'
 }
 
-async function loadSyncedDiagram() {
-  const item = await accountSync.loadItem()
-  const xml = item?.payload?.xml
-
-  if (typeof xml === 'string' && xml.trim()) {
-    savedXml.value = xml
-    savedAt.value = ''
-    loadXml(xml)
-    lastEvent.value = '已读取账号同步的 Draw.io 草稿。'
-  } else if (accountSync.auth.authenticated) {
-    lastEvent.value = '账号里还没有 Draw.io 草稿。'
-  }
-}
-
 async function persistSyncedDiagram(xml = savedXml.value) {
+  const nextItemKey = createArchiveKey()
   const item = await accountSync.saveItem({
-    title: 'Draw.io 默认图表',
+    title: createArchiveTitle(),
+    nextItemKey,
     payload: {
       xml,
       xml_length: xml.length,
+      archive_key: nextItemKey,
       updated_from: 'diagrams.net'
     }
   })
 
   if (item) {
-    lastEvent.value = '已同步 Draw.io 草稿到账号。'
+    lastEvent.value = '已新增 Draw.io 云端存档。'
     sendSavedStatus()
   }
 
@@ -155,14 +164,32 @@ async function saveSyncedDiagram() {
   await persistSyncedDiagram()
 }
 
-async function deleteSyncedDiagram() {
-  const deleted = await accountSync.deleteItem()
-  if (deleted) {
-    savedXml.value = starterXml
-    savedAt.value = ''
-    loadXml(starterXml)
-    lastEvent.value = '已删除账号同步草稿，并恢复示例图。'
+async function openArchive(item) {
+  const xml = item?.payload?.xml
+  if (typeof xml !== 'string' || !xml.trim()) {
+    lastEvent.value = '这个存档没有可读取的 XML。'
+    return
   }
+
+  accountSync.activeItem.value = item
+  savedXml.value = xml
+  savedAt.value = ''
+  loadXml(xml)
+  lastEvent.value = '已载入 Draw.io 云端存档。'
+}
+
+async function deleteSyncedDiagram(item) {
+  if (!item?.item_key) return
+
+  deletingArchiveKey.value = item.item_key
+  const deleted = await accountSync.deleteItem(item.item_key)
+  if (deleted) {
+    if (accountSync.activeItem.value?.item_key === item.item_key) {
+      accountSync.activeItem.value = null
+    }
+    lastEvent.value = '已删除 Draw.io 云端存档。'
+  }
+  deletingArchiveKey.value = ''
 }
 
 function resetDemo() {
@@ -240,7 +267,7 @@ function handleDrawioMessage(event) {
 
 onMounted(async () => {
   window.addEventListener('message', handleDrawioMessage)
-  await loadSyncedDiagram()
+  await accountSync.loadItems()
 })
 
 onUnmounted(() => {
@@ -267,7 +294,7 @@ onUnmounted(() => {
             <div class="drawio-panel-topline">
               <div>
                 <div class="section-kicker">存档</div>
-                <h2 class="bench-title">账号草稿</h2>
+                <h2 class="bench-title">账号存档</h2>
               </div>
               <span class="drawio-status">{{ syncStatusText }}</span>
             </div>
@@ -327,13 +354,13 @@ onUnmounted(() => {
               </button>
             </div>
             <p class="drawio-helper">
-              同步时会先从 draw.io 取回最新 XML，再保存为账号下的一份默认草稿。
+              同步时会先从 draw.io 取回最新 XML，再新增为一条账号存档。
             </p>
             <AccountSyncPanel
               :authenticated="accountSync.auth.authenticated"
               :loading="accountSync.auth.loading"
               :label="accountSync.syncLabel.value"
-              description="登录后可把当前 Draw.io 图表 XML 同步到账号，下次继续编辑。"
+              description="登录后可把当前 Draw.io 图表 XML 保存为账号存档，下次继续编辑。"
               @login="accountSync.login"
             />
           </article>
@@ -356,7 +383,7 @@ onUnmounted(() => {
             <div class="section-kicker">同步</div>
             <h2 class="bench-title">登录后启用图表存档</h2>
             <p class="drawio-helper">
-              当前版本保存一份默认 Draw.io 草稿；多图历史后续可以再扩展。
+              每次同步都会新增一条 Draw.io 存档，便于保留不同版本或不同图表。
             </p>
             <button
               class="drawio-primary-action drawio-auth-action"
@@ -375,45 +402,57 @@ onUnmounted(() => {
             <div class="drawio-panel-topline">
               <div>
                 <div class="section-kicker">同步</div>
-                <h2 class="bench-title">云端草稿</h2>
+                <h2 class="bench-title">云端存档</h2>
               </div>
               <button
                 class="drawio-ghost-action"
                 type="button"
                 :disabled="accountSync.loading.value"
-                @click="loadSyncedDiagram"
+                @click="accountSync.loadItems"
               >
-                {{ accountSync.loading.value ? '读取中' : '读取云端' }}
+                {{ accountSync.loading.value ? '刷新中' : '刷新' }}
               </button>
             </div>
             <div
-              v-if="!accountSync.activeItem.value"
+              v-if="!accountSync.items.value.length"
               class="drawio-empty"
             >
-              还没有 Draw.io 同步草稿。
+              还没有 Draw.io 云端存档。
             </div>
-            <div
-              v-else
-              class="drawio-sync-item"
-            >
-              <span class="drawio-sync-name">{{ accountSync.activeItem.value.title || 'Draw.io 默认图表' }}</span>
-              <span class="drawio-sync-meta">{{ syncStatusText }}</span>
-            </div>
-            <button
-              class="drawio-ghost-action drawio-danger-action drawio-sync-delete"
-              type="button"
-              :disabled="!accountSync.activeItem.value || accountSync.deleting.value"
-              @click="deleteSyncedDiagram"
-            >
-              {{ accountSync.deleting.value ? '删除中' : '删除云端' }}
-            </button>
+            <template v-else>
+              <div
+                v-for="item in accountSync.items.value"
+                :key="item.item_key"
+                class="drawio-archive-row"
+              >
+                <button
+                  class="drawio-sync-item"
+                  :class="{ 'drawio-sync-item-active': accountSync.activeItem.value?.item_key === item.item_key }"
+                  type="button"
+                  @click="openArchive(item)"
+                >
+                  <span class="drawio-sync-name">{{ item.title || 'Draw.io 图表' }}</span>
+                  <span class="drawio-sync-meta">
+                    {{ item.payload?.xml_length || 0 }} 字符 · {{ formatArchiveDate(item.updated_at) }}
+                  </span>
+                </button>
+                <button
+                  class="drawio-ghost-action drawio-danger-action drawio-archive-delete"
+                  type="button"
+                  :disabled="deletingArchiveKey === item.item_key"
+                  @click="deleteSyncedDiagram(item)"
+                >
+                  {{ deletingArchiveKey === item.item_key ? '删除中' : '删除' }}
+                </button>
+              </div>
+            </template>
           </article>
 
           <article class="drawio-panel">
             <div class="section-kicker">数据</div>
             <h2 class="bench-title">最近保存的 XML</h2>
             <p class="drawio-helper">
-              当前页面会保留最近一次从 draw.io 导出的 XML；登录后可同步为账号草稿。
+              当前页面会保留最近一次从 draw.io 导出的 XML；登录后可新增为账号存档。
             </p>
             <textarea
               class="drawio-xml-preview"
@@ -592,8 +631,7 @@ onUnmounted(() => {
   margin: 12px 0 0;
 }
 
-.drawio-auth-action,
-.drawio-sync-delete {
+.drawio-auth-action {
   margin-top: 16px;
   width: 100%;
 }
@@ -617,18 +655,31 @@ onUnmounted(() => {
   padding: 16px;
 }
 
+.drawio-archive-row {
+  align-items: stretch;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 12px;
+}
+
 .drawio-sync-item {
   background: rgba(255, 255, 255, 0.66);
   border: 1px solid var(--shell-line);
   border-radius: var(--brand-radius-md, 16px);
   color: inherit;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 14px;
   padding: 14px;
   text-align: left;
   width: 100%;
+}
+
+.drawio-sync-item-active {
+  border-color: var(--brand-color-accent, #102542);
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
 }
 
 .drawio-sync-name {
@@ -639,6 +690,10 @@ onUnmounted(() => {
 .drawio-sync-meta {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
+}
+
+.drawio-archive-delete {
+  align-self: center;
 }
 
 .drawio-xml-preview {
@@ -707,6 +762,14 @@ onUnmounted(() => {
 
   .drawio-frame {
     height: 520px;
+  }
+
+  .drawio-archive-row {
+    grid-template-columns: 1fr;
+  }
+
+  .drawio-archive-delete {
+    align-self: stretch;
   }
 }
 </style>
