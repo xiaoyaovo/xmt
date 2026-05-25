@@ -2,8 +2,8 @@
 import mermaid from 'mermaid'
 import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 
-import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolArchivePanel from 'src/components/tools/ToolArchivePanel.vue'
+import ToolSavePanel from 'src/components/tools/ToolSavePanel.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
 const defaultSource = `flowchart LR
@@ -294,15 +294,23 @@ onMounted(async () => {
 
       <section class="mermaid-workspace">
         <aside class="mermaid-sidebar">
-          <article class="mermaid-panel">
-            <div class="mermaid-panel-topline">
-              <div>
-                <div class="section-kicker">编辑</div>
-                <h2 class="bench-title">选择 Mermaid 示例</h2>
-              </div>
-              <span class="mermaid-limit">{{ syncStatusText }}</span>
-            </div>
-
+          <ToolSavePanel
+            title="选择 Mermaid 示例"
+            kicker="编辑"
+            :status="syncStatusText"
+            :save-label="accountSync.saving.value ? '保存中...' : accountSync.auth.authenticated ? '保存' : '登录后保存'"
+            save-as-label="另存为新存档"
+            :save-disabled="accountSync.saving.value"
+            :save-as-disabled="accountSync.saving.value"
+            helper="保存会更新当前打开的云端存档；未打开存档时会创建第一条。需要保留副本时使用另存为新存档。"
+            :authenticated="accountSync.auth.authenticated"
+            :auth-loading="accountSync.auth.loading"
+            :sync-label="accountSync.syncLabel.value"
+            sync-description="登录后可把当前 Mermaid 源码保存为云端存档，并在其他设备继续编辑。"
+            @save="saveSyncedSource"
+            @save-as="saveSyncedSourceAsNew"
+            @login="accountSync.login"
+          >
             <button
               v-for="example in examples"
               :key="example.name"
@@ -315,23 +323,7 @@ onMounted(async () => {
               <span class="mermaid-example-meta">{{ example.description }}</span>
             </button>
 
-            <div class="mermaid-upload-actions">
-              <button
-                class="mermaid-primary-action"
-                type="button"
-                :disabled="accountSync.saving.value"
-                @click="saveSyncedSource"
-              >
-                {{ accountSync.saving.value ? '保存中...' : accountSync.auth.authenticated ? '保存' : '登录后保存' }}
-              </button>
-              <button
-                class="mermaid-ghost-action"
-                type="button"
-                :disabled="accountSync.saving.value"
-                @click="saveSyncedSourceAsNew"
-              >
-                另存为新存档
-              </button>
+            <template #actions>
               <button
                 class="mermaid-ghost-action"
                 type="button"
@@ -339,18 +331,8 @@ onMounted(async () => {
               >
                 重置示例
               </button>
-            </div>
-            <p class="mermaid-helper">
-              保存会更新当前打开的云端存档；未打开存档时会创建第一条。需要保留副本时使用另存为新存档。
-            </p>
-            <AccountSyncPanel
-              :authenticated="accountSync.auth.authenticated"
-              :loading="accountSync.auth.loading"
-              :label="accountSync.syncLabel.value"
-              description="登录后可把当前 Mermaid 源码保存为云端存档，并在其他设备继续编辑。"
-              @login="accountSync.login"
-            />
-          </article>
+            </template>
+          </ToolSavePanel>
 
           <ToolArchivePanel
             :initialized="accountSync.auth.initialized"
@@ -531,7 +513,6 @@ onMounted(async () => {
   min-width: 0;
 }
 
-.mermaid-panel-topline,
 .mermaid-preview-header,
 .mermaid-actions {
   align-items: center;
@@ -539,7 +520,6 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.mermaid-panel-topline,
 .mermaid-preview-header {
   justify-content: space-between;
 }
@@ -549,7 +529,6 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-.mermaid-limit,
 .mermaid-helper,
 .mermaid-example-meta,
 .mermaid-sync-meta,
@@ -600,25 +579,6 @@ onMounted(async () => {
   overflow-wrap: anywhere;
 }
 
-.mermaid-upload-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.mermaid-primary-action {
-  background: var(--brand-color-accent, #102542);
-  border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
-  color: #ffffff;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 800;
-  min-height: 46px;
-  padding: 0 18px;
-}
-
 .mermaid-ghost-action {
   align-items: center;
   background: rgba(255, 255, 255, 0.62);
@@ -641,7 +601,6 @@ onMounted(async () => {
   border-color: rgba(16, 37, 66, 0.18);
 }
 
-.mermaid-primary-action:disabled,
 .mermaid-ghost-action:disabled {
   cursor: not-allowed;
   opacity: 0.62;

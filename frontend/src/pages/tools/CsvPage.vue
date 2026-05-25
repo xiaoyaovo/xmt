@@ -11,8 +11,8 @@ import {
 } from 'reka-ui'
 import { computed, onMounted, shallowRef } from 'vue'
 
-import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolArchivePanel from 'src/components/tools/ToolArchivePanel.vue'
+import ToolSavePanel from 'src/components/tools/ToolSavePanel.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 import { useCsvPreview } from 'src/composables/useCsvPreview'
 import {
@@ -235,15 +235,20 @@ onMounted(async () => {
         class="csv-workspace"
       >
         <aside class="csv-sidebar">
-          <article class="csv-panel">
-            <div class="csv-panel-topline">
-              <div>
-                <div class="section-kicker">上传</div>
-                <h2 class="bench-title">添加 CSV 文件</h2>
-              </div>
-              <span class="csv-limit">20 MB</span>
-            </div>
-
+          <ToolSavePanel
+            title="添加 CSV 文件"
+            kicker="上传"
+            status="20 MB"
+            :save-label="uploading ? '保存中...' : auth.authenticated ? '保存' : '登录后保存'"
+            :save-disabled="!canSaveLocalFile || uploading || localPreview.loading.value"
+            helper="本地预览不会上传文件。保存为云端存档需要 GitHub 登录，每个账号最多保留 50 个文件，总容量 500 MB。"
+            :authenticated="accountSync.auth.authenticated"
+            :auth-loading="accountSync.auth.loading"
+            :sync-label="accountSync.syncLabel.value"
+            sync-description="登录后可把当前 CSV 保存为云端存档，后续继续预览和下载。"
+            @save="saveLocalFile"
+            @login="accountSync.login"
+          >
             <label
               class="csv-file-picker"
               :class="{ 'csv-file-picker-disabled': uploading || localPreview.loading.value }"
@@ -261,15 +266,7 @@ onMounted(async () => {
               <span class="csv-file-picker-caption">本地解析，不登录也可以预览</span>
             </label>
 
-            <div class="csv-upload-actions">
-              <button
-                class="csv-primary-action"
-                type="button"
-                :disabled="!canSaveLocalFile || uploading || localPreview.loading.value"
-                @click="saveLocalFile"
-              >
-                {{ uploading ? '保存中...' : auth.authenticated ? '保存' : '登录后保存' }}
-              </button>
+            <template #actions>
               <button
                 class="csv-ghost-action"
                 type="button"
@@ -278,18 +275,8 @@ onMounted(async () => {
               >
                 清空预览
               </button>
-            </div>
-            <p class="csv-helper">
-              本地预览不会上传文件。保存为云端存档需要 GitHub 登录，每个账号最多保留 50 个文件，总容量 500 MB。
-            </p>
-            <AccountSyncPanel
-              :authenticated="accountSync.auth.authenticated"
-              :loading="accountSync.auth.loading"
-              :label="accountSync.syncLabel.value"
-              description="登录后可把当前 CSV 保存为云端存档，后续继续预览和下载。"
-              @login="accountSync.login"
-            />
-          </article>
+            </template>
+          </ToolSavePanel>
 
           <ToolArchivePanel
             :initialized="auth.initialized"
@@ -511,19 +498,6 @@ onMounted(async () => {
   box-shadow: var(--brand-shadow-card, var(--shell-shadow));
 }
 
-.csv-primary-action {
-  border: 0;
-  background: var(--brand-color-accent, #102542);
-  border-radius: var(--brand-radius-pill, 999px);
-  color: #ffffff;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 800;
-  min-height: 46px;
-  padding: 0 18px;
-}
-
-.csv-primary-action:disabled,
 .csv-ghost-action:disabled,
 .csv-file-picker-disabled {
   cursor: not-allowed;
@@ -548,7 +522,6 @@ onMounted(async () => {
   padding: 22px;
 }
 
-.csv-panel-topline,
 .csv-preview-header,
 .csv-table-toolbar,
 .csv-table-controls,
@@ -558,13 +531,11 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.csv-panel-topline,
 .csv-preview-header,
 .csv-table-toolbar {
   justify-content: space-between;
 }
 
-.csv-limit,
 .csv-helper,
 .csv-history-meta,
 .csv-table-toolbar {
@@ -599,13 +570,6 @@ onMounted(async () => {
 .csv-file-picker-caption {
   color: rgba(15, 23, 35, 0.58);
   font-size: 0.86rem;
-}
-
-.csv-upload-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
 }
 
 .csv-ghost-action,

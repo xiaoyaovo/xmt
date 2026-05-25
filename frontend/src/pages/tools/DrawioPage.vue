@@ -1,8 +1,8 @@
 <script setup>
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
 
-import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolArchivePanel from 'src/components/tools/ToolArchivePanel.vue'
+import ToolSavePanel from 'src/components/tools/ToolSavePanel.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
 const drawioOrigin = 'https://embed.diagrams.net'
@@ -291,15 +291,20 @@ onUnmounted(() => {
 
       <section class="drawio-workspace">
         <aside class="drawio-sidebar">
-          <article class="drawio-panel">
-            <div class="drawio-panel-topline">
-              <div>
-                <div class="section-kicker">存档</div>
-                <h2 class="bench-title">云端存档</h2>
-              </div>
-              <span class="drawio-status">{{ syncStatusText }}</span>
-            </div>
-
+          <ToolSavePanel
+            title="云端存档"
+            kicker="保存"
+            :status="syncStatusText"
+            :save-label="syncButtonText"
+            :save-disabled="syncButtonDisabled"
+            helper="保存会先从 draw.io 取回最新 XML，再保存为一条新的云端存档。"
+            :authenticated="accountSync.auth.authenticated"
+            :auth-loading="accountSync.auth.loading"
+            :sync-label="accountSync.syncLabel.value"
+            sync-description="登录后可把当前 Draw.io 图表 XML 保存为云端存档，下次继续编辑。"
+            @save="saveSyncedDiagram"
+            @login="accountSync.login"
+          >
             <div class="drawio-summary-grid">
               <div
                 v-for="item in stats"
@@ -321,22 +326,14 @@ onUnmounted(() => {
               {{ accountSync.errorMessage.value }}
             </div>
 
-            <div class="drawio-actions">
+            <template #actions>
               <button
-                class="drawio-primary-action"
+                class="drawio-ghost-action"
                 type="button"
                 :disabled="!editorReady"
                 @click="requestExport"
               >
                 导出 XML
-              </button>
-              <button
-                class="drawio-primary-action"
-                type="button"
-                :disabled="syncButtonDisabled"
-                @click="saveSyncedDiagram"
-              >
-                {{ syncButtonText }}
               </button>
               <button
                 class="drawio-ghost-action"
@@ -353,18 +350,8 @@ onUnmounted(() => {
               >
                 重置 Demo
               </button>
-            </div>
-            <p class="drawio-helper">
-              保存会先从 draw.io 取回最新 XML，再保存为一条新的云端存档。
-            </p>
-            <AccountSyncPanel
-              :authenticated="accountSync.auth.authenticated"
-              :loading="accountSync.auth.loading"
-              :label="accountSync.syncLabel.value"
-              description="登录后可把当前 Draw.io 图表 XML 保存为云端存档，下次继续编辑。"
-              @login="accountSync.login"
-            />
-          </article>
+            </template>
+          </ToolSavePanel>
 
           <ToolArchivePanel
             :initialized="accountSync.auth.initialized"
@@ -488,7 +475,6 @@ onUnmounted(() => {
   justify-content: space-between;
 }
 
-.drawio-status,
 .drawio-helper {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
@@ -539,14 +525,6 @@ onUnmounted(() => {
   color: #8d1120;
 }
 
-.drawio-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.drawio-primary-action,
 .drawio-ghost-action {
   align-items: center;
   border-radius: var(--brand-radius-pill, 999px);
@@ -560,12 +538,6 @@ onUnmounted(() => {
   padding: 0 14px;
 }
 
-.drawio-primary-action {
-  background: var(--brand-color-accent, #102542);
-  border: 0;
-  color: #ffffff;
-}
-
 .drawio-ghost-action {
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--shell-line);
@@ -577,7 +549,6 @@ onUnmounted(() => {
   border-color: rgba(16, 37, 66, 0.18);
 }
 
-.drawio-primary-action:disabled,
 .drawio-ghost-action:disabled {
   cursor: not-allowed;
   opacity: 0.62;
