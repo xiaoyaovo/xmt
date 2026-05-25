@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Xinming Tools</string>
+    <string name="title_activity_main">Xinming Tools</string>
+    <string name="package_name">com.xinming.tools</string>
+    <string name="custom_url_scheme">com.xinming.tools</string>
+</resources>

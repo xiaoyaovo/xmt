@@ -1,36 +1,22 @@
-# Xinming Tools (xinming-site)
+# Xinming
 
-Personal site and utility hub
-## Install the dependencies
+Personal site and utility hub monorepo.
+
+## Structure
+
+- `frontend/`: Quasar + Vue 3 frontend, including PWA, Electron, and Capacitor targets
+- `backend/`: FastAPI + Tortoise ORM backend
+
+## Frontend
+
 ```bash
-yarn
-# or
-npm install
+cd frontend
+pnpm dev
 ```
 
-### Start the app in development mode (hot-code reloading, error reporting, etc.)
-```bash
-quasar dev
-```
+## Backend
 
-### Lint the files
 ```bash
-yarn lint
-# or
-npm run lint
+cd backend
+uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
-
-### Format the files
-```bash
-yarn format
-# or
-npm run format
-```
-
-### Build the app for production
-```bash
-quasar build
-```
-
-### Customize the configuration
-See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-js).

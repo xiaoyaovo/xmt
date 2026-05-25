@@ -1,0 +1,13 @@
+{
+  "name": "xinming-site",
+  "version": "0.0.1",
+  "description": "Personal site and utility hub",
+  "author": "akko <xiaoyao51996@163.com>",
+  "private": true,
+  "dependencies": {
+    "@capacitor/android": "^8.3.4",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0"
+  }
+}
