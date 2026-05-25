@@ -71,3 +71,36 @@ Added a /tools/drawio demo page using diagrams.net iframe embed mode, wired the 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Add Draw.io account archive
+
+**Date**: 2026-05-25
+**Task**: Add Draw.io account archive
+**Branch**: `main`
+
+### Summary
+
+Connected the Draw.io page to account sync so logged-in users can save, load, and delete one cloud draft while keeping local iframe export usable without login.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2de7e61` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
