@@ -137,6 +137,16 @@ function createArchiveTitle() {
   return `Mermaid 图表 ${formatArchiveDate(new Date())}`
 }
 
+function createArchivePayload(itemKey) {
+  return {
+    source: source.value,
+    line_count: sourceLines.value,
+    character_count: sourceCharacters.value,
+    archive_key: itemKey,
+    updated_from: 'mermaid-editor'
+  }
+}
+
 async function renderDiagram() {
   const currentSequence = ++renderSequence
   rendering.value = true
@@ -196,22 +206,26 @@ function openArchive(item) {
   }
 }
 
-async function saveSyncedSource() {
-  const nextItemKey = createArchiveKey()
+async function persistSyncedSource({ forceNew = false } = {}) {
+  const activeItemKey = accountSync.activeItem.value?.item_key
+  const nextItemKey = forceNew || !activeItemKey ? createArchiveKey() : activeItemKey
+  const isNewArchive = nextItemKey !== activeItemKey
   const item = await accountSync.saveItem({
-    title: createArchiveTitle(),
+    title: isNewArchive ? createArchiveTitle() : accountSync.activeItem.value?.title || createArchiveTitle(),
     nextItemKey,
-    payload: {
-      source: source.value,
-      line_count: sourceLines.value,
-      character_count: sourceCharacters.value,
-      archive_key: nextItemKey,
-      updated_from: 'mermaid-editor'
-    }
+    payload: createArchivePayload(nextItemKey)
   })
   if (item) {
-    actionMessage.value = '已新增 Mermaid 云端存档。'
+    actionMessage.value = isNewArchive ? '已另存为 Mermaid 云端存档。' : '已保存当前 Mermaid 云端存档。'
   }
+}
+
+async function saveSyncedSource() {
+  await persistSyncedSource()
+}
+
+async function saveSyncedSourceAsNew() {
+  await persistSyncedSource({ forceNew: true })
 }
 
 async function deleteSyncedSource(item) {
@@ -307,7 +321,15 @@ onMounted(async () => {
                 :disabled="accountSync.saving.value"
                 @click="saveSyncedSource"
               >
-                {{ accountSync.saving.value ? '同步中...' : accountSync.auth.authenticated ? '新增存档' : '登录后同步' }}
+                {{ accountSync.saving.value ? '保存中...' : accountSync.auth.authenticated ? '保存' : '登录后保存' }}
+              </button>
+              <button
+                class="mermaid-ghost-action"
+                type="button"
+                :disabled="accountSync.saving.value"
+                @click="saveSyncedSourceAsNew"
+              >
+                另存为新存档
               </button>
               <button
                 class="mermaid-ghost-action"
@@ -318,7 +340,7 @@ onMounted(async () => {
               </button>
             </div>
             <p class="mermaid-helper">
-              示例只会替换当前编辑器内容。保存到账号后，会新增为一条云端源码存档。
+              保存会更新当前打开的云端存档；未打开存档时会创建第一条。需要保留副本时使用另存为新存档。
             </p>
             <AccountSyncPanel
               :authenticated="accountSync.auth.authenticated"
@@ -347,7 +369,7 @@ onMounted(async () => {
             <div class="section-kicker">同步</div>
             <h2 class="bench-title">登录后启用源码同步</h2>
             <p class="mermaid-helper">
-              每次同步都会新增一条 Mermaid 源码存档，便于保留不同图表或不同版本。
+              可以保存当前 Mermaid 源码，也可以另存为新存档来保留不同图表或不同版本。
             </p>
             <button
               class="mermaid-primary-action mermaid-auth-action"

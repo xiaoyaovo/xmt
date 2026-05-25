@@ -48,7 +48,7 @@ Use `useAccountSync(toolKey, { itemKey })` for logged-in account synchronization
 - Call `saveItem({ title, payload })` to persist JSON-shaped state.
 - If the tool owns files or binary data, keep its domain-specific API and use `useAccountSync()` only for login/sync UI state.
 
-Mermaid and Draw.io use generic sync as multi-entry archives by generating a unique `itemKey` for each saved source/XML; loading an archive hydrates the page state, and later saves create another archive unless overwrite behavior is explicitly added. CSV keeps `csvFiles.js` for file history because the backend owns upload quotas, storage paths, and row pagination.
+Mermaid and Draw.io use generic sync as multi-entry archives. Mermaid's primary save updates the currently loaded archive item and creates a first archive when none is loaded; its save-as action generates a unique `itemKey` for a new source archive. Draw.io generates a unique `itemKey` for each saved XML because its embedded editor save flow behaves like exporting a new diagram snapshot. CSV keeps `csvFiles.js` for file history because the backend owns upload quotas, storage paths, and row pagination.
 
 ## URL State
 
