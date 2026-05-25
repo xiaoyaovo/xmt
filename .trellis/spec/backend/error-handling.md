@@ -42,6 +42,20 @@ Reference pattern:
 
 Deletion cleanup should be best-effort when the database operation is the source of truth. `delete_storage_file()` ignores `OSError` if removing the stored file fails.
 
+## CORS On Error Responses
+
+The FastAPI app must be wrapped with CORS as the outer ASGI application. `backend/app/main.py` returns `apply_middlewares(app)` after mounting routers, and `backend/app/core/middlewares.py` applies `CORSMiddleware` directly around the app.
+
+Why this matters: when an unexpected exception escapes route handling, Starlette's error middleware can emit a 500 response before inner middleware adds CORS headers. Browser clients then report a misleading CORS failure instead of the real backend error.
+
+Expected behavior for configured origins such as `http://localhost:9002`:
+
+- Missing auth on `/api/v1/sync/items/...` returns `401` with `Access-Control-Allow-Origin`.
+- Missing sync item returns `404` with `Access-Control-Allow-Origin`.
+- Unexpected backend errors should still include configured CORS headers so the frontend can surface the actual failure.
+
+Do not replace this with `app.add_middleware(CORSMiddleware, ...)` unless you verify 500 responses still carry CORS headers.
+
 ## Client Messages
 
 The backend currently returns a mix of English auth/config messages and Chinese user-facing CSV messages. When adding feature-specific user-facing errors, match the surrounding route or service. Shared infrastructure messages can stay English.
