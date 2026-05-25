@@ -266,6 +266,7 @@ onMounted(async () => {
               v-for="example in examples"
               :key="example.name"
               class="mermaid-example-item"
+              :class="{ 'mermaid-example-item-active': activeExampleName === example.name }"
               type="button"
               @click="useExample(example)"
             >
@@ -563,6 +564,11 @@ onMounted(async () => {
 
 .mermaid-example-item:hover {
   border-color: rgba(16, 37, 66, 0.18);
+}
+
+.mermaid-example-item-active {
+  border-color: var(--brand-color-accent, #102542);
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
 }
 
 .mermaid-example-name,
