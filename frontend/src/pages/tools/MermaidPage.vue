@@ -246,9 +246,6 @@ onMounted(async () => {
           <div class="section-kicker">Mermaid · 实时预览</div>
           <h1 class="section-title">先写清图表，再导出 SVG。</h1>
         </div>
-        <p class="section-text">
-          源码会在浏览器里实时渲染。登录 GitHub 后，可以把当前 Mermaid 源码同步到账号，后续继续编辑。
-        </p>
       </div>
 
       <section class="mermaid-workspace">
