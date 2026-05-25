@@ -170,3 +170,36 @@ Changed Draw.io sync from a single default draft to a multi-entry archive using 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: Add Mermaid multi archive
+
+**Date**: 2026-05-25
+**Task**: Add Mermaid multi archive
+**Branch**: `main`
+
+### Summary
+
+Changed Mermaid account sync from a single default draft to multi-entry cloud archives using unique sync item keys, with archive list load/delete controls and local preview/export preserved.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a2843d2` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
