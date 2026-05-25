@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 14
+- **Total Sessions**: 15
 - **Last Active**: 2026-05-25
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~469 | Active |
+| `journal-1.md` | ~502 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 15 | 2026-05-25 | Fix CSV source editor preview layout | `f635a35` | `main` |
 | 14 | 2026-05-25 | Restore CSV preview as read only | `25daca7` | `main` |
 | 13 | 2026-05-25 | Fix Draw.io canvas and CSV text editing | `6e9b87e` | `main` |
 | 12 | 2026-05-25 | Unify tool workbench layouts | `b95b51f` | `main` |

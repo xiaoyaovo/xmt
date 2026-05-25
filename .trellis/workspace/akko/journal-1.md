@@ -467,3 +467,36 @@ Clarified that the left-edit/right-preview split applies to CSV. Removed the CSV
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: Fix CSV source editor preview layout
+
+**Date**: 2026-05-25
+**Task**: Fix CSV source editor preview layout
+**Branch**: `main`
+
+### Summary
+
+Corrected CSV workbench semantics: the left source pane is now an editable CSV textarea and the right preview pane is a read-only table. Upload/archive data populates the source editor, text edits reparse into table rows, the table no longer contains inputs, and save uses the current source text. Verified lint/build and browser behavior.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f635a35` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
