@@ -302,3 +302,36 @@ Added a shared ToolSavePanel for CSV, Mermaid, and Draw.io save/add-new areas, p
 ### Next Steps
 
 - None - task complete
+
+
+## Session 10: Align CSV save card copy
+
+**Date**: 2026-05-25
+**Task**: Align CSV save card copy
+**Branch**: `main`
+
+### Summary
+
+Updated the CSV ToolSavePanel copy so it presents as a save/archive card rather than an upload card, while keeping the file picker and existing save behavior unchanged.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2b790ec` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
