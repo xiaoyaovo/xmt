@@ -53,6 +53,7 @@ const renderError = shallowRef('')
 const actionMessage = shallowRef('')
 const copied = shallowRef(false)
 const rendering = shallowRef(false)
+const deletingArchiveKey = shallowRef('')
 const previewRef = useTemplateRef('preview')
 const accountSync = useAccountSync('mermaid')
 
@@ -72,7 +73,7 @@ const renderStatusText = computed(() => {
 const syncStatusText = computed(() => {
   if (accountSync.saving.value) return '正在同步'
   if (accountSync.loading.value) return '正在读取云端'
-  return accountSync.activeItem.value ? '已加载云端版本' : accountSync.syncLabel.value
+  return accountSync.items.value.length ? `${accountSync.items.value.length} 个云端存档` : accountSync.syncLabel.value
 })
 const activeExampleName = computed(() => {
   const activeExample = examples.find(example => example.source === source.value)
@@ -115,6 +116,25 @@ function formatMermaidError(error) {
   return rawMessage
     .replace(/^Error:\s*/i, '')
     .trim() || 'Mermaid 渲染失败，请检查语法。'
+}
+
+function formatArchiveDate(value) {
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date(value))
+}
+
+function createArchiveKey() {
+  const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `archive-${timestamp}-${suffix}`
+}
+
+function createArchiveTitle() {
+  return `Mermaid 图表 ${formatArchiveDate(new Date())}`
 }
 
 async function renderDiagram() {
@@ -165,37 +185,47 @@ function resetSource() {
   actionMessage.value = '已恢复默认流程图示例。'
 }
 
-async function loadSyncedSource() {
-  const item = await accountSync.loadItem()
+function openArchive(item) {
   const syncedSource = item?.payload?.source
   if (typeof syncedSource === 'string' && syncedSource.trim()) {
+    accountSync.activeItem.value = item
     source.value = syncedSource
-    actionMessage.value = '已读取账号同步的 Mermaid 源码。'
-  } else if (accountSync.auth.authenticated) {
-    actionMessage.value = '账号里还没有 Mermaid 同步内容。'
+    actionMessage.value = '已载入 Mermaid 云端存档。'
+  } else {
+    actionMessage.value = '这个存档没有可读取的 Mermaid 源码。'
   }
 }
 
 async function saveSyncedSource() {
+  const nextItemKey = createArchiveKey()
   const item = await accountSync.saveItem({
-    title: 'Mermaid 默认图表',
+    title: createArchiveTitle(),
+    nextItemKey,
     payload: {
       source: source.value,
       line_count: sourceLines.value,
-      character_count: sourceCharacters.value
+      character_count: sourceCharacters.value,
+      archive_key: nextItemKey,
+      updated_from: 'mermaid-editor'
     }
   })
   if (item) {
-    actionMessage.value = '已同步到账号。'
+    actionMessage.value = '已新增 Mermaid 云端存档。'
   }
 }
 
-async function deleteSyncedSource() {
-  const deleted = await accountSync.deleteItem()
+async function deleteSyncedSource(item) {
+  if (!item?.item_key) return
+
+  deletingArchiveKey.value = item.item_key
+  const deleted = await accountSync.deleteItem(item.item_key)
   if (deleted) {
-    source.value = defaultSource
-    actionMessage.value = '已删除账号同步内容，并恢复默认示例。'
+    if (accountSync.activeItem.value?.item_key === item.item_key) {
+      accountSync.activeItem.value = null
+    }
+    actionMessage.value = '已删除 Mermaid 云端存档。'
   }
+  deletingArchiveKey.value = ''
 }
 
 async function copySource() {
@@ -232,7 +262,7 @@ watch(source, scheduleRender)
 
 onMounted(async () => {
   configureMermaid()
-  await loadSyncedSource()
+  await accountSync.loadItems()
   await renderDiagram()
 })
 </script>
@@ -255,7 +285,7 @@ onMounted(async () => {
                 <div class="section-kicker">示例</div>
                 <h2 class="bench-title">选择图表类型</h2>
               </div>
-              <span class="mermaid-limit">{{ activeExampleName }}</span>
+              <span class="mermaid-limit">{{ syncStatusText }}</span>
             </div>
 
             <button
@@ -277,7 +307,7 @@ onMounted(async () => {
                 :disabled="accountSync.saving.value"
                 @click="saveSyncedSource"
               >
-                {{ accountSync.saving.value ? '同步中...' : accountSync.auth.authenticated ? '同步到账号' : '登录后同步' }}
+                {{ accountSync.saving.value ? '同步中...' : accountSync.auth.authenticated ? '新增存档' : '登录后同步' }}
               </button>
               <button
                 class="mermaid-ghost-action"
@@ -288,13 +318,13 @@ onMounted(async () => {
               </button>
             </div>
             <p class="mermaid-helper">
-              示例只会替换当前编辑器内容。保存到账号后，后续可以从云端读取回来继续编辑。
+              示例只会替换当前编辑器内容。保存到账号后，会新增为一条云端源码存档。
             </p>
             <AccountSyncPanel
               :authenticated="accountSync.auth.authenticated"
               :loading="accountSync.auth.loading"
               :label="accountSync.syncLabel.value"
-              description="登录后可把当前 Mermaid 源码同步到账号，并在其他设备继续编辑。"
+              description="登录后可把当前 Mermaid 源码保存为账号存档，并在其他设备继续编辑。"
               @login="accountSync.login"
             />
           </article>
@@ -317,7 +347,7 @@ onMounted(async () => {
             <div class="section-kicker">同步</div>
             <h2 class="bench-title">登录后启用源码同步</h2>
             <p class="mermaid-helper">
-              同步内容会绑定到你的 GitHub 账号，当前版本保留一份默认 Mermaid 草稿。
+              每次同步都会新增一条 Mermaid 源码存档，便于保留不同图表或不同版本。
             </p>
             <button
               class="mermaid-primary-action mermaid-auth-action"
@@ -336,38 +366,50 @@ onMounted(async () => {
             <div class="mermaid-panel-topline">
               <div>
                 <div class="section-kicker">同步</div>
-                <h2 class="bench-title">账号草稿</h2>
+                <h2 class="bench-title">云端存档</h2>
               </div>
               <button
                 class="mermaid-ghost-action"
                 type="button"
                 :disabled="accountSync.loading.value"
-                @click="loadSyncedSource"
+                @click="accountSync.loadItems"
               >
-                {{ accountSync.loading.value ? '读取中' : '读取云端' }}
+                {{ accountSync.loading.value ? '刷新中' : '刷新' }}
               </button>
             </div>
             <div
-              v-if="!accountSync.activeItem.value"
+              v-if="!accountSync.items.value.length"
               class="mermaid-empty"
             >
-              还没有 Mermaid 同步内容。
+              还没有 Mermaid 云端存档。
             </div>
-            <div
-              v-else
-              class="mermaid-sync-item"
-            >
-              <span class="mermaid-sync-name">{{ accountSync.activeItem.value.title || 'Mermaid 默认图表' }}</span>
-              <span class="mermaid-sync-meta">{{ syncStatusText }}</span>
-            </div>
-            <button
-              class="mermaid-ghost-action mermaid-danger-action mermaid-sync-delete"
-              type="button"
-              :disabled="!accountSync.activeItem.value || accountSync.deleting.value"
-              @click="deleteSyncedSource"
-            >
-              {{ accountSync.deleting.value ? '删除中' : '删除云端' }}
-            </button>
+            <template v-else>
+              <div
+                v-for="item in accountSync.items.value"
+                :key="item.item_key"
+                class="mermaid-archive-row"
+              >
+                <button
+                  class="mermaid-sync-item"
+                  :class="{ 'mermaid-sync-item-active': accountSync.activeItem.value?.item_key === item.item_key }"
+                  type="button"
+                  @click="openArchive(item)"
+                >
+                  <span class="mermaid-sync-name">{{ item.title || 'Mermaid 图表' }}</span>
+                  <span class="mermaid-sync-meta">
+                    {{ item.payload?.character_count || 0 }} 字符 · {{ formatArchiveDate(item.updated_at) }}
+                  </span>
+                </button>
+                <button
+                  class="mermaid-ghost-action mermaid-danger-action mermaid-archive-delete"
+                  type="button"
+                  :disabled="deletingArchiveKey === item.item_key"
+                  @click="deleteSyncedSource(item)"
+                >
+                  {{ deletingArchiveKey === item.item_key ? '删除中' : '删除' }}
+                </button>
+              </div>
+            </template>
           </article>
         </aside>
 
@@ -628,8 +670,7 @@ onMounted(async () => {
   opacity: 0.62;
 }
 
-.mermaid-auth-action,
-.mermaid-sync-delete {
+.mermaid-auth-action {
   margin-top: 16px;
   width: 100%;
 }
@@ -656,8 +697,25 @@ onMounted(async () => {
   padding: 16px;
 }
 
+.mermaid-archive-row {
+  align-items: stretch;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 12px;
+}
+
 .mermaid-sync-item {
-  margin-top: 14px;
+  cursor: pointer;
+}
+
+.mermaid-sync-item-active {
+  border-color: var(--brand-color-accent, #102542);
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
+}
+
+.mermaid-archive-delete {
+  align-self: center;
 }
 
 .mermaid-editor {
@@ -774,6 +832,14 @@ onMounted(async () => {
 
   .mermaid-summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mermaid-archive-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mermaid-archive-delete {
+    align-self: stretch;
   }
 }
 </style>
