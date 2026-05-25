@@ -1,51 +1,38 @@
-# Logging Guidelines
+# Backend Logging Guidelines
 
-> How logging is done in this project.
+The backend currently has no project logging abstraction and does not emit application logs from routes or services. Uvicorn/FastAPI server logs provide request/runtime visibility during development.
 
----
+## Current Posture
 
-## Overview
+Keep backend code quiet by default:
 
-<!--
-Document your project's logging conventions here.
+- Do not add `print()` debugging.
+- Do not introduce a logging framework for one-off messages.
+- Do not log bearer tokens, GitHub OAuth tokens, secrets, uploaded CSV content, or full user profile payloads.
 
-Questions to answer:
-- What logging library do you use?
-- What are the log levels and when to use each?
-- What should be logged?
-- What should NOT be logged (PII, secrets)?
--->
+## When To Add Logs
 
-(To be filled by the team)
+Add explicit logging only when a recurring operational event needs diagnosis and cannot be observed through return values or server logs. Good candidates:
 
----
+- OAuth provider failures without token values.
+- Repeated storage cleanup failures.
+- Migration or startup failures if the app adds custom startup checks.
 
-## Log Levels
+If logging is introduced, centralize configuration under `backend/app/core/` or `backend/app/settings/` instead of configuring loggers inside feature modules.
 
-<!-- When to use each level: debug, info, warn, error -->
+## Error Visibility
 
-(To be filled by the team)
+Expected client errors should be represented by `HTTPException` details, not logs. Examples include:
 
----
+- Missing authentication.
+- CSV quota failures.
+- Missing user-owned resources.
 
-## Structured Logging
+Unexpected errors should be allowed to propagate so FastAPI/Uvicorn records them during development and the client receives the appropriate server error.
 
-<!-- Log format, required fields -->
+## Avoid
 
-(To be filled by the team)
-
----
-
-## What to Log
-
-<!-- Important events to log -->
-
-(To be filled by the team)
-
----
-
-## What NOT to Log
-
-<!-- Sensitive data, PII, secrets -->
-
-(To be filled by the team)
+- Logging PII such as email addresses unless there is a documented operational need.
+- Logging uploaded file contents or CSV rows.
+- Adding noisy success logs for every request.
+- Using broad `except Exception as error: print(error)` blocks.

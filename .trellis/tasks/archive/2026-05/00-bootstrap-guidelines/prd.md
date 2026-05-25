@@ -19,11 +19,11 @@ the rest conversationally.
 
 ---
 
-## Status (update the checkboxes as you complete each item)
+## Status
 
-- [ ] Fill backend guidelines
-- [ ] Fill frontend guidelines
-- [ ] Add code examples
+- [x] Fill backend guidelines
+- [x] Fill frontend guidelines
+- [x] Add code examples
 
 ---
 
@@ -127,6 +127,13 @@ python3 ./.trellis/scripts/task.py archive 00-bootstrap-guidelines
 
 After archive, every new developer who joins this project will get a
 `00-join-<slug>` onboarding task instead of this bootstrap task.
+
+## Completion Notes
+
+- Backend guidelines now document the actual FastAPI/Tortoise/Aerich structure, including route/service/schema/model boundaries, auth dependencies, user-scoped queries, migrations, runtime CSV storage, and verification commands.
+- Frontend guidelines now document the actual Quasar/Vue structure, including pages, components, composables, Pinia auth state, API helpers, account sync, design tokens, and JavaScript type-safety conventions.
+- Spec files reference concrete project files such as `backend/app/api/v1/csv_files.py`, `backend/app/services/csv_service.py`, `frontend/src/pages/tools/CsvPage.vue`, `frontend/src/composables/useAccountSync.js`, and `frontend/src/lib/http/interceptors.js`.
+- Placeholder scan passed for `.trellis/spec/`.
 
 ---
 

@@ -1,51 +1,46 @@
-# Quality Guidelines
+# Backend Quality Guidelines
 
-> Code quality standards for backend development.
-
----
-
-## Overview
-
-<!--
-Document your project's quality standards here.
-
-Questions to answer:
-- What patterns are forbidden?
-- What linting rules do you enforce?
-- What are your testing requirements?
-- What code review standards apply?
--->
-
-(To be filled by the team)
-
----
-
-## Forbidden Patterns
-
-<!-- Patterns that should never be used and why -->
-
-(To be filled by the team)
-
----
+Backend changes should preserve the current separation between API boundaries, services, schemas, and models.
 
 ## Required Patterns
 
-<!-- Patterns that must always be used -->
+- Use async FastAPI route handlers.
+- Keep route handlers thin and delegate business logic to `backend/app/services/`.
+- Use `Depends(require_current_user)` for authenticated user-owned resources.
+- Scope all user-owned queries by `user`.
+- Return Pydantic response models from API routes.
+- Keep settings in `backend/app/settings/config.py` with environment variable aliases.
+- Use `from app...` imports inside backend code.
 
-(To be filled by the team)
+## Forbidden Patterns
 
----
+- Reading `.env` manually outside `Settings`.
+- Returning ORM objects directly from route handlers.
+- Fetching user-owned data without filtering by user.
+- Staging runtime data from `backend/storage/`.
+- Adding blocking network or file operations to hot paths without a clear reason. Current GitHub OAuth uses `urllib` in the callback route; do not spread that pattern unless replacing it intentionally.
+- Adding debug `print()` calls.
 
-## Testing Requirements
+## Review Checklist
 
-<!-- What level of testing is expected -->
+- Does each new endpoint have a router prefix and response model?
+- Are auth dependencies correct for optional versus required auth?
+- Are service functions responsible for domain behavior and cleanup?
+- Are errors represented with correct HTTP status codes?
+- If a model changed, is there a migration?
+- Are uploaded files, caches, and secrets ignored?
 
-(To be filled by the team)
+## Verification Commands
 
----
+Run from the repo root or backend directory as shown:
 
-## Code Review Checklist
+```bash
+cd backend
+uv run python -m compileall app
+```
 
-<!-- What reviewers should check -->
+For model or migration changes, also run the appropriate Aerich workflow against a configured development database before relying on the migration.
 
-(To be filled by the team)
+## Test Status
+
+There is no backend test suite yet. For risky backend changes, prefer adding focused tests before broad refactors. Until tests exist, combine `compileall`, manual endpoint inspection, and careful service review.

@@ -1,38 +1,36 @@
 # Backend Development Guidelines
 
-> Best practices for backend development in this project.
+Backend code lives under `backend/` and is a FastAPI application with Tortoise ORM, Aerich migrations, Pydantic schemas, and service modules for business logic.
 
----
+## Stack
 
-## Overview
-
-This directory contains guidelines for backend development. Fill in each file with your project's specific conventions.
-
----
+- Python 3.11+
+- FastAPI async route handlers
+- Tortoise ORM with MySQL through `aiomysql`
+- Aerich migrations in `backend/migrations/`
+- Pydantic Settings in `backend/app/settings/config.py`
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Database Guidelines](./database-guidelines.md) | ORM patterns, queries, migrations | To fill |
-| [Error Handling](./error-handling.md) | Error types, handling strategies | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Logging Guidelines](./logging-guidelines.md) | Structured logging, log levels | To fill |
+| Guide | Purpose | Status |
+|-------|---------|--------|
+| [Directory Structure](./directory-structure.md) | Where API, service, schema, model, settings, and DB code belongs | Filled |
+| [Database Guidelines](./database-guidelines.md) | Tortoise model, query, migration, storage, and naming conventions | Filled |
+| [Error Handling](./error-handling.md) | HTTP errors, auth failures, cleanup behavior, and client-facing messages | Filled |
+| [Quality Guidelines](./quality-guidelines.md) | Review checklist and verification commands | Filled |
+| [Logging Guidelines](./logging-guidelines.md) | Current logging posture and when to add logs | Filled |
 
----
+## Pre-Development Checklist
 
-## How to Fill These Guidelines
+- Read this index and the specific guide for the layer you are changing.
+- For new or changed endpoints, read `directory-structure.md`, `error-handling.md`, and `quality-guidelines.md`.
+- For models, migrations, or stored files, read `database-guidelines.md`.
+- Search for an existing route/service/schema pattern before creating a new shape.
+- Keep route handlers thin: validation and HTTP boundary concerns in `app/api/v1/`, domain behavior in `app/services/`.
 
-For each guideline file:
+## Quality Check
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
-
-The goal is to help AI assistants and new team members understand how YOUR project works.
-
----
-
-**Language**: All documentation should be written in **English**.
+- Run `cd backend && uv run python -m compileall app` after backend changes.
+- If model fields changed, verify the matching Aerich migration under `backend/migrations/models/`.
+- Check imports from the repo root package style: `from app...`, not relative parent imports.
+- Confirm no secrets, uploaded files, `.env`, virtualenv files, or `__pycache__` are staged.

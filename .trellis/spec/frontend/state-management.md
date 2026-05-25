@@ -1,61 +1,61 @@
-# State Management
+# Frontend State Management
 
-> How state is managed in this project.
-
----
-
-## Overview
-
-<!--
-Document your project's state management conventions here.
-
-Questions to answer:
-- What state management solution do you use?
-- How is local vs global state decided?
-- How do you handle server state?
-- What are the patterns for derived state?
--->
-
-(To be filled by the team)
-
----
+The frontend uses Pinia for cross-page application state and local refs/composables for page/tool state.
 
 ## State Categories
 
-<!-- Local state, global state, server state, URL state -->
+- Global auth state: `frontend/src/stores/auth.js`
+- Tool/page state: local refs in page components
+- Reusable tool state: composables in `frontend/src/composables/`
+- Server requests: API helpers in `frontend/src/lib/`
+- Theme selection: `useBrandTheme()` plus design-system storage helpers
 
-(To be filled by the team)
+## Pinia
 
----
+Use Pinia when state must be shared across layout, pages, and components. The current store is `useAuthStore`, which owns:
 
-## When to Use Global State
+- persisted access token lookup
+- current user
+- loading/initialized flags
+- GitHub login redirect
+- logout
 
-<!-- Criteria for promoting state to global -->
+Do not create a Pinia store for state that belongs to a single page. CSV selected file, active rows, Mermaid source, and render status stay local to their pages/composables.
 
-(To be filled by the team)
+## Auth State
 
----
+`auth.authenticated` means `auth.user` exists after `/auth/me` has confirmed the token. A token in local storage alone is not enough.
+
+Use `auth.initialized` before showing final logged-in/logged-out UI. `useAccountSync()` demonstrates this with `ensureAuth()` and `syncLabel`.
 
 ## Server State
 
-<!-- How server data is cached and synchronized -->
+Server requests should flow through `src/lib/` helpers:
 
-### Account Sync
+- `auth.js` wraps auth endpoints and local token storage.
+- `csvFiles.js` wraps upload/history/rows/download/delete.
+- `accountSync.js` wraps generic sync endpoints.
+
+Components and composables should catch the normalized error object from `src/lib/http/interceptors.js`, which has `code`, `message`, and `error`.
+
+## Account Sync
 
 Use `useAccountSync(toolKey, { itemKey })` for logged-in account synchronization shared by tool pages.
 
-* `toolKey` must match the backend `/sync/items/{tool_key}` namespace.
-* `itemKey` defaults to `default` and should be stable for the synced document.
-* Call `loadItem()` to hydrate local tool state after auth initialization.
-* Call `saveItem({ title, payload })` to persist JSON-shaped state.
-* If the tool owns files or binary data, keep its domain-specific API and use `useAccountSync()` only for login/sync UI state.
+- `toolKey` must match the backend `/sync/items/{tool_key}` namespace.
+- `itemKey` defaults to `default` and should be stable for the synced document.
+- Call `loadItem()` to hydrate local tool state after auth initialization.
+- Call `saveItem({ title, payload })` to persist JSON-shaped state.
+- If the tool owns files or binary data, keep its domain-specific API and use `useAccountSync()` only for login/sync UI state.
 
 Mermaid uses generic sync for source text. CSV keeps `csvFiles.js` for file history because the backend owns upload quotas, storage paths, and row pagination.
 
----
+## URL State
 
-## Common Mistakes
+The app currently uses Vue Router hash mode and does not encode tool state in query params. Do not add URL state casually; use it only when reload/share behavior is part of the feature.
 
-<!-- State management mistakes your team has made -->
+## Avoid
 
-(To be filled by the team)
+- Putting transient form/input state into Pinia.
+- Reading or writing `localStorage` from arbitrary components when `auth.js` or design-system helpers already own the key.
+- Duplicating server state in multiple stores and composables without a clear source of truth.

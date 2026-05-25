@@ -1,39 +1,42 @@
 # Frontend Development Guidelines
 
-> Best practices for frontend development in this project.
+Frontend code lives under `frontend/` and is a Quasar + Vue 3 application using JavaScript, Pinia, Vue Router, Reka UI, UnoCSS, and project CSS/design tokens.
 
----
+## Stack
 
-## Overview
-
-This directory contains guidelines for frontend development. Fill in each file with your project's specific conventions.
-
----
+- Vue 3 single-file components with `<script setup>`
+- Quasar app-vite
+- Pinia for cross-page state
+- Vue Router hash mode
+- Axios request helpers under `src/lib/`
+- Project design tokens in `src/design-system/`
 
 ## Guidelines Index
 
-| Guide | Description | Status |
-|-------|-------------|--------|
-| [Directory Structure](./directory-structure.md) | Module organization and file layout | To fill |
-| [Component Guidelines](./component-guidelines.md) | Component patterns, props, composition | To fill |
-| [Hook Guidelines](./hook-guidelines.md) | Custom hooks, data fetching patterns | To fill |
-| [State Management](./state-management.md) | Local state, global state, server state | To fill |
-| [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
-| [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
+| Guide | Purpose | Status |
+|-------|---------|--------|
+| [Directory Structure](./directory-structure.md) | Where pages, components, composables, lib modules, stores, and design files belong | Filled |
+| [Component Guidelines](./component-guidelines.md) | Vue SFC structure, props/events, styling, accessibility, and UI patterns | Filled |
+| [Hook Guidelines](./hook-guidelines.md) | Vue composable patterns, async state, and reusable logic | Filled |
+| [State Management](./state-management.md) | Local state, Pinia, server state, auth, and account sync | Filled |
+| [Quality Guidelines](./quality-guidelines.md) | Lint/build commands and review checklist | Filled |
+| [Type Safety](./type-safety.md) | Current JavaScript typing conventions and runtime validation | Filled |
 
----
+## Pre-Development Checklist
 
-## How to Fill These Guidelines
+- Read this index and the specific guide for the files you will edit.
+- Use `<script setup>` for new Vue components.
+- Search `src/lib/`, `src/composables/`, and `src/stores/` before adding new shared logic.
+- Keep tool pages usable without login unless the feature is truly account-only.
+- Use existing design tokens and shell classes before adding a new visual language.
 
-For each guideline file:
+## Quality Check
 
-1. Document your project's **actual conventions** (not ideals)
-2. Include **code examples** from your codebase
-3. List **forbidden patterns** and why
-4. Add **common mistakes** your team has made
+Run from `frontend/`:
 
-The goal is to help AI assistants and new team members understand how YOUR project works.
+```bash
+pnpm lint
+pnpm build
+```
 
----
-
-**Language**: All documentation should be written in **English**.
+Use a compatible Node version. The current build was verified with Node `v24.15.0`; `@quasar/app-vite` rejects older Node versions such as `v22.16.0`.
