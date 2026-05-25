@@ -290,14 +290,6 @@ function updateCell(rowIndex, columnIndex, event) {
   }
 }
 
-function updateCsvText(event) {
-  localPreview.updateFromCsvText(event.target.value)
-  page.value = 1
-  if (localPreview.selectedFile.value) {
-    syncActiveFileFromPreview(localPreview.selectedFile.value)
-  }
-}
-
 onMounted(async () => {
   await auth.refreshMe()
   await refreshFiles()
@@ -622,8 +614,8 @@ onMounted(async () => {
             <textarea
               class="csv-text-preview"
               :value="csvTextPreview"
-              aria-label="编辑 CSV 文本"
-              @input="updateCsvText"
+              readonly
+              aria-label="CSV 文本预览"
             />
           </article>
         </template>

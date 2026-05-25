@@ -81,22 +81,6 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
     return new File([toCsvText()], safeFilename, { type: 'text/csv;charset=utf-8' })
   }
 
-  function updateFromCsvText(csvText) {
-    const results = Papa.parse(csvText || '', {
-      skipEmptyLines: 'greedy'
-    })
-    const parsedRows = Array.isArray(results.data) ? results.data : []
-    const header = normalizeHeader(parsedRows[0] || [])
-    const bodyRows = normalizeRows(parsedRows.slice(1), header.length)
-
-    columns.value = header
-    rows.value = bodyRows
-    delimiter.value = results.meta?.delimiter || delimiter.value || ','
-    parseErrors.value = (results.errors || []).slice(0, maxErrors)
-    errorMessage.value = header.length ? '' : '没有读取到 CSV 表头，请检查文件内容。'
-    dirty.value = true
-  }
-
   async function previewFile(file) {
     if (!file) return null
 
@@ -151,7 +135,6 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
     fileSummary,
     previewFile,
     updateCell,
-    updateFromCsvText,
     toCsvText,
     createCsvFile,
     resetPreview
