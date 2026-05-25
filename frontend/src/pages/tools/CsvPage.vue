@@ -69,6 +69,22 @@ const fileStats = computed(() => {
   ]
 })
 
+const savePanelStatus = computed(() => {
+  if (uploading.value) return '保存中'
+  if (loadingFiles.value) return '正在读取云端'
+  return files.value.length ? `${files.value.length} 个云端存档` : accountSync.syncLabel.value
+})
+
+const savePanelStats = computed(() => [
+  { label: '文件', value: activeFile.value?.original_filename || '未选择' },
+  { label: '行数', value: activeFile.value?.row_count || 0 },
+  { label: '大小', value: activeFile.value ? formatBytes(activeFile.value.size) : '0 B' },
+  {
+    label: '保存',
+    value: activeSource.value === 'history' ? '已保存' : activeSource.value === 'local' ? '待保存' : '未选择'
+  }
+])
+
 const canSaveLocalFile = computed(() => activeSource.value === 'local' && localPreview.selectedFile.value)
 
 function formatBytes(bytes) {
@@ -236,9 +252,9 @@ onMounted(async () => {
       >
         <aside class="csv-sidebar">
           <ToolSavePanel
-            title="CSV 云端存档"
+            title="云端存档"
             kicker="保存"
-            status="本地预览"
+            :status="savePanelStatus"
             :save-label="uploading ? '保存中...' : auth.authenticated ? '保存' : '登录后保存'"
             :save-disabled="!canSaveLocalFile || uploading || localPreview.loading.value"
             helper="先选择 CSV 文件进行本地预览，再保存为云端存档。单个文件最多 20 MB，每个账号最多保留 50 个文件，总容量 500 MB。"
@@ -249,6 +265,17 @@ onMounted(async () => {
             @save="saveLocalFile"
             @login="accountSync.login"
           >
+            <div class="csv-summary-grid csv-save-summary-grid">
+              <div
+                v-for="item in savePanelStats"
+                :key="item.label"
+                class="csv-summary-card"
+              >
+                <div class="csv-summary-value">{{ item.value }}</div>
+                <div class="csv-summary-label">{{ item.label }}</div>
+              </div>
+            </div>
+
             <label
               class="csv-file-picker"
               :class="{ 'csv-file-picker-disabled': uploading || localPreview.loading.value }"
@@ -676,6 +703,10 @@ onMounted(async () => {
   margin-top: 18px;
 }
 
+.csv-save-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .csv-chip-row {
   margin-top: 18px;
   max-height: 96px;
@@ -733,6 +764,10 @@ onMounted(async () => {
 
   .csv-actions {
     flex-wrap: wrap;
+  }
+
+  .csv-save-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

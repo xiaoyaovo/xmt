@@ -58,7 +58,7 @@ const emit = defineEmits(['save', 'save-as', 'login'])
 <template>
   <article class="tool-save-panel">
     <div class="tool-save-panel-topline">
-      <div>
+      <div class="tool-save-heading">
         <div class="section-kicker">{{ kicker }}</div>
         <h2 class="bench-title">{{ title }}</h2>
       </div>
@@ -127,10 +127,34 @@ const emit = defineEmits(['save', 'save-as', 'login'])
   justify-content: space-between;
 }
 
+.tool-save-heading {
+  flex: 1 1 auto;
+  min-width: 7rem;
+}
+
+.tool-save-heading .section-kicker,
+.tool-save-heading .bench-title {
+  word-break: keep-all;
+}
+
+.tool-save-heading .bench-title {
+  display: inline-block;
+  line-height: 1.2;
+  min-width: 0;
+  margin: 8px 0 0;
+  white-space: nowrap;
+}
+
 .tool-save-status,
 .tool-save-helper {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
+}
+
+.tool-save-status {
+  flex: 0 1 auto;
+  max-width: 52%;
+  text-align: right;
 }
 
 .tool-save-actions {
@@ -194,6 +218,11 @@ const emit = defineEmits(['save', 'save-as', 'login'])
   .tool-save-panel-topline {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .tool-save-status {
+    max-width: none;
+    text-align: left;
   }
 }
 </style>

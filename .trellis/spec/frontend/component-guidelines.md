@@ -50,7 +50,7 @@ Avoid nested card-like containers unless they represent genuinely separate repea
 
 For tool history/archive sections, use `ToolArchivePanel.vue` for the shared login-checking, logged-out, authenticated header, refresh, and empty states. Keep item row rendering in page-level slots when metadata or row actions differ by tool.
 
-For tool save/add-new sections, use `ToolSavePanel.vue` for the shared card shell, primary save action, optional save-as/new action, helper copy, and account sync prompt. Put tool-specific pickers, examples, status summaries, and secondary actions in slots.
+For tool save/add-new sections, use `ToolSavePanel.vue` for the shared card shell, primary save action, optional save-as/new action, helper copy, and account sync prompt. Put tool-specific pickers, examples, status summaries, and secondary actions in slots. Keep save cards aligned across tools: the shared top line should read as a save surface (`保存` kicker, `云端存档` title, right-side archive/sync status), and tool state summaries should appear before picker/example controls when useful.
 
 ## Accessibility
 

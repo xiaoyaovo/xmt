@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Quality gate expectations for frontend lint/build checks."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Verification target for consistent ToolSavePanel usage across tool pages."}

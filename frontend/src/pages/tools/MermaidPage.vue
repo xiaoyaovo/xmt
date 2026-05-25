@@ -295,8 +295,8 @@ onMounted(async () => {
       <section class="mermaid-workspace">
         <aside class="mermaid-sidebar">
           <ToolSavePanel
-            title="选择 Mermaid 示例"
-            kicker="编辑"
+            title="云端存档"
+            kicker="保存"
             :status="syncStatusText"
             :save-label="accountSync.saving.value ? '保存中...' : accountSync.auth.authenticated ? '保存' : '登录后保存'"
             save-as-label="另存为新存档"
@@ -311,6 +311,17 @@ onMounted(async () => {
             @save-as="saveSyncedSourceAsNew"
             @login="accountSync.login"
           >
+            <div class="mermaid-summary-grid">
+              <div
+                v-for="item in previewStats"
+                :key="item.label"
+                class="mermaid-summary-card"
+              >
+                <div class="mermaid-summary-value">{{ item.value }}</div>
+                <div class="mermaid-summary-label">{{ item.label }}</div>
+              </div>
+            </div>
+
             <button
               v-for="example in examples"
               :key="example.name"
@@ -418,17 +429,6 @@ onMounted(async () => {
               spellcheck="false"
               aria-label="Mermaid source"
             />
-
-            <div class="mermaid-summary-grid">
-              <div
-                v-for="item in previewStats"
-                :key="item.label"
-                class="mermaid-summary-card"
-              >
-                <div class="mermaid-summary-value">{{ item.value }}</div>
-                <div class="mermaid-summary-label">{{ item.label }}</div>
-              </div>
-            </div>
           </article>
 
           <article
@@ -657,7 +657,7 @@ onMounted(async () => {
 .mermaid-summary-grid {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 18px;
 }
 
@@ -722,10 +722,6 @@ onMounted(async () => {
 @media (max-width: 1023px) {
   .mermaid-workspace {
     grid-template-columns: 1fr;
-  }
-
-  .mermaid-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .mermaid-editor,
