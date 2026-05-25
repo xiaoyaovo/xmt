@@ -454,7 +454,7 @@ onMounted(async () => {
               <div class="section-kicker">预览</div>
               <h2 class="content-title">输入 Mermaid 源码</h2>
               <p class="section-text">
-                右侧会显示渲染结果。空内容不会触发 Mermaid 解析。
+                预览区会显示渲染结果。空内容不会触发 Mermaid 解析。
               </p>
             </div>
 

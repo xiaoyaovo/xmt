@@ -377,7 +377,7 @@ onMounted(async () => {
             <div class="section-kicker">预览</div>
             <h2 class="content-title">选择或上传一个 CSV 文件</h2>
             <p class="section-text">
-              右侧会显示字段、统计信息和分页表格。
+              预览区会显示字段、统计信息和分页表格。
             </p>
           </article>
 
