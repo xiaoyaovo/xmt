@@ -26,6 +26,7 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
   const loading = shallowRef(false)
   const errorMessage = shallowRef('')
   const dirty = shallowRef(false)
+  const sourceText = shallowRef('')
 
   const rowCount = computed(() => rows.value.length)
 
@@ -51,19 +52,7 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
     errorMessage.value = ''
     loading.value = false
     dirty.value = false
-  }
-
-  function updateCell(rowIndex, columnIndex, value) {
-    const nextRows = rows.value.map((row, index) => {
-      if (index !== rowIndex) return row
-
-      const nextRow = [...row]
-      nextRow[columnIndex] = value
-      return nextRow
-    })
-
-    rows.value = nextRows
-    dirty.value = true
+    sourceText.value = ''
   }
 
   function toCsvText() {
@@ -76,9 +65,25 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
     })
   }
 
-  function createCsvFile(filename) {
-    const safeFilename = filename?.toLowerCase().endsWith('.csv') ? filename : `${filename || 'edited'}.csv`
-    return new File([toCsvText()], safeFilename, { type: 'text/csv;charset=utf-8' })
+  function applyParsedCsvText(csvText, { dirty: nextDirty = true } = {}) {
+    const results = Papa.parse(csvText || '', {
+      skipEmptyLines: 'greedy'
+    })
+    const parsedRows = Array.isArray(results.data) ? results.data : []
+    const header = normalizeHeader(parsedRows[0] || [])
+    const bodyRows = normalizeRows(parsedRows.slice(1), header.length)
+
+    sourceText.value = csvText || ''
+    columns.value = header
+    rows.value = bodyRows
+    delimiter.value = results.meta?.delimiter || delimiter.value || ','
+    parseErrors.value = (results.errors || []).slice(0, maxErrors)
+    errorMessage.value = header.length ? '' : '没有读取到 CSV 表头，请检查文件内容。'
+    dirty.value = nextDirty
+  }
+
+  function updateFromCsvText(csvText) {
+    applyParsedCsvText(csvText, { dirty: true })
   }
 
   async function previewFile(file) {
@@ -99,6 +104,13 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
           const parsedRows = Array.isArray(results.data) ? results.data : []
           const header = normalizeHeader(parsedRows[0] || [])
           const bodyRows = normalizeRows(parsedRows.slice(1), header.length)
+          const normalizedCsv = Papa.unparse({
+            fields: header,
+            data: bodyRows
+          }, {
+            delimiter: results.meta?.delimiter || ',',
+            newline: '\n'
+          })
 
           if (!header.length) {
             errorMessage.value = '没有读取到 CSV 表头，请检查文件内容。'
@@ -110,6 +122,7 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
           parseErrors.value = (results.errors || []).slice(0, maxErrors)
           loading.value = false
           dirty.value = false
+          sourceText.value = normalizedCsv
 
           resolve(fileSummary.value)
         },
@@ -132,11 +145,11 @@ export function useCsvPreview({ maxErrors = 5 } = {}) {
     loading,
     errorMessage,
     dirty,
+    sourceText,
     fileSummary,
     previewFile,
-    updateCell,
+    updateFromCsvText,
     toCsvText,
-    createCsvFile,
     resetPreview
   }
 }

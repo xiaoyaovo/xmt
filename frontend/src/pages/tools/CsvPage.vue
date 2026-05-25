@@ -1,4 +1,5 @@
 <script setup>
+import Papa from 'papaparse'
 import {
   SelectContent,
   SelectItem,
@@ -84,7 +85,7 @@ const canSaveCsv = computed(() => Boolean(activeFile.value && activeColumns.valu
 
 const csvTextPreview = computed(() => {
   if (!activeFile.value) return ''
-  return localPreview.toCsvText()
+  return localPreview.sourceText.value
 })
 
 const sourceLabel = computed(() => {
@@ -140,11 +141,13 @@ async function selectHistoryFile(file) {
   try {
     const response = await loadAllHistoryRows(file)
     localPreview.selectedFile.value = new File([], file.original_filename, { type: file.content_type || 'text/csv' })
-    localPreview.columns.value = response.columns
-    localPreview.rows.value = response.rows
-    localPreview.delimiter.value = file.delimiter || ','
-    localPreview.parseErrors.value = []
-    localPreview.errorMessage.value = ''
+    localPreview.updateFromCsvText(Papa.unparse({
+      fields: response.columns,
+      data: response.rows
+    }, {
+      delimiter: file.delimiter || ',',
+      newline: '\n'
+    }))
     localPreview.dirty.value = false
     activeFile.value = response.file
     activeSource.value = 'history'
@@ -206,6 +209,11 @@ function syncActiveFileFromPreview(file) {
   }
 }
 
+function createCsvFileFromSource(filename) {
+  const safeFilename = filename?.toLowerCase().endsWith('.csv') ? filename : `${filename || 'edited'}.csv`
+  return new File([localPreview.sourceText.value], safeFilename, { type: 'text/csv;charset=utf-8' })
+}
+
 async function saveCsvVersion() {
   if (!canSaveCsv.value) return
 
@@ -214,7 +222,7 @@ async function saveCsvVersion() {
     return
   }
 
-  const editedFile = localPreview.createCsvFile(createEditedFilename())
+  const editedFile = createCsvFileFromSource(createEditedFilename())
   uploading.value = true
   errorMessage.value = ''
   try {
@@ -283,8 +291,9 @@ async function changeRowsPerPage(value) {
   page.value = 1
 }
 
-function updateCell(rowIndex, columnIndex, event) {
-  localPreview.updateCell(offset.value + rowIndex, columnIndex, event.target.value)
+function updateCsvText(event) {
+  localPreview.updateFromCsvText(event.target.value)
+  page.value = 1
   if (localPreview.selectedFile.value) {
     syncActiveFileFromPreview(localPreview.selectedFile.value)
   }
@@ -441,7 +450,7 @@ onMounted(async () => {
             v-if="!activeFile"
             class="csv-panel csv-preview-empty"
           >
-            <div class="section-kicker">编辑</div>
+            <div class="section-kicker">源码</div>
             <h2 class="content-title">选择或上传一个 CSV 文件</h2>
           </article>
 
@@ -481,6 +490,26 @@ onMounted(async () => {
               class="csv-notice csv-notice-warning"
             >
               解析提示：{{ localPreview.parseErrors.value.length }} 条
+            </div>
+
+            <textarea
+              class="csv-text-editor"
+              :value="csvTextPreview"
+              aria-label="CSV 源码编辑器"
+              spellcheck="false"
+              @input="updateCsvText"
+            />
+          </article>
+        </template>
+
+        <template #preview>
+          <article class="csv-panel csv-preview-panel">
+            <div class="csv-preview-header">
+              <div>
+                <div class="section-kicker">表格</div>
+                <h2 class="csv-file-title">CSV 预览</h2>
+              </div>
+              <span class="csv-table-toolbar">{{ localPreview.dirty.value ? '有未保存编辑' : '已同步' }}</span>
             </div>
 
             <div class="csv-summary-grid">
@@ -573,19 +602,14 @@ onMounted(async () => {
                 <tbody>
                   <tr
                     v-for="(row, rowIndex) in previewRows"
-                    :key="`${activeSource}-${activeFile.id || activeFile.original_filename}-${offset + rowIndex}`"
+                    :key="`${activeSource}-${activeFile?.id || activeFile?.original_filename || 'csv'}-${offset + rowIndex}`"
                   >
                     <td>{{ offset + rowIndex + 1 }}</td>
                     <td
                       v-for="(column, columnIndex) in activeColumns"
                       :key="`${column}-${columnIndex}`"
                     >
-                      <input
-                        class="csv-cell-input"
-                        :value="row[columnIndex] ?? ''"
-                        :aria-label="`${column} 第 ${offset + rowIndex + 1} 行`"
-                        @input="updateCell(rowIndex, columnIndex, $event)"
-                      >
+                      {{ row[columnIndex] ?? '' }}
                     </td>
                   </tr>
                 </tbody>
@@ -598,25 +622,6 @@ onMounted(async () => {
             >
               正在读取数据...
             </div>
-          </article>
-        </template>
-
-        <template #preview>
-          <article class="csv-panel csv-preview-panel">
-            <div class="csv-preview-header">
-              <div>
-                <div class="section-kicker">CSV 输出</div>
-                <h2 class="csv-file-title">编辑后的 CSV 文本</h2>
-              </div>
-              <span class="csv-table-toolbar">{{ localPreview.dirty.value ? '有未保存编辑' : '已同步' }}</span>
-            </div>
-
-            <textarea
-              class="csv-text-preview"
-              :value="csvTextPreview"
-              readonly
-              aria-label="CSV 文本预览"
-            />
           </article>
         </template>
       </ToolWorkbench>
@@ -901,24 +906,7 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.96);
 }
 
-.csv-cell-input {
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid transparent;
-  border-radius: 8px;
-  color: var(--shell-navy);
-  font: inherit;
-  min-width: 140px;
-  padding: 8px 9px;
-  width: 100%;
-}
-
-.csv-cell-input:focus {
-  border-color: rgba(16, 37, 66, 0.22);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
-  outline: none;
-}
-
-.csv-text-preview {
+.csv-text-editor {
   background: #0f1723;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--brand-radius-md, 16px);
