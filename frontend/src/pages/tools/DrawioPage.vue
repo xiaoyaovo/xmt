@@ -527,40 +527,10 @@ onUnmounted(() => {
   margin-left: 2px;
 }
 
-.drawio-history-popover {
-  background: rgba(250, 252, 255, 0.98);
-  border: 1px solid rgba(16, 37, 66, 0.1);
-  border-radius: var(--brand-radius-md, 16px);
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
-  color: var(--shell-navy);
-  min-width: 320px;
-  padding: 12px;
-  z-index: 90;
-}
-
-.drawio-history-popover-head {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-}
-
-.drawio-history-popover-empty {
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.9rem;
-  margin-top: 10px;
-  padding: 6px 4px;
-}
-
 .drawio-history-refresh {
   min-height: 32px;
   padding: 0 10px;
   font-size: 0.82rem;
-}
-
-.drawio-history-popover:focus-visible {
-  outline: none;
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
 }
 
 .drawio-toolbar-head,
@@ -668,17 +638,91 @@ onUnmounted(() => {
   outline: none;
 }
 
+.drawio-frame {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--shell-line);
+  border-radius: var(--brand-radius-md, 16px);
+  height: min(72vh, 760px);
+  margin-top: 16px;
+  min-height: 620px;
+  width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .drawio-frame {
+    height: 580px;
+  }
+}
+
+@media (max-width: 599px) {
+  .drawio-editor-header,
+  .drawio-toolbar-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .drawio-frame {
+    height: 520px;
+    min-height: 520px;
+  }
+
+  .drawio-toolbar-block {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .drawio-workbench-toolbar,
+  .drawio-canvas-pane {
+    padding: 18px;
+  }
+}
+</style>
+
+<style>
+/* Unscoped: PopoverPortal teleports PopoverContent to <body>, so scoped
+   selectors with data-v-XXX attributes do not reliably reach the
+   portal-mounted subtree. These classes are namespaced enough not to leak. */
+.drawio-history-popover {
+  background: #ffffff;
+  border: 1px solid rgba(16, 37, 66, 0.1);
+  border-radius: var(--brand-radius-md, 16px);
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
+  color: var(--shell-navy, #102542);
+  min-width: 320px;
+  padding: 12px;
+  z-index: 90;
+}
+
+.drawio-history-popover:focus-visible {
+  outline: none;
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+}
+
+.drawio-history-popover-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.drawio-history-popover-empty {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.9rem;
+  margin-top: 10px;
+  padding: 6px 4px;
+}
+
 .drawio-archive-list {
+  background: #ffffff;
+  border: 1px solid var(--shell-line, rgba(16, 37, 66, 0.12));
+  border-radius: var(--brand-radius-md, 16px);
   display: flex;
   flex-direction: column;
   margin-top: 12px;
   max-height: min(60vh, 360px);
   overflow-y: auto;
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-md, 16px);
-  background: rgba(255, 255, 255, 0.5);
-  scrollbar-width: thin;
   scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
+  scrollbar-width: thin;
 }
 
 .drawio-archive-list::-webkit-scrollbar {
@@ -692,6 +736,7 @@ onUnmounted(() => {
 
 .drawio-archive-row {
   align-items: center;
+  background: transparent;
   border-top: 1px solid rgba(16, 37, 66, 0.06);
   display: grid;
   gap: 8px;
@@ -733,13 +778,13 @@ onUnmounted(() => {
 }
 
 .drawio-archive-open:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
   border-radius: var(--brand-radius-sm, 8px);
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
   outline: none;
 }
 
 .drawio-archive-time {
-  color: var(--shell-navy);
+  color: var(--shell-navy, #102542);
   font-size: 0.86rem;
   font-weight: 700;
 }
@@ -787,44 +832,5 @@ onUnmounted(() => {
 .drawio-archive-delete:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.drawio-frame {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-md, 16px);
-  height: min(72vh, 760px);
-  margin-top: 16px;
-  min-height: 620px;
-  width: 100%;
-}
-
-@media (max-width: 1023px) {
-  .drawio-frame {
-    height: 580px;
-  }
-}
-
-@media (max-width: 599px) {
-  .drawio-editor-header,
-  .drawio-toolbar-head {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .drawio-frame {
-    height: 520px;
-    min-height: 520px;
-  }
-
-  .drawio-toolbar-block {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .drawio-workbench-toolbar,
-  .drawio-canvas-pane {
-    padding: 18px;
-  }
 }
 </style>

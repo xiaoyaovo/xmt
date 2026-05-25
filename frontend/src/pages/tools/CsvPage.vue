@@ -722,40 +722,10 @@ onMounted(async () => {
   margin-left: 2px;
 }
 
-.csv-history-popover {
-  background: rgba(250, 252, 255, 0.98);
-  border: 1px solid rgba(16, 37, 66, 0.1);
-  border-radius: var(--brand-radius-md, 16px);
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
-  color: var(--shell-navy);
-  min-width: 320px;
-  padding: 12px;
-  z-index: 90;
-}
-
-.csv-history-popover-head {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-}
-
-.csv-history-popover-empty {
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.9rem;
-  margin-top: 10px;
-  padding: 6px 4px;
-}
-
 .csv-history-refresh {
   min-height: 32px;
   padding: 0 10px;
   font-size: 0.82rem;
-}
-
-.csv-history-popover:focus-visible {
-  outline: none;
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
 }
 
 .csv-toolbar-head,
@@ -933,127 +903,6 @@ onMounted(async () => {
   background: rgba(16, 37, 66, 0.07);
 }
 
-.csv-history-list {
-  display: flex;
-  flex-direction: column;
-  margin-top: 12px;
-  max-height: min(60vh, 360px);
-  overflow-y: auto;
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-md, 16px);
-  background: rgba(255, 255, 255, 0.5);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
-}
-
-.csv-history-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.csv-history-list::-webkit-scrollbar-thumb {
-  background: rgba(16, 37, 66, 0.2);
-  border-radius: 999px;
-}
-
-.csv-history-row {
-  align-items: center;
-  border-top: 1px solid rgba(16, 37, 66, 0.06);
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 32px;
-  padding: 4px 8px 4px 10px;
-  position: relative;
-  transition: background 120ms ease;
-}
-
-.csv-history-row:first-child {
-  border-top: 0;
-}
-
-.csv-history-row:hover,
-.csv-history-row:focus-within {
-  background: rgba(16, 37, 66, 0.04);
-}
-
-.csv-history-row-active {
-  background: rgba(16, 37, 66, 0.06);
-  box-shadow: inset 3px 0 0 0 var(--brand-color-accent, #102542);
-}
-
-.csv-history-open {
-  align-items: baseline;
-  background: transparent;
-  border: 0;
-  color: inherit;
-  cursor: pointer;
-  display: flex;
-  flex-wrap: wrap;
-  font: inherit;
-  gap: 10px;
-  min-height: 28px;
-  padding: 2px 0;
-  text-align: left;
-  width: 100%;
-}
-
-.csv-history-open:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  border-radius: var(--brand-radius-sm, 8px);
-  outline: none;
-}
-
-.csv-history-time {
-  color: var(--shell-navy);
-  font-size: 0.86rem;
-  font-weight: 700;
-}
-
-.csv-history-meta {
-  color: rgba(15, 23, 35, 0.55);
-  font-size: 0.82rem;
-}
-
-.csv-history-delete {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
-  color: rgba(15, 23, 35, 0.4);
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-size: 1.05rem;
-  font-weight: 700;
-  height: 24px;
-  justify-content: center;
-  line-height: 1;
-  padding: 0;
-  transition: color 120ms ease, background 120ms ease;
-  width: 24px;
-}
-
-.csv-history-row:hover .csv-history-delete,
-.csv-history-row:focus-within .csv-history-delete {
-  color: var(--shell-coral, #ff7a59);
-}
-
-.csv-history-delete:hover {
-  background: rgba(255, 122, 89, 0.12);
-  color: var(--shell-coral, #ff7a59);
-}
-
-.csv-history-delete:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  color: var(--shell-coral, #ff7a59);
-  outline: none;
-}
-
-.csv-history-delete:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
 .csv-file-title {
   color: var(--shell-navy);
   font-weight: 800;
@@ -1136,5 +985,162 @@ onMounted(async () => {
     min-width: 0;
     width: 100%;
   }
+}
+</style>
+
+<style>
+/* Unscoped: PopoverPortal teleports PopoverContent to <body>, so scoped
+   selectors with data-v-XXX attributes do not reliably reach the
+   portal-mounted subtree. These classes are namespaced enough not to leak. */
+.csv-history-popover {
+  background: #ffffff;
+  border: 1px solid rgba(16, 37, 66, 0.1);
+  border-radius: var(--brand-radius-md, 16px);
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
+  color: var(--shell-navy, #102542);
+  min-width: 320px;
+  padding: 12px;
+  z-index: 90;
+}
+
+.csv-history-popover:focus-visible {
+  outline: none;
+  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+}
+
+.csv-history-popover-head {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.csv-history-popover-empty {
+  color: rgba(15, 23, 35, 0.62);
+  font-size: 0.9rem;
+  margin-top: 10px;
+  padding: 6px 4px;
+}
+
+.csv-history-list {
+  background: #ffffff;
+  border: 1px solid var(--shell-line, rgba(16, 37, 66, 0.12));
+  border-radius: var(--brand-radius-md, 16px);
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+  max-height: min(60vh, 360px);
+  overflow-y: auto;
+  scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
+  scrollbar-width: thin;
+}
+
+.csv-history-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.csv-history-list::-webkit-scrollbar-thumb {
+  background: rgba(16, 37, 66, 0.2);
+  border-radius: 999px;
+}
+
+.csv-history-row {
+  align-items: center;
+  background: transparent;
+  border-top: 1px solid rgba(16, 37, 66, 0.06);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 32px;
+  padding: 4px 8px 4px 10px;
+  position: relative;
+  transition: background 120ms ease;
+}
+
+.csv-history-row:first-child {
+  border-top: 0;
+}
+
+.csv-history-row:hover,
+.csv-history-row:focus-within {
+  background: rgba(16, 37, 66, 0.04);
+}
+
+.csv-history-row-active {
+  background: rgba(16, 37, 66, 0.06);
+  box-shadow: inset 3px 0 0 0 var(--brand-color-accent, #102542);
+}
+
+.csv-history-open {
+  align-items: baseline;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  font: inherit;
+  gap: 10px;
+  min-height: 28px;
+  padding: 2px 0;
+  text-align: left;
+  width: 100%;
+}
+
+.csv-history-open:focus-visible {
+  border-radius: var(--brand-radius-sm, 8px);
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  outline: none;
+}
+
+.csv-history-time {
+  color: var(--shell-navy, #102542);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.csv-history-meta {
+  color: rgba(15, 23, 35, 0.55);
+  font-size: 0.82rem;
+}
+
+.csv-history-delete {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--brand-radius-pill, 999px);
+  color: rgba(15, 23, 35, 0.4);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  height: 24px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  transition: color 120ms ease, background 120ms ease;
+  width: 24px;
+}
+
+.csv-history-row:hover .csv-history-delete,
+.csv-history-row:focus-within .csv-history-delete {
+  color: var(--shell-coral, #ff7a59);
+}
+
+.csv-history-delete:hover {
+  background: rgba(255, 122, 89, 0.12);
+  color: var(--shell-coral, #ff7a59);
+}
+
+.csv-history-delete:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+  color: var(--shell-coral, #ff7a59);
+  outline: none;
+}
+
+.csv-history-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 </style>
