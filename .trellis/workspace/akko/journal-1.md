@@ -203,3 +203,36 @@ Changed Mermaid account sync from a single default draft to multi-entry cloud ar
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: Fix Mermaid archive save action
+
+**Date**: 2026-05-25
+**Task**: Fix Mermaid archive save action
+**Branch**: `main`
+
+### Summary
+
+Changed Mermaid's primary archive action to save the currently loaded archive, create a first archive when none is active, and added a separate save-as-new action for multi-archive copies.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c5c5b52` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
