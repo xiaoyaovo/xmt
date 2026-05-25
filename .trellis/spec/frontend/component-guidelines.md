@@ -14,6 +14,7 @@ Use this order for SFCs:
 Reference examples:
 
 - `frontend/src/components/tools/AccountSyncPanel.vue`
+- `frontend/src/components/tools/ToolArchivePanel.vue`
 - `frontend/src/components/site/SiteUserMenu.vue`
 - `frontend/src/pages/tools/MermaidPage.vue`
 
@@ -45,6 +46,8 @@ Use existing CSS variables before adding new colors or radii:
 Local component styles should use stable class names and responsive media queries. The current UI favors dense, tool-like panels and restrained visual styling over marketing-page ornamentation on tool pages.
 
 Avoid nested card-like containers unless they represent genuinely separate repeated items or overlays. Keep tool workspaces structured with panels, sidebars, and main content areas like `CsvPage.vue` and `MermaidPage.vue`.
+
+For tool history/archive sections, use `ToolArchivePanel.vue` for the shared login-checking, logged-out, authenticated header, refresh, and empty states. Keep item row rendering in page-level slots when metadata or row actions differ by tool.
 
 ## Accessibility
 

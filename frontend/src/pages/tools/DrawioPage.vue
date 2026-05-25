@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
+import ToolArchivePanel from 'src/components/tools/ToolArchivePanel.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 
 const drawioOrigin = 'https://embed.diagrams.net'
@@ -54,9 +55,9 @@ const syncStatusText = computed(() => {
   return accountSync.items.value.length ? `${accountSync.items.value.length} 个云端存档` : accountSync.syncLabel.value
 })
 const syncButtonText = computed(() => {
-  if (syncingExport.value) return '准备同步...'
-  if (accountSync.saving.value) return '同步中...'
-  return accountSync.auth.authenticated ? '同步到账号' : '登录后同步'
+  if (syncingExport.value) return '准备保存...'
+  if (accountSync.saving.value) return '保存中...'
+  return accountSync.auth.authenticated ? '保存' : '登录后保存'
 })
 const syncButtonDisabled = computed(() => syncingExport.value || accountSync.saving.value)
 const stats = computed(() => [
@@ -138,7 +139,7 @@ async function persistSyncedDiagram(xml = savedXml.value) {
   })
 
   if (item) {
-    lastEvent.value = '已新增 Draw.io 云端存档。'
+    lastEvent.value = '已保存为 Draw.io 云端存档。'
     sendSavedStatus()
   }
 
@@ -294,7 +295,7 @@ onUnmounted(() => {
             <div class="drawio-panel-topline">
               <div>
                 <div class="section-kicker">存档</div>
-                <h2 class="bench-title">账号存档</h2>
+                <h2 class="bench-title">云端存档</h2>
               </div>
               <span class="drawio-status">{{ syncStatusText }}</span>
             </div>
@@ -354,105 +355,61 @@ onUnmounted(() => {
               </button>
             </div>
             <p class="drawio-helper">
-              同步时会先从 draw.io 取回最新 XML，再新增为一条账号存档。
+              保存会先从 draw.io 取回最新 XML，再保存为一条新的云端存档。
             </p>
             <AccountSyncPanel
               :authenticated="accountSync.auth.authenticated"
               :loading="accountSync.auth.loading"
               :label="accountSync.syncLabel.value"
-              description="登录后可把当前 Draw.io 图表 XML 保存为账号存档，下次继续编辑。"
+              description="登录后可把当前 Draw.io 图表 XML 保存为云端存档，下次继续编辑。"
               @login="accountSync.login"
             />
           </article>
 
-          <article
-            v-if="!accountSync.auth.initialized || accountSync.auth.loading"
-            class="drawio-panel drawio-sync-panel"
+          <ToolArchivePanel
+            :initialized="accountSync.auth.initialized"
+            :authenticated="accountSync.auth.authenticated"
+            :auth-loading="accountSync.auth.loading"
+            :loading="accountSync.loading.value"
+            :has-items="Boolean(accountSync.items.value.length)"
+            loading-description="编辑器和本地导出可直接使用，登录状态只影响云端存档。"
+            login-description="每次保存都会新增一条 Draw.io 存档，便于保留不同版本或不同图表。"
+            empty-text="还没有 Draw.io 云端存档。"
+            @login="accountSync.login"
+            @refresh="accountSync.loadItems"
           >
-            <div class="section-kicker">登录状态</div>
-            <h2 class="bench-title">正在检查 GitHub 登录</h2>
-            <p class="drawio-helper">
-              编辑器和本地导出可直接使用，登录状态只影响账号存档。
-            </p>
-          </article>
-
-          <article
-            v-else-if="!accountSync.auth.authenticated"
-            class="drawio-panel drawio-sync-panel"
-          >
-            <div class="section-kicker">同步</div>
-            <h2 class="bench-title">登录后启用图表存档</h2>
-            <p class="drawio-helper">
-              每次同步都会新增一条 Draw.io 存档，便于保留不同版本或不同图表。
-            </p>
-            <button
-              class="drawio-primary-action drawio-auth-action"
-              type="button"
-              :disabled="accountSync.auth.loading"
-              @click="accountSync.login"
+            <div
+              v-for="item in accountSync.items.value"
+              :key="item.item_key"
+              class="drawio-archive-row"
             >
-              {{ accountSync.auth.loading ? '正在跳转...' : '使用 GitHub 登录' }}
-            </button>
-          </article>
-
-          <article
-            v-else
-            class="drawio-panel drawio-sync-panel"
-          >
-            <div class="drawio-panel-topline">
-              <div>
-                <div class="section-kicker">同步</div>
-                <h2 class="bench-title">云端存档</h2>
-              </div>
               <button
-                class="drawio-ghost-action"
+                class="drawio-sync-item"
+                :class="{ 'drawio-sync-item-active': accountSync.activeItem.value?.item_key === item.item_key }"
                 type="button"
-                :disabled="accountSync.loading.value"
-                @click="accountSync.loadItems"
+                @click="openArchive(item)"
               >
-                {{ accountSync.loading.value ? '刷新中' : '刷新' }}
+                <span class="drawio-sync-name">{{ item.title || 'Draw.io 图表' }}</span>
+                <span class="drawio-sync-meta">
+                  {{ item.payload?.xml_length || 0 }} 字符 · {{ formatArchiveDate(item.updated_at) }}
+                </span>
+              </button>
+              <button
+                class="drawio-ghost-action drawio-danger-action drawio-archive-delete"
+                type="button"
+                :disabled="deletingArchiveKey === item.item_key"
+                @click="deleteSyncedDiagram(item)"
+              >
+                {{ deletingArchiveKey === item.item_key ? '删除中' : '删除' }}
               </button>
             </div>
-            <div
-              v-if="!accountSync.items.value.length"
-              class="drawio-empty"
-            >
-              还没有 Draw.io 云端存档。
-            </div>
-            <template v-else>
-              <div
-                v-for="item in accountSync.items.value"
-                :key="item.item_key"
-                class="drawio-archive-row"
-              >
-                <button
-                  class="drawio-sync-item"
-                  :class="{ 'drawio-sync-item-active': accountSync.activeItem.value?.item_key === item.item_key }"
-                  type="button"
-                  @click="openArchive(item)"
-                >
-                  <span class="drawio-sync-name">{{ item.title || 'Draw.io 图表' }}</span>
-                  <span class="drawio-sync-meta">
-                    {{ item.payload?.xml_length || 0 }} 字符 · {{ formatArchiveDate(item.updated_at) }}
-                  </span>
-                </button>
-                <button
-                  class="drawio-ghost-action drawio-danger-action drawio-archive-delete"
-                  type="button"
-                  :disabled="deletingArchiveKey === item.item_key"
-                  @click="deleteSyncedDiagram(item)"
-                >
-                  {{ deletingArchiveKey === item.item_key ? '删除中' : '删除' }}
-                </button>
-              </div>
-            </template>
-          </article>
+          </ToolArchivePanel>
 
           <article class="drawio-panel">
-            <div class="section-kicker">数据</div>
-            <h2 class="bench-title">最近保存的 XML</h2>
+            <div class="section-kicker">本地数据</div>
+            <h2 class="bench-title">最近导出的 XML</h2>
             <p class="drawio-helper">
-              当前页面会保留最近一次从 draw.io 导出的 XML；登录后可新增为账号存档。
+              当前页面会保留最近一次从 draw.io 导出的 XML；登录后可保存为云端存档。
             </p>
             <textarea
               class="drawio-xml-preview"
@@ -631,28 +588,8 @@ onUnmounted(() => {
   margin: 12px 0 0;
 }
 
-.drawio-auth-action {
-  margin-top: 16px;
-  width: 100%;
-}
-
 .drawio-danger-action {
   color: #9b2f25;
-}
-
-.drawio-sync-panel {
-  max-height: 560px;
-  overflow: auto;
-}
-
-.drawio-empty {
-  background: rgba(255, 255, 255, 0.54);
-  border: 1px dashed rgba(16, 37, 66, 0.16);
-  border-radius: var(--brand-radius-md, 16px);
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.9rem;
-  margin-top: 14px;
-  padding: 16px;
 }
 
 .drawio-archive-row {

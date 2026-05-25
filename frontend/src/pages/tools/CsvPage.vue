@@ -12,6 +12,7 @@ import {
 import { computed, onMounted, shallowRef } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
+import ToolArchivePanel from 'src/components/tools/ToolArchivePanel.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 import { useCsvPreview } from 'src/composables/useCsvPreview'
 import {
@@ -222,11 +223,11 @@ onMounted(async () => {
     <section class="tool-detail-shell">
       <div class="tool-detail-header">
         <div>
-          <div class="section-kicker">CSV · 本地预览</div>
+          <div class="section-kicker">CSV · 表格预览</div>
           <h1 class="section-title">先看清 CSV，再决定是否保存。</h1>
         </div>
         <p class="section-text">
-          选择本地 CSV 后会直接在浏览器里解析预览。登录 GitHub 后，可以把文件保存到历史记录并在 30 天内继续查看。
+          选择本地 CSV 后会直接在浏览器里解析预览。登录 GitHub 后，可以把文件保存为云端存档并在 30 天内继续查看。
         </p>
       </div>
 
@@ -267,7 +268,7 @@ onMounted(async () => {
                 :disabled="!canSaveLocalFile || uploading || localPreview.loading.value"
                 @click="saveLocalFile"
               >
-                {{ uploading ? '保存中...' : auth.authenticated ? '保存到历史' : '登录后保存' }}
+                {{ uploading ? '保存中...' : auth.authenticated ? '保存' : '登录后保存' }}
               </button>
               <button
                 class="csv-ghost-action"
@@ -279,73 +280,28 @@ onMounted(async () => {
               </button>
             </div>
             <p class="csv-helper">
-              本地预览不会上传文件。保存到历史需要 GitHub 登录，每个账号最多保留 50 个文件，总容量 500 MB。
+              本地预览不会上传文件。保存为云端存档需要 GitHub 登录，每个账号最多保留 50 个文件，总容量 500 MB。
             </p>
             <AccountSyncPanel
               :authenticated="accountSync.auth.authenticated"
               :loading="accountSync.auth.loading"
               :label="accountSync.syncLabel.value"
-              description="登录后可把 CSV 文件保存到账号历史，后续继续预览和下载。"
+              description="登录后可把当前 CSV 保存为云端存档，后续继续预览和下载。"
               @login="accountSync.login"
             />
           </article>
 
-          <article
-            v-if="!auth.initialized || auth.loading"
-            class="csv-panel csv-history-panel"
+          <ToolArchivePanel
+            :initialized="auth.initialized"
+            :authenticated="auth.authenticated"
+            :auth-loading="auth.loading"
+            :loading="loadingFiles"
+            :has-items="Boolean(files.length)"
+            login-description="登录后可把 CSV 文件保存为云端存档，后续继续预览和下载。"
+            empty-text="还没有 CSV 云端存档。"
+            @login="accountSync.login"
+            @refresh="refreshFiles"
           >
-            <div class="section-kicker">登录状态</div>
-            <h2 class="bench-title">正在检查 GitHub 登录</h2>
-            <p class="csv-helper">
-              预览功能可直接使用，登录状态只影响历史记录。
-            </p>
-          </article>
-
-          <article
-            v-else-if="!auth.authenticated"
-            class="csv-panel csv-history-panel"
-          >
-            <div class="section-kicker">历史</div>
-            <h2 class="bench-title">登录后启用历史记录</h2>
-            <p class="csv-helper">
-              历史记录会绑定到你的 GitHub 账号，第一版不开放传统注册表单。
-            </p>
-            <button
-              class="csv-primary-action csv-auth-action"
-              type="button"
-              :disabled="auth.loading"
-              @click="accountSync.login"
-            >
-              {{ auth.loading ? '正在跳转...' : '使用 GitHub 登录' }}
-            </button>
-          </article>
-
-          <article
-            v-else
-            class="csv-panel csv-history-panel"
-          >
-            <div class="csv-panel-topline">
-              <div>
-                <div class="section-kicker">历史</div>
-                <h2 class="bench-title">最近文件</h2>
-              </div>
-              <button
-                class="csv-ghost-action"
-                type="button"
-                :disabled="loadingFiles"
-                @click="refreshFiles"
-              >
-                {{ loadingFiles ? '刷新中' : '刷新' }}
-              </button>
-            </div>
-
-            <div
-              v-if="!files.length && !loadingFiles"
-              class="csv-empty"
-            >
-              还没有 CSV 历史。
-            </div>
-
             <button
               v-for="file in files"
               :key="file.id"
@@ -359,7 +315,7 @@ onMounted(async () => {
                 {{ file.row_count }} 行 · {{ formatBytes(file.size) }} · {{ formatDate(file.created_at) }}
               </span>
             </button>
-          </article>
+          </ToolArchivePanel>
         </aside>
 
         <main class="csv-preview">
@@ -388,7 +344,7 @@ onMounted(async () => {
             <div class="csv-preview-header">
               <div>
                 <div class="section-kicker">
-                  {{ activeSource === 'local' ? '本地预览' : '历史文件' }}
+                  {{ activeSource === 'local' ? '本地预览' : '云端存档' }}
                 </div>
                 <h2 class="csv-file-title">{{ activeFile.original_filename }}</h2>
               </div>
@@ -416,7 +372,7 @@ onMounted(async () => {
               v-if="activeSource === 'local'"
               class="csv-notice"
             >
-              当前展示的是浏览器本地解析结果，文件还没有上传。需要跨设备继续查看时，可以保存到历史。
+              当前展示的是浏览器本地解析结果，文件还没有上传。需要跨设备继续查看时，可以保存为云端存档。
             </div>
 
             <div
@@ -611,7 +567,6 @@ onMounted(async () => {
 .csv-limit,
 .csv-helper,
 .csv-history-meta,
-.csv-empty,
 .csv-table-toolbar {
   color: rgba(15, 23, 35, 0.62);
   font-size: 0.9rem;
@@ -651,11 +606,6 @@ onMounted(async () => {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 14px;
-}
-
-.csv-auth-action {
-  margin-top: 16px;
-  width: 100%;
 }
 
 .csv-ghost-action,
@@ -719,11 +669,6 @@ onMounted(async () => {
 .csv-helper {
   line-height: 1.6;
   margin: 14px 0 0;
-}
-
-.csv-history-panel {
-  max-height: 560px;
-  overflow: auto;
 }
 
 .csv-history-item {
