@@ -539,3 +539,36 @@ Rebuilt frontend landing + tool pages around a Linear/Vercel single-column narra
 ### Next Steps
 
 - None - task complete
+
+
+## Session 17: Fix CSV migration state drift
+
+**Date**: 2026-05-26
+**Task**: Fix CSV migration state drift
+**Branch**: `main`
+
+### Summary
+
+Fixed the CSV history 500 by repairing the local MySQL csv_files schema, syncing Aerich migration records, adding MODELS_STATE to the CSV title/remark migration, and documenting the drift repair workflow.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d8e6c1f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
