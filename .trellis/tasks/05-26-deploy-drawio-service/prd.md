@@ -112,7 +112,8 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
 ### Phase 3: MVP Persistence
 
 - Reuse the existing generic sync backend:
-  - tool key: `drawio`
+  - diagram tool key: `drawio`
+  - whiteboard tool key: `drawio-whiteboard`
   - item key: generated archive key
   - payload: `{ xml, xml_length, archive_key, mode, updated_from, remark }`
 - Save flow:

@@ -5,7 +5,7 @@ import {
   PopoverRoot,
   PopoverTrigger
 } from 'reka-ui'
-import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
+import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 import ToolSaveDialog from 'src/components/tools/ToolSaveDialog.vue'
@@ -51,13 +51,15 @@ const syncAfterNextExport = shallowRef(false)
 const syncingExport = shallowRef(false)
 const deletingArchiveKey = shallowRef('')
 const historyOpen = shallowRef(false)
-const accountSync = useAccountSync('drawio')
+const diagramSync = useAccountSync('drawio')
+const whiteboardSync = useAccountSync('drawio-whiteboard')
 const saveDialogOpen = shallowRef(false)
 const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 const pendingArchiveMeta = shallowRef({ title: '', remark: '' })
 
 const editorMode = computed(() => route.query.mode === 'whiteboard' ? 'whiteboard' : 'diagram')
 const editorModeLabel = computed(() => editorMode.value === 'whiteboard' ? '白板' : 'Draw.io')
+const accountSync = computed(() => editorMode.value === 'whiteboard' ? whiteboardSync : diagramSync)
 const drawioEmbedUrl = computed(() => {
   const modeParams = editorMode.value === 'whiteboard' ? 'ui=sketch&sketch=1' : 'ui=min'
   return `${drawioOrigin}${drawioPath}?embed=1&proto=json&spin=1&${modeParams}&lang=zh&dark=0&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
@@ -65,38 +67,38 @@ const drawioEmbedUrl = computed(() => {
 const xmlCharacters = computed(() => savedXml.value.length)
 const syncStatusText = computed(() => {
   if (syncingExport.value) return '准备同步'
-  if (accountSync.saving.value) return '同步中'
-  if (accountSync.loading.value) return '读取中'
+  if (accountSync.value.saving.value) return '同步中'
+  if (accountSync.value.loading.value) return '读取中'
   return ''
 })
 const archiveCountText = computed(() => {
-  if (accountSync.loading.value) return '读取中'
-  return accountSync.items.value.length ? String(accountSync.items.value.length) : ''
+  if (accountSync.value.loading.value) return '读取中'
+  return accountSync.value.items.value.length ? String(accountSync.value.items.value.length) : ''
 })
 const historyTriggerLabel = computed(() => {
-  if (!accountSync.auth.initialized || accountSync.auth.loading) return '检查登录中'
-  if (!accountSync.auth.authenticated) return '未登录 · 登录后同步'
-  if (accountSync.loading.value) return '读取中'
-  const active = accountSync.activeItem.value
+  if (!accountSync.value.auth.initialized || accountSync.value.auth.loading) return '检查登录中'
+  if (!accountSync.value.auth.authenticated) return '未登录 · 登录后同步'
+  if (accountSync.value.loading.value) return '读取中'
+  const active = accountSync.value.activeItem.value
   if (active) {
     const activeLabel = (active.title || '').trim() || formatArchiveDate(active.updated_at)
     return `历史 · ${activeLabel}`
   }
-  if (!accountSync.items.value.length) return '无存档'
-  return `历史存档 · ${accountSync.items.value.length}`
+  if (!accountSync.value.items.value.length) return '无存档'
+  return `历史存档 · ${accountSync.value.items.value.length}`
 })
 const historyTriggerDisabled = computed(() => {
-  if (!accountSync.auth.initialized || accountSync.auth.loading) return true
-  if (!accountSync.auth.authenticated) return true
-  if (accountSync.loading.value) return false
-  return !accountSync.items.value.length
+  if (!accountSync.value.auth.initialized || accountSync.value.auth.loading) return true
+  if (!accountSync.value.auth.authenticated) return true
+  if (accountSync.value.loading.value) return false
+  return !accountSync.value.items.value.length
 })
 const syncButtonText = computed(() => {
   if (syncingExport.value) return '准备保存...'
-  if (accountSync.saving.value) return '保存中...'
-  return accountSync.auth.authenticated ? '保存' : '登录后保存'
+  if (accountSync.value.saving.value) return '保存中...'
+  return accountSync.value.auth.authenticated ? '保存' : '登录后保存'
 })
-const syncButtonDisabled = computed(() => syncingExport.value || accountSync.saving.value)
+const syncButtonDisabled = computed(() => syncingExport.value || accountSync.value.saving.value)
 const editorMetaText = computed(() => {
   const parts = [`${xmlCharacters.value} 字符`]
   if (savedAt.value) parts.push(`已保存 ${savedAt.value}`)
@@ -170,7 +172,7 @@ async function persistSyncedDiagram(xml = savedXml.value, { title = '', remark =
   const nextItemKey = createArchiveKey()
   const trimmedTitle = (title || '').trim()
   const trimmedRemark = (remark || '').trim()
-  const item = await accountSync.saveItem({
+  const item = await accountSync.value.saveItem({
     title: trimmedTitle || createArchiveTitle(),
     nextItemKey,
     payload: {
@@ -192,15 +194,15 @@ async function persistSyncedDiagram(xml = savedXml.value, { title = '', remark =
 }
 
 async function saveSyncedDiagram() {
-  if (!accountSync.auth.authenticated) {
-    const authenticated = await accountSync.ensureAuth()
+  if (!accountSync.value.auth.authenticated) {
+    const authenticated = await accountSync.value.ensureAuth()
     if (!authenticated) {
-      accountSync.login()
+      accountSync.value.login()
       return
     }
   }
 
-  const active = accountSync.activeItem.value
+  const active = accountSync.value.activeItem.value
   saveDialogDefaults.value = {
     title: active?.title || '',
     remark: active?.payload?.remark || ''
@@ -230,7 +232,7 @@ async function openArchive(item) {
     return
   }
 
-  accountSync.activeItem.value = item
+  accountSync.value.activeItem.value = item
   savedXml.value = xml
   savedAt.value = ''
   loadXml(xml)
@@ -242,10 +244,10 @@ async function deleteSyncedDiagram(item) {
   if (!item?.item_key) return
 
   deletingArchiveKey.value = item.item_key
-  const deleted = await accountSync.deleteItem(item.item_key)
+  const deleted = await accountSync.value.deleteItem(item.item_key)
   if (deleted) {
-    if (accountSync.activeItem.value?.item_key === item.item_key) {
-      accountSync.activeItem.value = null
+    if (accountSync.value.activeItem.value?.item_key === item.item_key) {
+      accountSync.value.activeItem.value = null
     }
     drawioError.value = ''
   }
@@ -303,7 +305,7 @@ function handleDrawioMessage(event) {
       const meta = pendingArchiveMeta.value
       pendingArchiveMeta.value = { title: '', remark: '' }
       persistSyncedDiagram(xmlPayload, meta)
-    } else if (message.event === 'save' && accountSync.auth.authenticated) {
+    } else if (message.event === 'save' && accountSync.value.auth.authenticated) {
       persistSyncedDiagram(xmlPayload)
     }
     return
@@ -319,12 +321,18 @@ function handleDrawioMessage(event) {
 
 onMounted(async () => {
   window.addEventListener('message', handleDrawioMessage)
-  await accountSync.ensureAuth()
-  await accountSync.loadItems()
+  await accountSync.value.ensureAuth()
+  await accountSync.value.loadItems()
 })
 
 onUnmounted(() => {
   window.removeEventListener('message', handleDrawioMessage)
+})
+
+watch(editorMode, async () => {
+  historyOpen.value = false
+  deletingArchiveKey.value = ''
+  await accountSync.value.loadItems()
 })
 </script>
 
