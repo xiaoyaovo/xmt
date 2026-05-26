@@ -46,6 +46,31 @@ def create_access_token(user_id: int) -> str:
     return f"{signing_input}.{_sign(signing_input)}"
 
 
+def create_signed_payload(payload: dict[str, Any]) -> str:
+    encoded_payload = _b64encode(_json_dumps(payload).encode("utf-8"))
+    return f"{encoded_payload}.{_sign(encoded_payload)}"
+
+
+def decode_signed_payload(token: str | None) -> dict[str, Any] | None:
+    if not token or token.count(".") != 1:
+        return None
+
+    encoded_payload, signature = token.split(".")
+    if not hmac.compare_digest(signature, _sign(encoded_payload)):
+        return None
+
+    try:
+        payload = json.loads(_b64decode(encoded_payload))
+    except (ValueError, json.JSONDecodeError):
+        return None
+
+    exp = payload.get("exp")
+    if exp is not None and int(exp) < int(datetime.now(UTC).timestamp()):
+        return None
+
+    return payload
+
+
 def decode_access_token(token: str | None) -> dict[str, Any] | None:
     if not token or token.count(".") != 2:
         return None

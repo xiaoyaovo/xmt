@@ -1,16 +1,34 @@
 import base64
-from datetime import UTC, datetime
-from urllib.parse import parse_qs, urlencode
+from datetime import UTC, datetime, timedelta
+from urllib.parse import urlencode
 from urllib.request import Request as UrlRequest, urlopen
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, require_current_user
 from app.models.user import User
-from app.schemas.auth import AuthMeResponse, LoginResponse, PasswordLoginRequest, UserResponse
-from app.services.auth_service import authenticate_password_user, create_login_token
+from app.models.user_auth_account import UserAuthAccount
+from app.schemas.auth import (
+    AuthAccountListResponse,
+    AuthAccountResponse,
+    AuthMeResponse,
+    LoginResponse,
+    OAuthUrlResponse,
+    PasswordLoginRequest,
+    UserResponse,
+)
+from app.services.auth_service import (
+    AUTH_PROVIDERS,
+    authenticate_password_user,
+    create_login_token,
+    get_or_create_oauth_user,
+    link_oauth_account,
+    list_auth_accounts,
+    unlink_auth_account,
+)
+from app.services.jwt_service import create_signed_payload, decode_signed_payload
 from app.settings.config import settings
 
 router = APIRouter(prefix="/auth")
@@ -26,6 +44,20 @@ def serialize_user(user: User) -> UserResponse:
         avatar_url=user.avatar_url,
         email=user.email,
         last_login_at=user.last_login_at,
+    )
+
+
+def serialize_auth_account(account: UserAuthAccount, *, can_unlink: bool) -> AuthAccountResponse:
+    return AuthAccountResponse(
+        provider=account.provider,
+        provider_user_id=account.provider_user_id,
+        provider_username=account.provider_username,
+        provider_email=account.provider_email,
+        avatar_url=account.avatar_url,
+        linked=True,
+        can_unlink=can_unlink,
+        linked_at=account.linked_at,
+        last_used_at=account.last_used_at,
     )
 
 
@@ -99,18 +131,58 @@ def _require_allowed_frontend_origin(value: str) -> str:
     return origin
 
 
-def _parse_oauth_state(state: str) -> tuple[str, str]:
-    state_values = parse_qs(state)
-    safe_redirect = _safe_redirect_path(state_values.get("redirect", [state])[0])
-    frontend_origin = _safe_frontend_origin(state_values.get("frontend_origin", [""])[0])
-    return safe_redirect, frontend_origin
+def _create_oauth_state(
+    *,
+    purpose: str,
+    redirect: str,
+    frontend_origin: str,
+    user_id: int | None = None,
+) -> str:
+    payload = {
+        "purpose": purpose,
+        "redirect": _safe_redirect_path(redirect),
+        "frontend_origin": _safe_frontend_origin(frontend_origin),
+        "iat": int(datetime.now(UTC).timestamp()),
+        "exp": int((datetime.now(UTC) + timedelta(minutes=15)).timestamp()),
+    }
+    if user_id is not None:
+        payload["user_id"] = user_id
+
+    return create_signed_payload(payload)
+
+
+def _parse_oauth_state(state: str) -> dict:
+    payload = decode_signed_payload(state)
+    if payload:
+        payload["redirect"] = _safe_redirect_path(str(payload.get("redirect") or "/tools"))
+        payload["frontend_origin"] = _safe_frontend_origin(str(payload.get("frontend_origin") or ""))
+        payload["purpose"] = payload.get("purpose") or "login"
+        return payload
+
+    return {
+        "purpose": "login",
+        "redirect": _safe_redirect_path(state),
+        "frontend_origin": settings.frontend_url.rstrip("/"),
+    }
 
 
 def _callback_redirect(user: User, state: str) -> RedirectResponse:
-    safe_redirect, frontend_origin = _parse_oauth_state(state)
-    token_query = urlencode({"access_token": create_login_token(user), "redirect": safe_redirect})
+    state_payload = _parse_oauth_state(state)
+    token_query = urlencode({"access_token": create_login_token(user), "redirect": state_payload["redirect"]})
     return RedirectResponse(
-        f"{frontend_origin}/#/auth/callback?{token_query}",
+        f"{state_payload['frontend_origin']}/#/auth/callback?{token_query}",
+        status_code=status.HTTP_302_FOUND,
+    )
+
+
+def _link_callback_redirect(state: str, *, status_value: str = "linked", message: str | None = None) -> RedirectResponse:
+    state_payload = _parse_oauth_state(state)
+    query_payload = {"provider_status": status_value, "redirect": state_payload["redirect"]}
+    if message:
+        query_payload["message"] = message
+    query = urlencode(query_payload)
+    return RedirectResponse(
+        f"{state_payload['frontend_origin']}/#/auth/callback?{query}",
         status_code=status.HTTP_302_FOUND,
     )
 
@@ -125,6 +197,67 @@ def _linuxdo_avatar_url(profile: dict) -> str | None:
         return avatar_template.replace("{size}", "288")
 
     return None
+
+
+def _github_profile_values(profile: dict, email: str | None) -> dict:
+    profile_id = str(profile["id"])
+    return {
+        "provider": "github",
+        "provider_user_id": profile_id,
+        "username": profile.get("login") or f"github-{profile_id}",
+        "avatar_url": profile.get("avatar_url"),
+        "email": email,
+        "github_id": profile_id,
+    }
+
+
+def _linuxdo_profile_values(profile: dict) -> dict:
+    profile_id = profile.get("id") or profile.get("sub") or profile.get("user_id")
+    if profile_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="LinuxDo user profile is invalid")
+    if profile.get("active") is False or profile.get("silenced") is True:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="LinuxDo account is not allowed")
+
+    username = (
+        profile.get("username")
+        or profile.get("login")
+        or profile.get("name")
+        or profile.get("nickname")
+        or f"linuxdo-{profile_id}"
+    )
+    return {
+        "provider": "linuxdo",
+        "provider_user_id": str(profile_id),
+        "username": username,
+        "avatar_url": _linuxdo_avatar_url(profile),
+        "email": profile.get("email"),
+        "github_id": None,
+    }
+
+
+def _github_authorize_url(request: Request, state: str) -> str:
+    query = urlencode(
+        {
+            "client_id": settings.github_client_id,
+            "redirect_uri": str(request.url_for("github_callback")),
+            "scope": "read:user user:email",
+            "state": state,
+        }
+    )
+    return f"https://github.com/login/oauth/authorize?{query}"
+
+
+def _linuxdo_authorize_url(request: Request, state: str) -> str:
+    query = urlencode(
+        {
+            "client_id": settings.linuxdo_client_id,
+            "redirect_uri": str(request.url_for("linuxdo_callback")),
+            "response_type": "code",
+            "scope": "read",
+            "state": state,
+        }
+    )
+    return f"{settings.linuxdo_authorize_url}?{query}"
 
 
 @router.post("/login", response_model=LoginResponse, summary="Login with username and password")
@@ -142,18 +275,9 @@ async def github_login(
     if not settings.github_client_id:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="GitHub OAuth is not configured")
 
-    safe_redirect = _safe_redirect_path(redirect)
     safe_frontend_origin = _require_allowed_frontend_origin(frontend_origin)
-    state = urlencode({"redirect": safe_redirect, "frontend_origin": safe_frontend_origin})
-    query = urlencode(
-        {
-            "client_id": settings.github_client_id,
-            "redirect_uri": str(request.url_for("github_callback")),
-            "scope": "read:user user:email",
-            "state": state,
-        }
-    )
-    return RedirectResponse(f"https://github.com/login/oauth/authorize?{query}", status_code=status.HTTP_302_FOUND)
+    state = _create_oauth_state(purpose="login", redirect=redirect, frontend_origin=safe_frontend_origin)
+    return RedirectResponse(_github_authorize_url(request, state), status_code=status.HTTP_302_FOUND)
 
 
 @router.get("/github/callback", summary="Handle GitHub OAuth callback")
@@ -177,20 +301,38 @@ async def github_callback(code: str, state: str = "/tools") -> RedirectResponse:
     profile = _github_request("https://api.github.com/user", token=access_token)
     emails = _github_request("https://api.github.com/user/emails", token=access_token)
     primary_email = next((item.get("email") for item in emails if item.get("primary")), None)
+    profile_values = _github_profile_values(profile, primary_email)
+    state_payload = _parse_oauth_state(state)
 
-    user, _ = await User.update_or_create(
-        defaults={
-            "auth_provider": "github",
-            "provider_user_id": str(profile["id"]),
-            "username": profile.get("login") or f"github-{profile['id']}",
-            "avatar_url": profile.get("avatar_url"),
-            "email": primary_email,
-            "last_login_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-        github_id=str(profile["id"]),
-    )
+    if state_payload.get("purpose") == "link":
+        user = await User.get_or_none(id=int(state_payload.get("user_id", 0)))
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+        await link_oauth_account(user, **profile_values)
+        return _link_callback_redirect(state)
 
+    user = await get_or_create_oauth_user(**profile_values)
     return _callback_redirect(user, state)
+
+
+@router.get("/github/link", response_model=OAuthUrlResponse, summary="Start GitHub OAuth account linking")
+async def github_link(
+    request: Request,
+    redirect: str = "/account/security",
+    frontend_origin: str = "",
+    user: User = Depends(require_current_user),
+) -> RedirectResponse:
+    if not settings.github_client_id:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="GitHub OAuth is not configured")
+
+    safe_frontend_origin = _require_allowed_frontend_origin(frontend_origin)
+    state = _create_oauth_state(
+        purpose="link",
+        redirect=redirect,
+        frontend_origin=safe_frontend_origin,
+        user_id=user.id,
+    )
+    return OAuthUrlResponse(url=_github_authorize_url(request, state))
 
 
 @router.get("/linuxdo/login", summary="Start LinuxDo OAuth login")
@@ -202,19 +344,9 @@ async def linuxdo_login(
     if not settings.linuxdo_client_id:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="LinuxDo OAuth is not configured")
 
-    safe_redirect = _safe_redirect_path(redirect)
     safe_frontend_origin = _require_allowed_frontend_origin(frontend_origin)
-    state = urlencode({"redirect": safe_redirect, "frontend_origin": safe_frontend_origin})
-    query = urlencode(
-        {
-            "client_id": settings.linuxdo_client_id,
-            "redirect_uri": str(request.url_for("linuxdo_callback")),
-            "response_type": "code",
-            "scope": "read",
-            "state": state,
-        }
-    )
-    return RedirectResponse(f"{settings.linuxdo_authorize_url}?{query}", status_code=status.HTTP_302_FOUND)
+    state = _create_oauth_state(purpose="login", redirect=redirect, frontend_origin=safe_frontend_origin)
+    return RedirectResponse(_linuxdo_authorize_url(request, state), status_code=status.HTTP_302_FOUND)
 
 
 @router.get("/linuxdo/callback", summary="Handle LinuxDo OAuth callback")
@@ -237,33 +369,72 @@ async def linuxdo_callback(request: Request, code: str, state: str = "/tools") -
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="LinuxDo login failed")
 
     profile = _oauth_request(settings.linuxdo_user_url, token=access_token)
-    profile_id = profile.get("id") or profile.get("sub") or profile.get("user_id")
-    if profile_id is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="LinuxDo user profile is invalid")
-    if profile.get("active") is False or profile.get("silenced") is True:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="LinuxDo account is not allowed")
+    profile_values = _linuxdo_profile_values(profile)
+    state_payload = _parse_oauth_state(state)
 
-    username = (
-        profile.get("username")
-        or profile.get("login")
-        or profile.get("name")
-        or profile.get("nickname")
-        or f"linuxdo-{profile_id}"
-    )
+    if state_payload.get("purpose") == "link":
+        user = await User.get_or_none(id=int(state_payload.get("user_id", 0)))
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+        await link_oauth_account(user, **profile_values)
+        return _link_callback_redirect(state)
 
-    user, _ = await User.update_or_create(
-        defaults={
-            "github_id": None,
-            "username": username,
-            "avatar_url": _linuxdo_avatar_url(profile),
-            "email": profile.get("email"),
-            "last_login_at": datetime.now(UTC).replace(tzinfo=None),
-        },
-        auth_provider="linuxdo",
-        provider_user_id=str(profile_id),
-    )
-
+    user = await get_or_create_oauth_user(**profile_values)
     return _callback_redirect(user, state)
+
+
+@router.get("/linuxdo/link", response_model=OAuthUrlResponse, summary="Start LinuxDo OAuth account linking")
+async def linuxdo_link(
+    request: Request,
+    redirect: str = "/account/security",
+    frontend_origin: str = "",
+    user: User = Depends(require_current_user),
+) -> RedirectResponse:
+    if not settings.linuxdo_client_id:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="LinuxDo OAuth is not configured")
+
+    safe_frontend_origin = _require_allowed_frontend_origin(frontend_origin)
+    state = _create_oauth_state(
+        purpose="link",
+        redirect=redirect,
+        frontend_origin=safe_frontend_origin,
+        user_id=user.id,
+    )
+    return OAuthUrlResponse(url=_linuxdo_authorize_url(request, state))
+
+
+@router.get("/accounts", response_model=AuthAccountListResponse, summary="List linked login methods")
+async def get_auth_accounts(user: User = Depends(require_current_user)) -> AuthAccountListResponse:
+    accounts = await list_auth_accounts(user)
+    account_count = len(accounts)
+    account_by_provider = {account.provider: account for account in accounts}
+    response_accounts: list[AuthAccountResponse] = []
+    for provider in AUTH_PROVIDERS:
+        account = account_by_provider.get(provider)
+        if account:
+            response_accounts.append(
+                serialize_auth_account(account, can_unlink=provider != "password" and account_count > 1)
+            )
+            continue
+
+        response_accounts.append(
+            AuthAccountResponse(
+                provider=provider,
+                linked=False,
+                can_unlink=False,
+            )
+        )
+
+    return AuthAccountListResponse(accounts=response_accounts)
+
+
+@router.delete("/accounts/{provider}", summary="Unlink a login method")
+async def delete_auth_account(provider: str, user: User = Depends(require_current_user)) -> dict[str, bool]:
+    if provider not in AUTH_PROVIDERS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="登录方式不存在")
+
+    await unlink_auth_account(user, provider)
+    return {"ok": True}
 
 
 @router.get("/me", response_model=AuthMeResponse, summary="Get current user")

@@ -5,6 +5,7 @@ const routes = [
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
       { path: 'login', component: () => import('pages/LoginPage.vue') },
+      { path: 'account/security', component: () => import('pages/AccountSecurityPage.vue') },
       { path: 'tools', component: () => import('pages/ToolsPage.vue') },
       { path: 'tools/mermaid', component: () => import('pages/tools/MermaidPage.vue') },
       { path: 'tools/csv', component: () => import('pages/tools/CsvPage.vue') },

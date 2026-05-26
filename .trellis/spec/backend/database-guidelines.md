@@ -189,15 +189,26 @@ The database config sets `use_tz = False` and `timezone = "Asia/Shanghai"`. Curr
 - DB: `users.auth_provider VARCHAR(32)`, `users.provider_user_id VARCHAR(128)`, unique index
   `uid_users_provider_user(auth_provider, provider_user_id)`.
 - Legacy DB: `users.github_id` remains nullable for compatibility with existing GitHub-created rows.
+- DB: `user_auth_accounts(provider, provider_user_id)` identifies one provider account, and
+  `user_auth_accounts(user_id, provider)` enforces one account per provider per user in the current product.
 - API: `POST /api/v1/auth/login` accepts `{ "username": string, "password": string }`.
 - OAuth APIs: `GET /api/v1/auth/{github|linuxdo}/login`, `GET /api/v1/auth/{github|linuxdo}/callback`.
+- Account binding APIs: `GET /api/v1/auth/accounts`, `GET /api/v1/auth/{github|linuxdo}/link`,
+  `DELETE /api/v1/auth/accounts/{provider}`.
 - CLI: `cd backend && uv run python -m app.cli.create_password_user <username> [--email ...] [--password ...]`.
 
 ### 3. Contracts
 
 - `auth_provider` values currently used: `password`, `github`, `linuxdo`.
-- For password users, `provider_user_id` must equal the local username and `password_hash` must be set.
-- For OAuth users, `provider_user_id` must be the provider's stable user id; `password_hash` stays null.
+- `users` is the principal identity. `user_auth_accounts` owns login methods. New provider logic should query
+  `UserAuthAccount` first and keep `users.auth_provider/provider_user_id/password_hash` as legacy compatibility only.
+- For password accounts, `provider_user_id` must equal the local username and `password_hash` must be set on
+  `user_auth_accounts`.
+- For OAuth accounts, `provider_user_id` must be the provider's stable user id; `password_hash` stays null.
+- OAuth login state is a signed payload created with `create_signed_payload()` and includes `purpose`, `redirect`,
+  `frontend_origin`, `exp`, and for binding, `user_id`. Do not trust unsigned `state` for account linking.
+- Binding start endpoints require Bearer auth and return `{ "url": "<provider authorize URL>" }`; the browser cannot
+  navigate directly to these endpoints because top-level navigation does not include the Authorization header.
 - Frontend auth callback receives `/#/auth/callback?access_token=<jwt>&redirect=<safe-path>`.
 - Env keys: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `LINUXDO_CLIENT_ID`,
   `LINUXDO_CLIENT_SECRET`, optional `LINUXDO_AUTHORIZE_URL`, `LINUXDO_TOKEN_URL`, `LINUXDO_USER_URL`.
@@ -209,18 +220,24 @@ The database config sets `use_tz = False` and `timezone = "Asia/Shanghai"`. Curr
 - OAuth provider missing credentials -> `500 <Provider> OAuth is not configured`.
 - OAuth token response without `access_token` -> `400 <Provider> login failed`.
 - OAuth profile without stable id -> `400 <Provider> user profile is invalid`.
+- Binding a provider already linked to a different user -> `409 该登录方式已绑定到其他账号`.
+- Unbinding the last login method -> `400 至少保留一种登录方式`.
+- Unbinding password login -> `400 暂不支持解绑账号密码登录`.
 
 ### 5. Good/Base/Bad Cases
 
-- Good: existing GitHub rows are backfilled to `auth_provider='github'` and `provider_user_id=github_id` during migration.
-- Base: adding a new OAuth provider reuses the `auth_provider/provider_user_id` tuple.
+- Good: existing provider data is backfilled into `user_auth_accounts` during migration and JWT `sub` stays as `users.id`.
+- Base: adding a new OAuth provider adds a provider value and reuses `user_auth_accounts(provider, provider_user_id)`.
+- Bad: auto-merging two existing users when a provider collision occurs. Return `409` and make merge a deliberate future task.
 - Bad: querying users by provider username/email; those fields are mutable and not provider-stable.
 
 ### 6. Tests Required
 
 - Run `cd backend && uv run python -m compileall app`.
 - Run `cd backend && uv run aerich heads`.
+- After migration, run a Tortoise query against `UserAuthAccount` to ensure the new table is readable.
 - Verify `POST /api/v1/auth/login` returns `401` instead of `500` after migrations are applied.
+- Verify `GET /api/v1/auth/accounts` returns `password`, `github`, and `linuxdo` entries for authenticated users.
 - Verify the frontend login page handles normalized request errors without exposing provider internals.
 
 ### 7. Wrong vs Correct
@@ -241,4 +258,19 @@ await User.update_or_create(
     provider_user_id=str(profile_id),
     defaults={...},
 )
+```
+
+Wrong:
+
+```javascript
+window.location.href = '/api/v1/auth/github/link'
+```
+
+for binding a provider from the frontend.
+
+Correct:
+
+```javascript
+const response = await createOAuthLinkUrl('github', '/account/security')
+window.location.href = response.url
 ```

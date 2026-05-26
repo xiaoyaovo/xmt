@@ -15,6 +15,26 @@ export function passwordLogin({ username, password }) {
   return request.post('/auth/login', { username, password })
 }
 
+export function listAuthAccounts() {
+  return request.get('/auth/accounts')
+}
+
+export function unlinkAuthAccount(provider) {
+  return request.delete(`/auth/accounts/${encodeURIComponent(provider)}`)
+}
+
+export function createOAuthLinkUrl(provider, redirect = '/account/security') {
+  const search = new URLSearchParams()
+  if (redirect) {
+    search.set('redirect', redirect)
+  }
+  if (window.location.origin) {
+    search.set('frontend_origin', window.location.origin)
+  }
+
+  return request.get(`/auth/${provider}/link?${search.toString()}`)
+}
+
 export function currentRouteRedirect() {
   if (typeof window === 'undefined') {
     return '/tools'

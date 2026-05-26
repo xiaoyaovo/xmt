@@ -6,6 +6,7 @@ from tortoise import Tortoise
 
 from app.db.config import TORTOISE_ORM
 from app.models.user import User
+from app.services.auth_service import ensure_auth_account
 from app.services.password_service import hash_password
 
 
@@ -26,15 +27,33 @@ async def create_password_user(username: str, password: str, email: str | None) 
             user.email = email
             update_fields.append("email")
         await user.save(update_fields=update_fields)
+        await ensure_auth_account(
+            user,
+            provider="password",
+            provider_user_id=normalized_username,
+            provider_username=normalized_username,
+            provider_email=user.email,
+            avatar_url=user.avatar_url,
+            password_hash=password_hash,
+        )
         return user
 
-    return await User.create(
+    user = await User.create(
         auth_provider="password",
         provider_user_id=normalized_username,
         username=normalized_username,
         email=email,
         password_hash=password_hash,
     )
+    await ensure_auth_account(
+        user,
+        provider="password",
+        provider_user_id=normalized_username,
+        provider_username=normalized_username,
+        provider_email=email,
+        password_hash=password_hash,
+    )
+    return user
 
 
 async def main() -> None:

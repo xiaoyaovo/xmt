@@ -12,6 +12,7 @@ declare global {
   const clearAccessToken: typeof import('./lib/auth.js').clearAccessToken
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
+  const createOAuthLinkUrl: typeof import('./lib/auth.js').createOAuthLinkUrl
   const createRequest: typeof import('./lib/index.js').createRequest
   const csvDownloadUrl: typeof import('./lib/csvFiles.js').csvDownloadUrl
   const currentRouteRedirect: typeof import('./lib/auth.js').currentRouteRedirect
@@ -41,6 +42,7 @@ declare global {
   const isRef: typeof import('vue').isRef
   const isShallow: typeof import('vue').isShallow
   const linuxdoLoginUrl: typeof import('./lib/auth.js').linuxdoLoginUrl
+  const listAuthAccounts: typeof import('./lib/auth.js').listAuthAccounts
   const listCsvFiles: typeof import('./lib/csvFiles.js').listCsvFiles
   const listSyncItems: typeof import('./lib/accountSync.js').listSyncItems
   const loginPageUrl: typeof import('./lib/auth.js').loginPageUrl
@@ -82,6 +84,7 @@ declare global {
   const toRefs: typeof import('vue').toRefs
   const toValue: typeof import('vue').toValue
   const triggerRef: typeof import('vue').triggerRef
+  const unlinkAuthAccount: typeof import('./lib/auth.js').unlinkAuthAccount
   const unref: typeof import('vue').unref
   const uploadCsvFile: typeof import('./lib/csvFiles.js').uploadCsvFile
   const useAttrs: typeof import('vue').useAttrs

@@ -160,10 +160,14 @@ async function handleLogout() {
                   个人信息
                   <small>占位符</small>
                 </span>
-                <span class="mobile-nav-account-action mobile-nav-account-action-disabled">
-                  设置
-                  <small>占位符</small>
-                </span>
+                <RouterLink
+                  class="mobile-nav-account-action"
+                  to="/account/security"
+                  @click="open = false"
+                >
+                  登录方式
+                  <small>绑定管理</small>
+                </RouterLink>
                 <span
                   class="mobile-nav-account-action mobile-nav-account-action-danger"
                   role="button"
@@ -404,6 +408,7 @@ async function handleLogout() {
   background: rgba(16, 37, 66, 0.05);
   border-radius: var(--brand-radius-sm, 12px);
   color: var(--shell-navy);
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   font-size: 0.82rem;
@@ -411,6 +416,13 @@ async function handleLogout() {
   gap: 2px;
   min-width: 0;
   padding: 10px 8px;
+  text-decoration: none;
+}
+
+.mobile-nav-account-action:hover,
+.mobile-nav-account-action:focus-visible {
+  background: rgba(16, 37, 66, 0.08);
+  outline: none;
 }
 
 .mobile-nav-account-action small {
@@ -420,6 +432,7 @@ async function handleLogout() {
 }
 
 .mobile-nav-account-action-disabled {
+  cursor: default;
   opacity: 0.58;
 }
 

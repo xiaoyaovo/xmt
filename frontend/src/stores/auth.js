@@ -2,9 +2,11 @@ import { defineStore } from 'pinia'
 
 import {
   clearAccessToken,
+  createOAuthLinkUrl,
   getAccessToken,
   getCurrentUser,
   githubLoginUrl,
+  listAuthAccounts,
   linuxdoLoginUrl,
   loginPageUrl,
   logout as requestLogout,
@@ -79,6 +81,15 @@ export const useAuthStore = defineStore('auth', {
 
     loginWithLinuxDo(redirect) {
       window.location.href = linuxdoLoginUrl(redirect)
+    },
+
+    async linkProvider(provider, redirect = '/account/security') {
+      const response = await createOAuthLinkUrl(provider, redirect)
+      window.location.href = response.url
+    },
+
+    async listAccounts() {
+      return listAuthAccounts()
     },
 
     async logout() {

@@ -6,6 +6,7 @@ import {
   HoverCardTrigger
 } from 'reka-ui'
 import { shallowRef } from 'vue'
+import { RouterLink } from 'vue-router'
 
 const props = defineProps({
   user: {
@@ -76,22 +77,22 @@ function handleLogout() {
         <div class="site-user-panel-bridge" />
 
         <div class="site-user-label">
-          <span class="site-user-label-kicker">GitHub 账号</span>
+          <span class="site-user-label-kicker">当前账号</span>
           <span class="site-user-label-name">{{ props.user.username }}</span>
         </div>
 
         <div class="site-user-separator" />
 
-        <button
-          class="site-user-item site-user-item-disabled"
-          type="button"
-          disabled
+        <RouterLink
+          class="site-user-item"
+          to="/account/security"
+          @click="open = false"
         >
           <span class="site-user-item-copy">
-            <span class="site-user-item-title">个人信息</span>
-            <span class="site-user-item-caption">占位符，后续接个人主页</span>
+            <span class="site-user-item-title">登录方式绑定</span>
+            <span class="site-user-item-caption">管理 GitHub / LinuxDo 登录</span>
           </span>
-        </button>
+        </RouterLink>
 
         <button
           class="site-user-item site-user-item-disabled"
@@ -254,6 +255,7 @@ function handleLogout() {
   display: flex;
   font: inherit;
   padding: 10px 11px;
+  text-decoration: none;
   text-align: left;
   transition:
     background-color 160ms ease,

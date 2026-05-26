@@ -21,6 +21,11 @@ const targetPath = computed(() => {
 })
 
 onMounted(async () => {
+  if (typeof route.query.provider_status === 'string') {
+    await router.replace(targetPath.value)
+    return
+  }
+
   const token = typeof route.query.access_token === 'string' ? route.query.access_token : ''
   if (!token) {
     status.value = 'error'
