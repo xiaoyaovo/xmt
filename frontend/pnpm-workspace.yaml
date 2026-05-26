@@ -1,4 +1,7 @@
 # https://pnpm.io/settings
+packages:
+  - .
+
 shamefullyHoist: true
 
 onlyBuiltDependencies:
