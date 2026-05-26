@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Verify pnpm lint and pnpm build pass"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Verify new components follow SFC conventions, accessibility, naming"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Verify new files placed in correct directories"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "Verify useScrollReveal composable follows hook conventions, cleans up observers"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Verify brand tokens reused, no duplicated visual language"}

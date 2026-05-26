@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend stack overview + pre-dev checklist (Quasar+Vue3, design tokens, lint/build)"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "SFC structure, props/events, styling, UI patterns for new NarrativeSection / NumberedRow components"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "Where new components / composables belong (src/components/site/, src/composables/)"}
+{"file": ".trellis/spec/frontend/hook-guidelines.md", "reason": "Composable pattern for useScrollReveal (IntersectionObserver + reactive state)"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Lint/build commands and pre-commit checks"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Reuse existing brand tokens / shell classes before adding new visual language"}
