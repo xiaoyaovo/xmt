@@ -51,8 +51,16 @@ const whiteboardStarterXml = `<mxfile host="xinming-tools" modified="2026-05-25T
   </diagram>
 </mxfile>`
 
+function resolveEditorMode() {
+  return route.query.mode === 'whiteboard' ? 'whiteboard' : 'diagram'
+}
+
+function resolveStarterXml(mode = resolveEditorMode()) {
+  return mode === 'whiteboard' ? whiteboardStarterXml : diagramStarterXml
+}
+
 const iframeRef = useTemplateRef('drawioFrame')
-const savedXml = shallowRef(diagramStarterXml)
+const savedXml = shallowRef(resolveStarterXml())
 const editorReady = shallowRef(false)
 const drawioError = shallowRef('')
 const savedAt = shallowRef('')
@@ -67,10 +75,10 @@ const saveDialogOpen = shallowRef(false)
 const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 const pendingArchiveMeta = shallowRef({ title: '', remark: '' })
 
-const editorMode = computed(() => route.query.mode === 'whiteboard' ? 'whiteboard' : 'diagram')
+const editorMode = computed(() => resolveEditorMode())
 const editorModeLabel = computed(() => editorMode.value === 'whiteboard' ? '白板' : 'Draw.io')
 const accountSync = computed(() => editorMode.value === 'whiteboard' ? whiteboardSync : diagramSync)
-const starterXml = computed(() => editorMode.value === 'whiteboard' ? whiteboardStarterXml : diagramStarterXml)
+const starterXml = computed(() => resolveStarterXml(editorMode.value))
 const drawioEmbedUrl = computed(() => {
   const modeParams = editorMode.value === 'whiteboard' ? 'ui=sketch&sketch=1' : 'ui=min'
   return `${drawioOrigin}${drawioPath}?embed=1&proto=json&spin=1&${modeParams}&lang=zh&dark=0&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
