@@ -177,3 +177,68 @@ The database config sets `use_tz = False` and `timezone = "Asia/Shanghai"`. Curr
 - Staging `backend/storage/`, `.env`, `.venv`, or `__pycache__`.
 - Using mutable Python defaults outside ORM field defaults.
 - Creating a table per preview tool when `ToolSyncItem` can store stable JSON state.
+
+## Multi-Provider Auth Users
+
+### 1. Scope / Trigger
+
+- Trigger: Adding or changing a login provider, password auth, OAuth callback, or user identity persistence.
+
+### 2. Signatures
+
+- DB: `users.auth_provider VARCHAR(32)`, `users.provider_user_id VARCHAR(128)`, unique index
+  `uid_users_provider_user(auth_provider, provider_user_id)`.
+- Legacy DB: `users.github_id` remains nullable for compatibility with existing GitHub-created rows.
+- API: `POST /api/v1/auth/login` accepts `{ "username": string, "password": string }`.
+- OAuth APIs: `GET /api/v1/auth/{github|linuxdo}/login`, `GET /api/v1/auth/{github|linuxdo}/callback`.
+- CLI: `cd backend && uv run python -m app.cli.create_password_user <username> [--email ...] [--password ...]`.
+
+### 3. Contracts
+
+- `auth_provider` values currently used: `password`, `github`, `linuxdo`.
+- For password users, `provider_user_id` must equal the local username and `password_hash` must be set.
+- For OAuth users, `provider_user_id` must be the provider's stable user id; `password_hash` stays null.
+- Frontend auth callback receives `/#/auth/callback?access_token=<jwt>&redirect=<safe-path>`.
+- Env keys: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `LINUXDO_CLIENT_ID`,
+  `LINUXDO_CLIENT_SECRET`, optional `LINUXDO_AUTHORIZE_URL`, `LINUXDO_TOKEN_URL`, `LINUXDO_USER_URL`.
+
+### 4. Validation & Error Matrix
+
+- Empty username/password -> `400 请输入账号和密码`.
+- Unknown password user or wrong password -> `401 账号或密码错误`.
+- OAuth provider missing credentials -> `500 <Provider> OAuth is not configured`.
+- OAuth token response without `access_token` -> `400 <Provider> login failed`.
+- OAuth profile without stable id -> `400 <Provider> user profile is invalid`.
+
+### 5. Good/Base/Bad Cases
+
+- Good: existing GitHub rows are backfilled to `auth_provider='github'` and `provider_user_id=github_id` during migration.
+- Base: adding a new OAuth provider reuses the `auth_provider/provider_user_id` tuple.
+- Bad: querying users by provider username/email; those fields are mutable and not provider-stable.
+
+### 6. Tests Required
+
+- Run `cd backend && uv run python -m compileall app`.
+- Run `cd backend && uv run aerich heads`.
+- Verify `POST /api/v1/auth/login` returns `401` instead of `500` after migrations are applied.
+- Verify the frontend login page handles normalized request errors without exposing provider internals.
+
+### 7. Wrong vs Correct
+
+Wrong:
+
+```python
+await User.update_or_create(github_id=str(profile["id"]), defaults={...})
+```
+
+for a new non-GitHub provider.
+
+Correct:
+
+```python
+await User.update_or_create(
+    auth_provider="linuxdo",
+    provider_user_id=str(profile_id),
+    defaults={...},
+)
+```

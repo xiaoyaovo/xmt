@@ -31,6 +31,14 @@ class Settings(BaseSettings):
 
     github_client_id: str = Field(default="", alias="GITHUB_CLIENT_ID")
     github_client_secret: str = Field(default="", alias="GITHUB_CLIENT_SECRET")
+    linuxdo_client_id: str = Field(default="", alias="LINUXDO_CLIENT_ID")
+    linuxdo_client_secret: str = Field(default="", alias="LINUXDO_CLIENT_SECRET")
+    linuxdo_authorize_url: str = Field(
+        default="https://connect.linux.do/oauth2/authorize",
+        alias="LINUXDO_AUTHORIZE_URL",
+    )
+    linuxdo_token_url: str = Field(default="https://connect.linux.do/oauth2/token", alias="LINUXDO_TOKEN_URL")
+    linuxdo_user_url: str = Field(default="https://connect.linux.do/api/user", alias="LINUXDO_USER_URL")
     jwt_secret: str = Field(default="change-me-in-production", alias="JWT_SECRET")
     frontend_url: str = Field(default="http://localhost:9002", alias="FRONTEND_URL")
     csv_storage_dir: str = Field(default=str(BACKEND_DIR / "storage" / "csv"), alias="CSV_STORAGE_DIR")
@@ -43,8 +51,6 @@ class Settings(BaseSettings):
         default=[
             "http://localhost:9002",
             "http://127.0.0.1:9002",
-            "http://localhost:9003",
-            "http://127.0.0.1:9003",
         ],
         alias="CORS_ORIGINS",
     )

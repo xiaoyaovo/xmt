@@ -5,7 +5,10 @@ import {
   getAccessToken,
   getCurrentUser,
   githubLoginUrl,
+  linuxdoLoginUrl,
+  loginPageUrl,
   logout as requestLogout,
+  passwordLogin,
   setAccessToken
 } from 'src/lib/auth'
 
@@ -58,8 +61,24 @@ export const useAuthStore = defineStore('auth', {
       await this.refreshMe()
     },
 
+    async loginWithPassword(credentials) {
+      const response = await passwordLogin(credentials)
+      this.user = response.user || null
+      this.accessToken = response.access_token
+      setAccessToken(response.access_token)
+      return response
+    },
+
+    openLoginPage(redirect) {
+      window.location.href = loginPageUrl(redirect)
+    },
+
     loginWithGitHub() {
       window.location.href = githubLoginUrl()
+    },
+
+    loginWithLinuxDo(redirect) {
+      window.location.href = linuxdoLoginUrl(redirect)
     },
 
     async logout() {

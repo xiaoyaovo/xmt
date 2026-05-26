@@ -1,5 +1,5 @@
 <script setup>
-import { githubLoginUrl } from 'src/lib/auth'
+import { loginPageUrl } from 'src/lib/auth'
 
 defineProps({
   authenticated: {
@@ -20,7 +20,7 @@ defineProps({
   },
   actionLabel: {
     type: String,
-    default: '使用 GitHub 登录'
+    default: '登录'
   }
 })
 
@@ -53,7 +53,7 @@ const emit = defineEmits(['login'])
       </button>
       <a
         class="account-sync-link"
-        :href="githubLoginUrl()"
+        :href="loginPageUrl()"
       >
         打开登录页
       </a>

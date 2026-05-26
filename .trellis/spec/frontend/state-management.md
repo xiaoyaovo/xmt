@@ -17,7 +17,8 @@ Use Pinia when state must be shared across layout, pages, and components. The cu
 - persisted access token lookup
 - current user
 - loading/initialized flags
-- GitHub login redirect
+- unified login-page redirect plus provider redirects
+- password-login token acceptance
 - logout
 
 Do not create a Pinia store for state that belongs to a single page. CSV selected file, active rows, Mermaid source, and render status stay local to their pages/composables.
@@ -33,6 +34,9 @@ Use `auth.initialized` before showing final logged-in/logged-out UI. `useAccount
 Server requests should flow through `src/lib/` helpers:
 
 - `auth.js` wraps auth endpoints and local token storage.
+- `auth.js` owns login URL construction: `loginPageUrl()` for the unified page and provider-specific
+  OAuth URLs for the backend start endpoints. Components should call Pinia actions or these helpers,
+  not hardcode `/auth/<provider>/login` URLs.
 - `csvFiles.js` wraps upload/history/rows/download/delete.
 - `accountSync.js` wraps generic sync endpoints.
 

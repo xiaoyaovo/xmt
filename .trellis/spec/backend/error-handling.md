@@ -20,6 +20,11 @@ Authentication is split into optional and required dependencies:
 
 - `get_current_user()` returns `User | None` and never raises for missing or invalid bearer tokens.
 - `require_current_user()` wraps it and raises a `401` when authentication is mandatory.
+- Password login returns `400 请输入账号和密码` when either field is missing, and
+  `401 账号或密码错误` for unknown users or password mismatch. Do not reveal whether a username exists.
+- OAuth login start endpoints return `500 <Provider> OAuth is not configured` when required client
+  credentials are absent. OAuth callback endpoints return `400 <Provider> login failed` when token exchange
+  succeeds without an access token.
 
 Use the optional dependency for endpoints like `/auth/me`; use the required dependency for user-owned resources like CSV history and sync items.
 

@@ -21,7 +21,7 @@ export function useAccountSync(toolKey, { itemKey = 'default' } = {}) {
   })
 
   function login() {
-    auth.loginWithGitHub()
+    auth.openLoginPage()
   }
 
   async function ensureAuth() {

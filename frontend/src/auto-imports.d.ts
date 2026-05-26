@@ -14,6 +14,7 @@ declare global {
   const createApp: typeof import('vue').createApp
   const createRequest: typeof import('./lib/index.js').createRequest
   const csvDownloadUrl: typeof import('./lib/csvFiles.js').csvDownloadUrl
+  const currentRouteRedirect: typeof import('./lib/auth.js').currentRouteRedirect
   const customRef: typeof import('vue').customRef
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
@@ -39,11 +40,14 @@ declare global {
   const isReadonly: typeof import('vue').isReadonly
   const isRef: typeof import('vue').isRef
   const isShallow: typeof import('vue').isShallow
+  const linuxdoLoginUrl: typeof import('./lib/auth.js').linuxdoLoginUrl
   const listCsvFiles: typeof import('./lib/csvFiles.js').listCsvFiles
   const listSyncItems: typeof import('./lib/accountSync.js').listSyncItems
+  const loginPageUrl: typeof import('./lib/auth.js').loginPageUrl
   const logout: typeof import('./lib/auth.js').logout
   const markRaw: typeof import('vue').markRaw
   const nextTick: typeof import('vue').nextTick
+  const oauthLoginUrl: typeof import('./lib/auth.js').oauthLoginUrl
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
   const onBeforeRouteLeave: typeof import('vue-router').onBeforeRouteLeave
@@ -60,6 +64,7 @@ declare global {
   const onUnmounted: typeof import('vue').onUnmounted
   const onUpdated: typeof import('vue').onUpdated
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
+  const passwordLogin: typeof import('./lib/auth.js').passwordLogin
   const primaryNavItems: typeof import('./lib/siteNavigation.js').primaryNavItems
   const provide: typeof import('vue').provide
   const reactive: typeof import('vue').reactive

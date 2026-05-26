@@ -4,6 +4,7 @@ const routes = [
     component: () => import('layouts/MainLayout.vue'),
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
+      { path: 'login', component: () => import('pages/LoginPage.vue') },
       { path: 'tools', component: () => import('pages/ToolsPage.vue') },
       { path: 'tools/mermaid', component: () => import('pages/tools/MermaidPage.vue') },
       { path: 'tools/csv', component: () => import('pages/tools/CsvPage.vue') },

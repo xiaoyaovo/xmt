@@ -2,7 +2,7 @@
 import { computed, onMounted, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import { githubLoginUrl } from 'src/lib/auth'
+import { loginPageUrl } from 'src/lib/auth'
 import { useAuthStore } from 'src/stores/auth'
 
 const auth = useAuthStore()
@@ -40,14 +40,14 @@ onMounted(async () => {
 })
 
 function retryLogin() {
-  window.location.href = githubLoginUrl()
+  window.location.href = loginPageUrl(targetPath.value)
 }
 </script>
 
 <template>
   <div class="auth-callback-page">
     <section class="auth-callback-card">
-      <div class="section-kicker">GitHub 登录</div>
+      <div class="section-kicker">账号登录</div>
       <h1 class="content-title">
         {{ status === 'error' ? '登录确认失败' : '正在确认登录状态' }}
       </h1>

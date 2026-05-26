@@ -11,7 +11,28 @@ export function logout() {
   return request.post('/auth/logout')
 }
 
-export function githubLoginUrl(redirect = window.location.hash.replace(/^#/, '') || '/tools') {
+export function passwordLogin({ username, password }) {
+  return request.post('/auth/login', { username, password })
+}
+
+export function currentRouteRedirect() {
+  if (typeof window === 'undefined') {
+    return '/tools'
+  }
+
+  return window.location.hash.replace(/^#/, '') || '/tools'
+}
+
+export function loginPageUrl(redirect = currentRouteRedirect()) {
+  const search = new URLSearchParams()
+  if (redirect) {
+    search.set('redirect', redirect)
+  }
+
+  return `/#/login${search.toString() ? `?${search.toString()}` : ''}`
+}
+
+export function oauthLoginUrl(provider, redirect = currentRouteRedirect()) {
   const search = new URLSearchParams()
   if (redirect) {
     search.set('redirect', redirect)
@@ -20,7 +41,15 @@ export function githubLoginUrl(redirect = window.location.hash.replace(/^#/, '')
     search.set('frontend_origin', window.location.origin)
   }
 
-  return `${API_BASE_URL.replace(/\/$/, '')}/auth/github/login?${search.toString()}`
+  return `${API_BASE_URL.replace(/\/$/, '')}/auth/${provider}/login?${search.toString()}`
+}
+
+export function githubLoginUrl(redirect = currentRouteRedirect()) {
+  return oauthLoginUrl('github', redirect)
+}
+
+export function linuxdoLoginUrl(redirect = currentRouteRedirect()) {
+  return oauthLoginUrl('linuxdo', redirect)
 }
 
 export function getAccessToken() {

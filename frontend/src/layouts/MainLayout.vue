@@ -42,9 +42,9 @@
               v-else
               class="site-auth-button site-auth-login"
               type="button"
-              @click="auth.loginWithGitHub"
+              @click="auth.openLoginPage()"
             >
-              GitHub 登录
+              登录
             </button>
           </div>
 

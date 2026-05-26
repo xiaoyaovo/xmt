@@ -54,6 +54,10 @@ Keep tool pages concise. Toolbar copy should be labels, counts, statuses, and co
 
 For tool history/archive sections that are not inside `ToolWorkbench.vue`, use `ToolArchivePanel.vue` for the shared login-checking, logged-out, authenticated header, refresh, and empty states. Keep item row rendering in page-level slots when metadata or row actions differ by tool.
 
+For account entry points, route users through the unified `/login` page instead of hardcoding a single
+provider button in shell or tool components. Provider-specific buttons belong on `LoginPage.vue`; shell and
+tool prompts should use generic copy such as `登录` / `打开登录页`.
+
 For tool save/add-new sections that are not inside `ToolWorkbench.vue`, use `ToolSavePanel.vue` for the shared card shell, primary save action, optional save-as/new action, helper copy, and account sync prompt. Put tool-specific pickers, examples, status summaries, and secondary actions in slots. Keep save cards aligned across tools: the shared top line should read as a save surface (`保存` kicker, right-side archive/sync status). The kicker alone identifies the section — do NOT also render a redundant `<h2>云端存档</h2>` next to a `保存` or `历史` kicker; pick one label per section, not both.
 
 For the actual "save with metadata" UX (collecting an archive name + remark from the user before persisting), use `frontend/src/components/tools/ToolSaveDialog.vue` rather than rolling per-tool inline forms. It is a Reka Dialog wrapper with:

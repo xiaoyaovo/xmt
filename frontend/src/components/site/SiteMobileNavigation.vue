@@ -154,7 +154,7 @@ async function handleLogout() {
                 >
                 <span class="mobile-nav-card-label">{{ auth.user?.username }}</span>
               </div>
-              <p class="mobile-nav-card-caption">已通过 GitHub 登录，CSV 历史记录会绑定到当前账号。</p>
+              <p class="mobile-nav-card-caption">已登录，云端存档会绑定到当前账号。</p>
               <div class="mobile-nav-account-actions">
                 <span class="mobile-nav-account-action mobile-nav-account-action-disabled">
                   个人信息
@@ -181,12 +181,12 @@ async function handleLogout() {
               v-else
               class="mobile-nav-card mobile-nav-account"
               type="button"
-              @click="auth.loginWithGitHub"
+              @click="auth.openLoginPage()"
             >
               <div class="mobile-nav-card-topline">
-                <span class="mobile-nav-card-label">GitHub 登录</span>
+                <span class="mobile-nav-card-label">登录</span>
               </div>
-              <p class="mobile-nav-card-caption">登录后使用 CSV 历史记录。</p>
+              <p class="mobile-nav-card-caption">登录后使用云端存档。</p>
             </button>
           </div>
 

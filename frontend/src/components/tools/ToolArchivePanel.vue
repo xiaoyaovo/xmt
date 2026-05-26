@@ -45,7 +45,7 @@ const emit = defineEmits(['login', 'refresh'])
   <article class="tool-archive-panel">
     <template v-if="!initialized || authLoading">
       <div class="section-kicker">登录状态</div>
-      <h2 class="bench-title">正在检查 GitHub 登录</h2>
+      <h2 class="bench-title">正在检查登录状态</h2>
       <p class="tool-archive-helper">
         {{ loadingDescription }}
       </p>
@@ -63,7 +63,7 @@ const emit = defineEmits(['login', 'refresh'])
         :disabled="authLoading"
         @click="emit('login')"
       >
-        {{ authLoading ? '正在跳转...' : '使用 GitHub 登录' }}
+        {{ authLoading ? '正在跳转...' : '登录' }}
       </button>
     </template>
 

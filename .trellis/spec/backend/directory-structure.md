@@ -60,6 +60,8 @@ Services own side effects and domain decisions:
 
 - File storage and cleanup live in `csv_service.py`.
 - JWT signing and decoding live in `jwt_service.py`.
+- Password authentication decisions live in `auth_service.py`; password hashing and verification live in
+  `password_service.py`.
 - Generic account sync persistence lives in `tool_sync_service.py`.
 
 Services may raise `fastapi.HTTPException` when the error is part of the API contract, such as quota failures or missing user-owned resources.
