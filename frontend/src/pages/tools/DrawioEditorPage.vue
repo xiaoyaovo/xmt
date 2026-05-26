@@ -84,7 +84,7 @@ const editorModeLabel = computed(() => editorMode.value === 'whiteboard' ? 'ç™½æ
 const accountSync = computed(() => editorMode.value === 'whiteboard' ? whiteboardSync : diagramSync)
 const starterXml = computed(() => resolveStarterXml(editorMode.value))
 const drawioEmbedUrl = computed(() => {
-  const modeParams = editorMode.value === 'whiteboard' ? 'ui=sketch&sketch=1' : 'ui=min'
+  const modeParams = editorMode.value === 'whiteboard' ? 'ui=min&sketch=1' : 'ui=min'
   return `${drawioOrigin}${drawioPath}?embed=1&proto=json&spin=1&${modeParams}&lang=zh&dark=0&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
 })
 const xmlCharacters = computed(() => savedXml.value.length)

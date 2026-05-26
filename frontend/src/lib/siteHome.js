@@ -32,7 +32,7 @@ export const homeRows = [
   {
     index: 4,
     title: '白板',
-    description: '使用 draw.io sketch 白板做自由草图、头脑风暴和移动端手写。',
+    description: '使用 draw.io 手绘风格白板做自由草图、头脑风暴和移动端手写。',
     to: { path: '/tools/drawio/editor', query: { mode: 'whiteboard' } }
   }
 ]

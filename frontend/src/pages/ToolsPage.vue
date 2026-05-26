@@ -30,7 +30,7 @@ const tools = [
   {
     index: 4,
     title: '白板',
-    description: '打开 draw.io sketch 白板，适合自由草图、头脑风暴和移动端手写。',
+    description: '打开 draw.io 手绘风格白板，适合自由草图、头脑风暴和移动端手写。',
     meta: '可用 · 全屏白板、账号同步',
     to: { path: '/tools/drawio/editor', query: { mode: 'whiteboard' } }
   }

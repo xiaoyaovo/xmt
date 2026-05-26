@@ -10,7 +10,7 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
 
 - The current frontend embeds `https://embed.diagrams.net` in `frontend/src/pages/tools/DrawioPage.vue`.
 - The existing URL uses `ui=min`, which gives the standard diagram editor experience.
-- Whiteboard mode can use the same embed endpoint with `ui=sketch&sketch=1` plus `rough` / `toSketch` load options.
+- Whiteboard mode uses the same embed endpoint with the normal `ui=min` shell, `sketch=1`, and `rough` / `toSketch` load options. The dedicated `ui=sketch` shell was avoided because its final toolbar appears low-contrast/disabled in Xinming's fullscreen wrapper.
 - The repository does not currently include Docker Compose, Nginx, or deployment scripts.
 - Local SSH config has a server alias `sg` for `root@152.42.201.71:22`.
 - Non-interactive SSH access to `sg` now works with public key authentication.
@@ -53,7 +53,7 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
 - [x] `docker ps` shows a healthy draw.io container on the server.
 - [x] Public HTTPS URL loads the full draw.io editor via `https://cxmjtt.com/drawio/`.
 - [x] Embed URL works with `embed=1&proto=json&ui=min`.
-- [x] Whiteboard embed URL works with `embed=1&proto=json&ui=sketch&sketch=1`.
+- [x] Whiteboard embed URL works with `embed=1&proto=json&ui=min&sketch=1`.
 - [x] Frontend origin changed from `https://embed.diagrams.net` to the deployed URL.
 - [x] `/tools` links directly to diagram editor and whiteboard editor without mounting draw.io iframe.
 - [x] `/tools/drawio` redirects to the diagram editor for compatibility.
@@ -108,7 +108,7 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
   - mobile safe-area padding
 - The iframe should use:
   - diagram mode: `https://drawio.cxmjtt.com/drawio/?embed=1&proto=json&spin=1&ui=min&lang=zh&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
-  - whiteboard mode: `https://drawio.cxmjtt.com/drawio/?embed=1&proto=json&spin=1&ui=sketch&sketch=1&lang=zh&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
+  - whiteboard mode: `https://drawio.cxmjtt.com/drawio/?embed=1&proto=json&spin=1&ui=min&sketch=1&lang=zh&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
 - The host page should keep a loading cover above the iframe until the draw.io `init` event has arrived, the XML `load` action has been sent, and a short reveal delay has passed. If the embed never emits `init`, a fallback reveal prevents the cover from blocking the raw editor indefinitely.
 
 ### Phase 3: MVP Persistence
@@ -155,7 +155,7 @@ Implement Phase 1 through Phase 3 first. Keep Phase 4 as a documented follow-up 
 - Docker Compose file lives at `/opt/drawio/docker-compose.yml` on `sg`.
 - A mounted `/opt/drawio/server.xml` changes Tomcat context from root `/` to `/drawio`.
 - Working URL: `https://drawio.cxmjtt.com/drawio/?embed=1&proto=json&ui=min&lang=zh`.
-- Working whiteboard URL: `https://drawio.cxmjtt.com/drawio/?embed=1&proto=json&ui=sketch&sketch=1&lang=zh`.
+- Working whiteboard URL: `https://drawio.cxmjtt.com/drawio/?embed=1&proto=json&ui=min&sketch=1&lang=zh`.
 - Direct editor check URL: `https://drawio.cxmjtt.com/drawio/?ui=min&lang=zh&libraries=1`.
 - Frontend source now uses `https://drawio.cxmjtt.com/drawio/` for the iframe embed and opens the non-embed URL in a new window.
 - Frontend draw.io URLs include `lang=zh` for Chinese UI.
