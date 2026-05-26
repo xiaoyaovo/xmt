@@ -500,3 +500,42 @@ Corrected CSV workbench semantics: the left source pane is now an editable CSV t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 16: Redesign frontend to single-column narrative + tool page polish
+
+**Date**: 2026-05-26
+**Task**: Redesign frontend to single-column narrative + tool page polish
+**Branch**: `main`
+
+### Summary
+
+Rebuilt frontend landing + tool pages around a Linear/Vercel single-column narrative (NarrativeSection / NumberedRow / ToolPageHeader / useScrollReveal). Slimmed MainLayout header, added page-fade route transition. Swept tool-page clutter (duplicate cloud-archive h2, stat cards, pane kickers). Restructured history selector into a Reka Popover dropdown so the workspace reclaims half the screen; fixed transparent-bg regression caused by PopoverPortal teleporting outside scoped styles. Added a shared ToolSaveDialog to collect optional title + remark on save; CsvFile got nullable title + remark columns via migration 3_csv_title_remark, Mermaid/Drawio reuse payload.remark per a newly documented convention. Opened the CSV left textarea as the always-on edit surface with drag-to-load and a synthetic local activeFile, absorbing the parallel remove-csv-preview-clutter task. Pinned .nvmrc to Node v24.15.0.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `94c646d` | (see git log) |
+| `ed7b1a8` | (see git log) |
+| `4af3e0e` | (see git log) |
+| `1b48f74` | (see git log) |
+| `95a5ff8` | (see git log) |
+| `356a261` | (see git log) |
+| `d54bef3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

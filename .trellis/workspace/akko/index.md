@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 15
-- **Last Active**: 2026-05-25
+- **Total Sessions**: 16
+- **Last Active**: 2026-05-26
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~502 | Active |
+| `journal-1.md` | ~541 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 16 | 2026-05-26 | Redesign frontend to single-column narrative + tool page polish | `94c646d`, `ed7b1a8`, `4af3e0e`, `1b48f74`, `95a5ff8`, `356a261`, `d54bef3` | `main` |
 | 15 | 2026-05-25 | Fix CSV source editor preview layout | `f635a35` | `main` |
 | 14 | 2026-05-25 | Restore CSV preview as read only | `25daca7` | `main` |
 | 13 | 2026-05-25 | Fix Draw.io canvas and CSV text editing | `6e9b87e` | `main` |
