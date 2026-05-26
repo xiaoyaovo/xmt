@@ -174,7 +174,8 @@ function loadXml(xml = savedXml.value) {
     action: 'load',
     autosave: 1,
     title: `xinming-${editorMode.value}.drawio`,
-    xml
+    xml,
+    ...(editorMode.value === 'whiteboard' ? { rough: 1, toSketch: 1 } : {})
   })
   drawioError.value = ''
 }
