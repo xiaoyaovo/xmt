@@ -59,6 +59,7 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
 - [x] `/tools/drawio` redirects to the diagram editor for compatibility.
 - [x] `/tools/drawio/editor` opens a fullscreen iframe wrapper that occupies the available viewport on desktop, tablet, and phone.
 - [x] The fullscreen wrapper can load starter XML, request export, save to the existing draw.io sync bucket, open/delete history entries, and clear draw.io's modified state after save.
+- [x] The fullscreen wrapper masks draw.io's transient gray initialization state until the host has loaded the starter XML.
 - [x] The implementation plan for shared backend persistence and a future history/file page is documented.
 
 ## Definition Of Done
@@ -108,6 +109,7 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
 - The iframe should use:
   - diagram mode: `https://drawio.cxmjtt.com/drawio/?embed=1&proto=json&spin=1&ui=min&lang=zh&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
   - whiteboard mode: `https://drawio.cxmjtt.com/drawio/?embed=1&proto=json&spin=1&ui=sketch&sketch=1&lang=zh&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
+- The host page should keep a loading cover above the iframe until the draw.io `init` event has arrived, the XML `load` action has been sent, and a short reveal delay has passed. If the embed never emits `init`, a fallback reveal prevents the cover from blocking the raw editor indefinitely.
 
 ### Phase 3: MVP Persistence
 

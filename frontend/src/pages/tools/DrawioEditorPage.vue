@@ -14,6 +14,8 @@ import { useAccountSync } from 'src/composables/useAccountSync'
 const drawioOrigin = 'https://drawio.cxmjtt.com'
 const drawioPath = '/drawio/'
 const drawioStandaloneUrl = `${drawioOrigin}${drawioPath}?ui=min&lang=zh&dark=0&libraries=1`
+const editorRevealDelay = 900
+const editorRevealFallbackDelay = 7000
 const route = useRoute()
 const diagramStarterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:00:00.000Z" agent="Xinming Tools" version="30.0.2">
   <diagram id="xinming-demo" name="Demo">
@@ -62,6 +64,7 @@ function resolveStarterXml(mode = resolveEditorMode()) {
 const iframeRef = useTemplateRef('drawioFrame')
 const savedXml = shallowRef(resolveStarterXml())
 const editorReady = shallowRef(false)
+const editorVisible = shallowRef(false)
 const drawioError = shallowRef('')
 const savedAt = shallowRef('')
 const iframeKey = shallowRef(0)
@@ -74,6 +77,7 @@ const whiteboardSync = useAccountSync('drawio-whiteboard')
 const saveDialogOpen = shallowRef(false)
 const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 const pendingArchiveMeta = shallowRef({ title: '', remark: '' })
+let editorRevealTimer = null
 
 const editorMode = computed(() => resolveEditorMode())
 const editorModeLabel = computed(() => editorMode.value === 'whiteboard' ? '白板' : 'Draw.io')
@@ -157,6 +161,35 @@ function sendDrawioMessage(message) {
   iframeRef.value?.contentWindow?.postMessage(JSON.stringify(message), drawioOrigin)
 }
 
+function clearEditorRevealTimer() {
+  if (editorRevealTimer === null) return
+
+  window.clearTimeout(editorRevealTimer)
+  editorRevealTimer = null
+}
+
+function hideEditorUntilLoaded() {
+  clearEditorRevealTimer()
+  editorVisible.value = false
+}
+
+function scheduleEditorReveal() {
+  clearEditorRevealTimer()
+  editorRevealTimer = window.setTimeout(() => {
+    editorVisible.value = true
+    editorRevealTimer = null
+  }, editorRevealDelay)
+}
+
+function scheduleEditorFallbackReveal() {
+  if (editorVisible.value || editorRevealTimer !== null) return
+
+  editorRevealTimer = window.setTimeout(() => {
+    editorVisible.value = true
+    editorRevealTimer = null
+  }, editorRevealFallbackDelay)
+}
+
 function sendSavedStatus(message = '已保存到账号') {
   if (!editorReady.value) return
 
@@ -170,6 +203,7 @@ function sendSavedStatus(message = '已保存到账号') {
 function loadXml(xml = savedXml.value) {
   if (!editorReady.value) return
 
+  hideEditorUntilLoaded()
   sendDrawioMessage({
     action: 'load',
     autosave: 1,
@@ -178,6 +212,7 @@ function loadXml(xml = savedXml.value) {
     ...(editorMode.value === 'whiteboard' ? { rough: 1, toSketch: 1 } : {})
   })
   drawioError.value = ''
+  scheduleEditorReveal()
 }
 
 function requestExport() {
@@ -185,6 +220,10 @@ function requestExport() {
 
   sendDrawioMessage({ action: 'export', format: 'xml', spinKey: 'saving' })
   drawioError.value = ''
+}
+
+function handleIframeLoad() {
+  scheduleEditorFallbackReveal()
 }
 
 async function persistSyncedDiagram(xml = savedXml.value, { title = '', remark = '' } = {}) {
@@ -274,6 +313,8 @@ async function deleteSyncedDiagram(item) {
 }
 
 function resetDemo() {
+  hideEditorUntilLoaded()
+  scheduleEditorFallbackReveal()
   savedXml.value = starterXml.value
   savedAt.value = ''
   iframeKey.value += 1
@@ -340,15 +381,19 @@ function handleDrawioMessage(event) {
 
 onMounted(async () => {
   window.addEventListener('message', handleDrawioMessage)
+  scheduleEditorFallbackReveal()
   await accountSync.value.ensureAuth()
   await accountSync.value.loadItems()
 })
 
 onUnmounted(() => {
+  clearEditorRevealTimer()
   window.removeEventListener('message', handleDrawioMessage)
 })
 
 watch(editorMode, async () => {
+  hideEditorUntilLoaded()
+  scheduleEditorFallbackReveal()
   historyOpen.value = false
   deletingArchiveKey.value = ''
   savedXml.value = starterXml.value
@@ -519,10 +564,24 @@ watch(editorMode, async () => {
         :key="iframeKey"
         ref="drawioFrame"
         class="drawio-frame"
+        :class="{ 'drawio-frame-visible': editorVisible }"
         title="Draw.io embedded editor"
         :src="drawioEmbedUrl"
         allow="clipboard-read; clipboard-write"
+        @load="handleIframeLoad"
       />
+      <div
+        v-if="!editorVisible"
+        class="drawio-loading-cover"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="drawio-loading-copy">
+          <span class="drawio-loading-kicker">Xinming</span>
+          <span class="drawio-loading-title">正在准备{{ editorModeLabel }}</span>
+          <span class="drawio-loading-text">加载画布中</span>
+        </div>
+      </div>
     </main>
 
     <ToolSaveDialog
@@ -711,8 +770,10 @@ watch(editorMode, async () => {
 }
 
 .drawio-editor-main {
+  background: #ffffff;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .drawio-frame {
@@ -720,7 +781,64 @@ watch(editorMode, async () => {
   border: 0;
   display: block;
   height: 100%;
+  opacity: 0;
+  transition: opacity 180ms ease;
   width: 100%;
+}
+
+.drawio-frame-visible {
+  opacity: 1;
+}
+
+.drawio-loading-cover {
+  align-items: center;
+  background:
+    linear-gradient(90deg, rgba(16, 37, 66, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(16, 37, 66, 0.035) 1px, transparent 1px),
+    #f8fafc;
+  background-size: 36px 36px;
+  color: var(--shell-navy);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: absolute;
+  z-index: 2;
+}
+
+.drawio-loading-copy {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+}
+
+.drawio-loading-kicker {
+  color: rgba(15, 23, 35, 0.52);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.drawio-loading-title {
+  color: var(--shell-navy);
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.drawio-loading-text {
+  color: rgba(15, 23, 35, 0.58);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawio-frame {
+    transition: none;
+  }
 }
 
 @media (max-width: 920px) {
