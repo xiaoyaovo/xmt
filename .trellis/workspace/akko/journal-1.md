@@ -605,3 +605,36 @@ Added a unified /login page with password, GitHub, and LinuxDo entries; extended
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: Account linking management
+
+**Date**: 2026-05-26
+**Task**: Account linking management
+**Branch**: `main`
+
+### Summary
+
+Implemented multi-provider account binding with user_auth_accounts, signed OAuth link state, backend link/unlink APIs, and a frontend account security page.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ddb3941` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

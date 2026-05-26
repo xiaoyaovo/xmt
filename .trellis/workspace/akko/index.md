@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 18
+- **Total Sessions**: 19
 - **Last Active**: 2026-05-26
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~607 | Active |
+| `journal-1.md` | ~640 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 19 | 2026-05-26 | Account linking management | `ddb3941` | `main` |
 | 18 | 2026-05-26 | Unified multi-provider login | `aee7f87` | `main` |
 | 17 | 2026-05-26 | Fix CSV migration state drift | `d8e6c1f` | `main` |
 | 16 | 2026-05-26 | Redesign frontend to single-column narrative + tool page polish | `94c646d`, `ed7b1a8`, `4af3e0e`, `1b48f74`, `95a5ff8`, `356a261`, `d54bef3` | `main` |
