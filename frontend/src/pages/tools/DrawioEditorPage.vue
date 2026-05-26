@@ -334,7 +334,7 @@ onUnmounted(() => {
       <div class="drawio-editor-title-block">
         <RouterLink
           class="drawio-back-link"
-          to="/tools/drawio"
+          to="/tools"
         >
           ← 工具
         </RouterLink>

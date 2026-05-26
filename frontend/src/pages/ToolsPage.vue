@@ -23,9 +23,16 @@ const tools = [
   {
     index: 3,
     title: 'Draw.io',
-    description: '从工具区进入全屏流程图或白板编辑器，保存由 Xinming 接管。',
-    meta: '可用 · 全屏编辑、账号同步',
-    to: '/tools/drawio'
+    description: '直接进入全屏流程图编辑器，保存由 Xinming 接管。',
+    meta: '可用 · 全屏图表、账号同步',
+    to: { path: '/tools/drawio/editor', query: { mode: 'diagram' } }
+  },
+  {
+    index: 4,
+    title: '白板',
+    description: '打开 draw.io sketch 白板，适合自由草图、头脑风暴和移动端手写。',
+    meta: '可用 · 全屏白板、账号同步',
+    to: { path: '/tools/drawio/editor', query: { mode: 'whiteboard' } }
   }
 ]
 </script>

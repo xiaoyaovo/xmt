@@ -4,7 +4,7 @@
 
 Deploy a self-hosted draw.io / diagrams.net service for Xinming so the frontend can iframe the editor from the user's own server instead of `https://embed.diagrams.net`, with support for both diagram and whiteboard-style embed modes.
 
-The task has expanded to include the Xinming integration shape: XinmingTools should no longer embed draw.io inside the ordinary tool detail page. It should provide links into a dedicated fullscreen iframe wrapper, while Xinming owns save, autosave, file history, and account-backed persistence through the existing backend sync APIs.
+The task has expanded to include the Xinming integration shape: XinmingTools should no longer embed draw.io inside the ordinary tool detail page. The tools list should link directly into dedicated fullscreen diagram and whiteboard iframe wrappers, while Xinming owns save, autosave, file history, and account-backed persistence through the existing backend sync APIs.
 
 ## What I Already Know
 
@@ -41,7 +41,8 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
 - Keep container restart behavior persistent across reboots.
 - Leave room for both standard diagram embed and whiteboard/sketch embed URLs.
 - Verify the deployed `/` and embed URL respond successfully.
-- Convert `/tools/drawio` into a link-first entry page with no embedded iframe.
+- Link directly from `/tools` to the fullscreen Draw.io and whiteboard editor modes.
+- Keep `/tools/drawio` as a compatibility redirect to the diagram editor.
 - Add a dedicated fullscreen draw.io wrapper page for editing diagrams and whiteboards.
 - Keep the iframe protocol boundary explicit: pinned origin, defensive message parsing, load after `init`, export/save/autosave handling, and status reset after successful persistence.
 - Reuse Xinming account sync for draw.io XML persistence in the MVP.
@@ -54,7 +55,8 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
 - [x] Embed URL works with `embed=1&proto=json&ui=min`.
 - [x] Whiteboard embed URL works with `embed=1&proto=json&ui=sketch&sketch=1`.
 - [x] Frontend origin changed from `https://embed.diagrams.net` to the deployed URL.
-- [x] `/tools/drawio` shows links/actions for diagram editor and whiteboard editor without mounting draw.io iframe.
+- [x] `/tools` links directly to diagram editor and whiteboard editor without mounting draw.io iframe.
+- [x] `/tools/drawio` redirects to the diagram editor for compatibility.
 - [x] `/tools/drawio/editor` opens a fullscreen iframe wrapper that occupies the available viewport on desktop, tablet, and phone.
 - [x] The fullscreen wrapper can load starter XML, request export, save to the existing draw.io sync bucket, open/delete history entries, and clear draw.io's modified state after save.
 - [x] The implementation plan for shared backend persistence and a future history/file page is documented.
@@ -81,15 +83,13 @@ The task has expanded to include the Xinming integration shape: XinmingTools sho
 
 ## Integration Plan
 
-### Phase 1: Split Entry From Editor
+### Phase 1: Split Tool List From Editor
 
-- Keep `/tools/drawio` as the XinmingTools entry page.
-- Remove the embedded draw.io iframe from this entry page.
-- Present links/buttons for:
-  - "打开 Draw.io"
-  - "打开白板"
-  - "查看历史文件" (can initially link to the same page section or a placeholder route if not implemented yet)
-- Move the current iframe/postMessage/save/history implementation into a new route such as `/tools/drawio/editor`.
+- Keep `/tools` as the XinmingTools entry point.
+- Link the Draw.io row directly to `/tools/drawio/editor?mode=diagram`.
+- Add a separate whiteboard row linking directly to `/tools/drawio/editor?mode=whiteboard`.
+- Keep `/tools/drawio` as a compatibility redirect to diagram mode.
+- Move the iframe/postMessage/save/history implementation into `/tools/drawio/editor`.
 - Use query parameters for mode:
   - `/tools/drawio/editor?mode=diagram`
   - `/tools/drawio/editor?mode=whiteboard`
