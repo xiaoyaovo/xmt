@@ -49,6 +49,7 @@ const rowsPerPageOptions = [200, 500, 1000]
 const historyOpen = shallowRef(false)
 const saveDialogOpen = shallowRef(false)
 const saveDialogDefaults = shallowRef({ title: '', remark: '' })
+const dragActive = shallowRef(false)
 
 const totalPages = computed(() => {
   if (!activeFile.value?.row_count) return 1
@@ -61,17 +62,6 @@ const activeColumns = computed(() => activeFile.value?.columns || [])
 
 const previewRows = computed(() => {
   return localPreview.rows.value.slice(offset.value, offset.value + rowsPerPage.value)
-})
-
-const fileStats = computed(() => {
-  if (!activeFile.value) return []
-
-  return [
-    { label: '行数', value: activeFile.value.row_count },
-    { label: '字段', value: activeFile.value.columns.length },
-    { label: '大小', value: formatBytes(activeFile.value.size) },
-    { label: '分隔符', value: activeFile.value.delimiter || ',' }
-  ]
 })
 
 const savePanelStatus = computed(() => {
@@ -127,10 +117,7 @@ const historyTriggerDisabled = computed(() => {
 
 const canSaveCsv = computed(() => Boolean(activeFile.value && activeColumns.value.length))
 
-const csvTextPreview = computed(() => {
-  if (!activeFile.value) return ''
-  return localPreview.sourceText.value
-})
+const csvTextPreview = computed(() => localPreview.sourceText.value)
 
 const sourceLabel = computed(() => {
   if (activeSource.value === 'history') return '云端存档'
@@ -354,10 +341,69 @@ async function changeRowsPerPage(value) {
 }
 
 function updateCsvText(event) {
-  localPreview.updateFromCsvText(event.target.value)
+  const nextValue = event.target.value
+  localPreview.updateFromCsvText(nextValue)
   page.value = 1
-  if (localPreview.selectedFile.value) {
-    syncActiveFileFromPreview(localPreview.selectedFile.value)
+  if (!nextValue.trim()) {
+    localPreview.errorMessage.value = ''
+  }
+  if (!localPreview.columns.value.length) {
+    activeFile.value = null
+    activeSource.value = ''
+    return
+  }
+  const file = localPreview.selectedFile.value
+  if (file) {
+    syncActiveFileFromPreview(file)
+    return
+  }
+  activeFile.value = {
+    id: null,
+    original_filename: 'untitled.csv',
+    size: new Blob([localPreview.sourceText.value]).size,
+    columns: localPreview.columns.value,
+    row_count: localPreview.rowCount.value,
+    delimiter: localPreview.delimiter.value,
+    source: 'local'
+  }
+  activeSource.value = 'local'
+}
+
+async function loadDroppedFile(file) {
+  if (!file) return
+  const isCsv = file.type === 'text/csv'
+    || file.type === 'application/vnd.ms-excel'
+    || /\.csv$/i.test(file.name || '')
+  if (!isCsv) {
+    errorMessage.value = '仅支持 .csv 文件'
+    return
+  }
+  errorMessage.value = ''
+  const preview = await localPreview.previewFile(file)
+  if (preview) {
+    activeFile.value = preview
+    activeSource.value = 'local'
+    page.value = 1
+  }
+}
+
+function onDragEnter() {
+  dragActive.value = true
+}
+
+function onDragOver() {
+  dragActive.value = true
+}
+
+function onDragLeave() {
+  dragActive.value = false
+}
+
+async function onDropFile(event) {
+  dragActive.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (file) {
+    await loadDroppedFile(file)
   }
 }
 
@@ -518,39 +564,36 @@ onMounted(async () => {
         </template>
 
         <template #source>
-          <div
-            v-if="errorMessage || localPreview.errorMessage.value"
-            class="csv-notice csv-notice-error"
-          >
-            {{ errorMessage || localPreview.errorMessage.value }}
-          </div>
-
           <article
-            v-if="!activeFile"
-            class="csv-panel csv-preview-empty"
+            class="csv-panel csv-edit-panel"
+            :class="{ 'csv-edit-panel-drag': dragActive }"
           >
-            <p class="csv-empty-hint">选择或拖入一个 CSV 文件</p>
-          </article>
+            <div
+              v-if="errorMessage || localPreview.errorMessage.value"
+              class="csv-notice csv-notice-error"
+            >
+              {{ errorMessage || localPreview.errorMessage.value }}
+            </div>
 
-          <article
-            v-else
-            class="csv-panel csv-preview-panel"
-          >
-            <div class="csv-preview-header">
+            <div
+              v-if="activeFile"
+              class="csv-source-header"
+            >
               <div class="csv-source-meta">
                 <span class="csv-source-name">{{ activeFile.original_filename }}</span>
                 <span class="csv-source-label">{{ sourceLabel }}</span>
               </div>
-              <div class="csv-actions">
+              <div
+                v-if="activeSource === 'history'"
+                class="csv-actions"
+              >
                 <a
-                  v-if="activeSource === 'history'"
                   class="csv-ghost-action"
                   :href="csvDownloadUrl(activeFile.id)"
                 >
                   下载原文件
                 </a>
                 <button
-                  v-if="activeSource === 'history'"
                   class="csv-ghost-action csv-danger-action"
                   type="button"
                   :disabled="deletingId === activeFile.id"
@@ -571,44 +614,20 @@ onMounted(async () => {
             <textarea
               class="csv-text-editor"
               :value="csvTextPreview"
+              placeholder="粘贴 CSV 内容，或拖入 .csv 文件"
               aria-label="CSV 源码编辑器"
               spellcheck="false"
               @input="updateCsvText"
+              @dragenter.prevent="onDragEnter"
+              @dragover.prevent="onDragOver"
+              @dragleave.prevent="onDragLeave"
+              @drop.prevent="onDropFile"
             />
           </article>
         </template>
 
         <template #preview>
           <article class="csv-panel csv-preview-panel">
-            <div class="csv-preview-header">
-              <div>
-                <div class="section-kicker">表格</div>
-                <h2 class="csv-file-title">CSV 预览</h2>
-              </div>
-              <span class="csv-table-toolbar">{{ localPreview.dirty.value ? '有未保存编辑' : '已同步' }}</span>
-            </div>
-
-            <div class="csv-summary-grid">
-              <div
-                v-for="item in fileStats"
-                :key="item.label"
-                class="csv-summary-card"
-              >
-                <div class="csv-summary-value">{{ item.value }}</div>
-                <div class="csv-summary-label">{{ item.label }}</div>
-              </div>
-            </div>
-
-            <div class="csv-chip-row">
-              <span
-                v-for="column in activeColumns"
-                :key="column"
-                class="csv-chip"
-              >
-                {{ column }}
-              </span>
-            </div>
-
             <div class="csv-table-toolbar">
               <span>第 {{ page }} / {{ totalPages }} 页</span>
               <div class="csv-table-controls">
@@ -720,11 +739,17 @@ onMounted(async () => {
 }
 
 .csv-preview-panel,
-.csv-preview-empty {
+.csv-edit-panel {
   min-height: 0;
 }
 
-.csv-preview-header,
+.csv-edit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.csv-source-header,
 .csv-table-toolbar,
 .csv-table-controls {
   align-items: center;
@@ -732,9 +757,15 @@ onMounted(async () => {
   gap: 12px;
 }
 
-.csv-preview-header,
+.csv-source-header,
 .csv-table-toolbar {
   justify-content: space-between;
+}
+
+.csv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .csv-toolbar-status,
@@ -838,12 +869,6 @@ onMounted(async () => {
 .csv-source-label {
   color: rgba(15, 23, 35, 0.58);
   font-size: 0.82rem;
-}
-
-.csv-empty-hint {
-  color: rgba(15, 23, 35, 0.6);
-  font-size: 0.95rem;
-  margin: 0;
 }
 
 .csv-file-picker {
@@ -951,31 +976,8 @@ onMounted(async () => {
   background: rgba(16, 37, 66, 0.07);
 }
 
-.csv-file-title {
-  color: var(--shell-navy);
-  font-weight: 800;
-  font-family: "Georgia", "Times New Roman", serif;
-  font-size: clamp(1.4rem, 2.5vw, 2rem);
-  margin: 8px 0 0;
-  overflow-wrap: anywhere;
-}
-
-.csv-preview-empty {
-  min-height: 340px;
-}
-
-.csv-summary-grid {
-  margin-top: 18px;
-}
-
-.csv-chip-row {
-  margin-top: 18px;
-  max-height: 96px;
-  overflow: auto;
-}
-
 .csv-table-toolbar {
-  margin-top: 20px;
+  margin-top: 0;
 }
 
 .csv-table-controls {
@@ -1008,12 +1010,33 @@ onMounted(async () => {
   border-radius: var(--brand-radius-md, 16px);
   color: #edf6ff;
   font: 0.9rem/1.65 "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
-  margin-top: 16px;
+  margin-top: 0;
   min-height: 560px;
   outline: none;
   padding: 18px;
   resize: vertical;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
   width: 100%;
+}
+
+.csv-text-editor:focus-visible {
+  border-color: var(--brand-color-accent, #102542);
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
+}
+
+.csv-text-editor::placeholder {
+  color: rgba(237, 246, 255, 0.45);
+}
+
+.csv-edit-panel-drag .csv-text-editor {
+  border-color: var(--brand-color-accent, #102542);
+  box-shadow: inset 0 0 0 2px var(--brand-color-accent, #102542);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .csv-text-editor {
+    transition: none;
+  }
 }
 
 .csv-loading {
@@ -1022,7 +1045,7 @@ onMounted(async () => {
 }
 
 @media (max-width: 599px) {
-  .csv-preview-header,
+  .csv-source-header,
   .csv-table-toolbar,
   .csv-toolbar-head {
     align-items: flex-start;
