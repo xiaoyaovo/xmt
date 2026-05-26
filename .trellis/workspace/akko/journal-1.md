@@ -572,3 +572,36 @@ Fixed the CSV history 500 by repairing the local MySQL csv_files schema, syncing
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: Unified multi-provider login
+
+**Date**: 2026-05-26
+**Task**: Unified multi-provider login
+**Branch**: `main`
+
+### Summary
+
+Added a unified /login page with password, GitHub, and LinuxDo entries; extended backend auth to multi-provider users with migration and local password account CLI; updated Trellis specs for the new auth contracts.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `aee7f87` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
