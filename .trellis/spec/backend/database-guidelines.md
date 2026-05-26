@@ -66,6 +66,80 @@ When changing models:
 
 > **Gotcha — `MODELS_STATE` snapshot drifts on hand-written migrations.** Aerich's auto-`migrate` command diffs the current models against the `MODELS_STATE` blob baked into the most recent migration file (see `0_20260519174335_init.py` for the format). The hand-written migrations in this project (`2_...`, `3_...`) do NOT update that blob. The next time someone runs `aerich migrate`, the diff will be computed against the stale snapshot from `1_...` and will re-emit columns that have already been added by `2_...` and `3_...`. When you write a new migration, either: (a) keep hand-writing and accept that future auto-`migrate` runs need manual cleanup, or (b) regenerate the `MODELS_STATE` blob by running `aerich init-db` against a clean DB and copying the resulting snapshot. Pick deliberately; mixing styles invisibly causes duplicate-column errors at deploy time.
 
+### Scenario: Repair drifted hand-written migration state
+
+#### 1. Scope / Trigger
+
+- Trigger: A model field exists in code and in a migration file, but runtime MySQL fails with `Unknown column '<field>' in 'field list'`.
+- Trigger: `uv run aerich heads` or `uv run aerich history` fails with `Old format of migration file detected` after a hand-written migration was added without `MODELS_STATE`.
+
+#### 2. Signatures
+
+- Command: `cd backend && uv run aerich heads`
+- Command: `cd backend && uv run aerich history`
+- DB check: `SHOW COLUMNS FROM \`<table>\`;`
+- DB state table: `aerich(version, app, content)`
+
+#### 3. Contracts
+
+- Every migration that can be the latest file in `backend/migrations/models/` must expose a valid `MODELS_STATE` string for Aerich 0.6+.
+- The `aerich` table must record only migrations whose SQL effects are already present in the database.
+- If a migration's SQL was applied manually, record it with `aerich upgrade --fake` only after verifying the schema matches.
+
+#### 4. Validation & Error Matrix
+
+- `Unknown column` during ORM select -> compare model fields against `SHOW COLUMNS`.
+- `Old format of migration file detected` -> latest migration file lacks a valid `MODELS_STATE`.
+- Pending migration creates a table/index that already exists -> the schema was applied but the `aerich` record is missing; verify schema before faking.
+- `aerich heads` returns no rows -> Aerich believes all migration records are current.
+
+#### 5. Good/Base/Bad Cases
+
+- Good: migration file has SQL plus current `MODELS_STATE`; DB columns exist; `aerich heads` prints `No available heads.`
+- Base: DB is behind; run `uv run aerich upgrade` and verify columns.
+- Bad: DB has schema changes but `aerich` lacks records; direct `upgrade` may fail on duplicate table/index/column.
+
+#### 6. Tests Required
+
+- Run `cd backend && uv run python -m compileall app`.
+- Run `cd backend && uv run aerich heads`.
+- For field-related fixes, run a Tortoise query against the affected model to ensure ORM select lists no longer fail.
+
+#### 7. Wrong vs Correct
+
+Wrong:
+
+```bash
+cd backend
+uv run aerich upgrade
+```
+
+If earlier hand-written SQL was already applied outside Aerich, this can fail on duplicate schema objects.
+
+Correct:
+
+```bash
+cd backend
+uv run aerich heads
+uv run python - <<'PY'
+import asyncio
+from tortoise import Tortoise
+from app.db.config import TORTOISE_ORM
+
+async def main():
+    await Tortoise.init(config=TORTOISE_ORM)
+    conn = Tortoise.get_connection("default")
+    try:
+        print(await conn.execute_query_dict("SHOW COLUMNS FROM `<table>`"))
+    finally:
+        await Tortoise.close_connections()
+
+asyncio.run(main())
+PY
+```
+
+Then either run the missing migration normally, or manually add the verified missing schema and use `uv run aerich upgrade --fake` to repair Aerich bookkeeping.
+
 ## Runtime File Storage
 
 Uploaded CSV bytes are not stored in the database. `CsvFile.storage_path` points at files under `backend/storage/`, and that directory is ignored by git.
