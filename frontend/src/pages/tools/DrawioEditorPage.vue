@@ -15,7 +15,7 @@ const drawioOrigin = 'https://drawio.cxmjtt.com'
 const drawioPath = '/drawio/'
 const drawioStandaloneUrl = `${drawioOrigin}${drawioPath}?ui=min&lang=zh&dark=0&libraries=1`
 const route = useRoute()
-const starterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:00:00.000Z" agent="Xinming Tools" version="30.0.2">
+const diagramStarterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:00:00.000Z" agent="Xinming Tools" version="30.0.2">
   <diagram id="xinming-demo" name="Demo">
     <mxGraphModel dx="1120" dy="680" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
       <root>
@@ -40,9 +40,19 @@ const starterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:00:00.0
     </mxGraphModel>
   </diagram>
 </mxfile>`
+const whiteboardStarterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:00:00.000Z" agent="Xinming Tools" version="30.0.2">
+  <diagram id="xinming-whiteboard" name="Whiteboard">
+    <mxGraphModel dx="1120" dy="680" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>`
 
 const iframeRef = useTemplateRef('drawioFrame')
-const savedXml = shallowRef(starterXml)
+const savedXml = shallowRef(diagramStarterXml)
 const editorReady = shallowRef(false)
 const drawioError = shallowRef('')
 const savedAt = shallowRef('')
@@ -60,6 +70,7 @@ const pendingArchiveMeta = shallowRef({ title: '', remark: '' })
 const editorMode = computed(() => route.query.mode === 'whiteboard' ? 'whiteboard' : 'diagram')
 const editorModeLabel = computed(() => editorMode.value === 'whiteboard' ? '白板' : 'Draw.io')
 const accountSync = computed(() => editorMode.value === 'whiteboard' ? whiteboardSync : diagramSync)
+const starterXml = computed(() => editorMode.value === 'whiteboard' ? whiteboardStarterXml : diagramStarterXml)
 const drawioEmbedUrl = computed(() => {
   const modeParams = editorMode.value === 'whiteboard' ? 'ui=sketch&sketch=1' : 'ui=min'
   return `${drawioOrigin}${drawioPath}?embed=1&proto=json&spin=1&${modeParams}&lang=zh&dark=0&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
@@ -255,7 +266,7 @@ async function deleteSyncedDiagram(item) {
 }
 
 function resetDemo() {
-  savedXml.value = starterXml
+  savedXml.value = starterXml.value
   savedAt.value = ''
   iframeKey.value += 1
   editorReady.value = false
@@ -332,6 +343,13 @@ onUnmounted(() => {
 watch(editorMode, async () => {
   historyOpen.value = false
   deletingArchiveKey.value = ''
+  savedXml.value = starterXml.value
+  savedAt.value = ''
+  iframeKey.value += 1
+  editorReady.value = false
+  syncAfterNextExport.value = false
+  syncingExport.value = false
+  drawioError.value = ''
   await accountSync.value.loadItems()
 })
 </script>
