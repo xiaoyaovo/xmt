@@ -25,8 +25,8 @@ export const homeRows = [
   },
   {
     index: 3,
-    title: 'Draw.io Demo',
-    description: '通过 iframe embed 运行 diagrams.net，体验完整流程图与白板编辑器。',
+    title: 'Draw.io',
+    description: '进入全屏流程图或白板编辑器，编辑体验交给 draw.io，保存和历史交给 Xinming。',
     to: '/tools/drawio'
   }
 ]

@@ -22,9 +22,9 @@ const tools = [
   },
   {
     index: 3,
-    title: 'Draw.io Demo',
-    description: '通过 iframe embed 运行 diagrams.net，体验完整流程图与白板编辑器。',
-    meta: 'Demo · 集成方式验证',
+    title: 'Draw.io',
+    description: '从工具区进入全屏流程图或白板编辑器，保存由 Xinming 接管。',
+    meta: '可用 · 全屏编辑、账号同步',
     to: '/tools/drawio'
   }
 ]

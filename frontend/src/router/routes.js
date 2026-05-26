@@ -13,6 +13,10 @@ const routes = [
     ]
   },
   {
+    path: '/tools/drawio/editor',
+    component: () => import('pages/tools/DrawioEditorPage.vue')
+  },
+  {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue')
   }
