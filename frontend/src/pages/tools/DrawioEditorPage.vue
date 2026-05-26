@@ -42,7 +42,7 @@ const diagramStarterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:
 </mxfile>`
 const whiteboardStarterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:00:00.000Z" agent="Xinming Tools" version="30.0.2">
   <diagram id="xinming-whiteboard" name="Whiteboard">
-    <mxGraphModel dx="1120" dy="680" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
+    <mxGraphModel dx="1120" dy="680" grid="0" gridSize="10" guides="0" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1100" pageHeight="850" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -174,8 +174,7 @@ function loadXml(xml = savedXml.value) {
     action: 'load',
     autosave: 1,
     title: `xinming-${editorMode.value}.drawio`,
-    xml,
-    ...(editorMode.value === 'whiteboard' ? { rough: 1, toSketch: 1 } : {})
+    xml
   })
   drawioError.value = ''
 }
