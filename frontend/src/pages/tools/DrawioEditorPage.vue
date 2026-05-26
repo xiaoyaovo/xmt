@@ -13,7 +13,7 @@ import { useAccountSync } from 'src/composables/useAccountSync'
 
 const drawioOrigin = 'https://drawio.cxmjtt.com'
 const drawioPath = '/drawio/'
-const drawioStandaloneUrl = `${drawioOrigin}${drawioPath}?ui=min&lang=zh&libraries=1`
+const drawioStandaloneUrl = `${drawioOrigin}${drawioPath}?ui=min&lang=zh&dark=0&libraries=1`
 const route = useRoute()
 const starterXml = `<mxfile host="xinming-tools" modified="2026-05-25T00:00:00.000Z" agent="Xinming Tools" version="30.0.2">
   <diagram id="xinming-demo" name="Demo">
@@ -60,7 +60,7 @@ const editorMode = computed(() => route.query.mode === 'whiteboard' ? 'whiteboar
 const editorModeLabel = computed(() => editorMode.value === 'whiteboard' ? '白板' : 'Draw.io')
 const drawioEmbedUrl = computed(() => {
   const modeParams = editorMode.value === 'whiteboard' ? 'ui=sketch&sketch=1' : 'ui=min'
-  return `${drawioOrigin}${drawioPath}?embed=1&proto=json&spin=1&${modeParams}&lang=zh&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
+  return `${drawioOrigin}${drawioPath}?embed=1&proto=json&spin=1&${modeParams}&lang=zh&dark=0&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
 })
 const xmlCharacters = computed(() => savedXml.value.length)
 const syncStatusText = computed(() => {
