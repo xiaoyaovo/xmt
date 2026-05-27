@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import {
   clearAccessToken,
   createOAuthLinkUrl,
+  deleteCurrentUser,
   getAccessToken,
   getCurrentUser,
   githubLoginUrl,
@@ -118,6 +119,13 @@ export const useAuthStore = defineStore('auth', {
 
     async logout() {
       await requestLogout()
+      this.user = null
+      this.accessToken = null
+      clearAccessToken()
+    },
+
+    async deleteAccount() {
+      await deleteCurrentUser()
       this.user = null
       this.accessToken = null
       clearAccessToken()

@@ -11,6 +11,10 @@ export function logout() {
   return request.post('/auth/logout')
 }
 
+export function deleteCurrentUser() {
+  return request.delete('/auth/me')
+}
+
 export function passwordLogin({ email, password }) {
   return request.post('/auth/login', { email, password })
 }

@@ -2,6 +2,7 @@
 import { computed, onMounted, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import AccountDeleteDialog from 'src/components/account/AccountDeleteDialog.vue'
 import AccountLinkResultDialog from 'src/components/account/AccountLinkResultDialog.vue'
 import AuthAccountRow from 'src/components/account/AuthAccountRow.vue'
 import { listAuthAccounts, unlinkAuthAccount } from 'src/lib/auth'
@@ -17,6 +18,9 @@ const actionProvider = shallowRef('')
 const errorMessage = shallowRef('')
 const noticeMessage = shallowRef('')
 const linkResultOpen = shallowRef(false)
+const deleteDialogOpen = shallowRef(false)
+const deletingAccount = shallowRef(false)
+const deleteError = shallowRef('')
 const linkResult = shallowRef({
   provider: '',
   providerLabel: '第三方账号',
@@ -119,6 +123,25 @@ async function handleDialogRetry() {
   }
 }
 
+function openDeleteDialog() {
+  deleteError.value = ''
+  deleteDialogOpen.value = true
+}
+
+async function deleteAccount() {
+  deletingAccount.value = true
+  deleteError.value = ''
+  try {
+    await auth.deleteAccount()
+    deleteDialogOpen.value = false
+    window.location.href = '/#/login'
+  } catch (error) {
+    deleteError.value = error.message || '账号删除失败，请稍后重试'
+  } finally {
+    deletingAccount.value = false
+  }
+}
+
 onMounted(async () => {
   readProviderCallback()
   await loadAccounts()
@@ -188,6 +211,22 @@ onMounted(async () => {
             @unlink="unlinkProvider"
           />
         </div>
+
+        <section class="account-security-danger">
+          <div>
+            <h2 class="account-security-danger-title">删除账号</h2>
+            <p class="account-security-danger-copy">
+              删除当前账号会同时清除登录方式、云端同步数据、CSV 历史与已上传文件。
+            </p>
+          </div>
+          <button
+            class="account-security-danger-button"
+            type="button"
+            @click="openDeleteDialog"
+          >
+            删除账号
+          </button>
+        </section>
       </template>
 
       <AccountLinkResultDialog
@@ -197,6 +236,13 @@ onMounted(async () => {
         :message="linkResult.message"
         @login="handleDialogLogin"
         @retry="handleDialogRetry"
+      />
+
+      <AccountDeleteDialog
+        v-model:open="deleteDialogOpen"
+        :busy="deletingAccount"
+        :error="deleteError"
+        @confirm="deleteAccount"
       />
     </section>
   </div>
@@ -266,6 +312,55 @@ onMounted(async () => {
   gap: 14px;
 }
 
+.account-security-danger {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(157, 37, 37, 0.18);
+  border-radius: var(--brand-radius-md, 16px);
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.account-security-danger-title {
+  color: #9d2525;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.2;
+  margin: 0 0 6px;
+}
+
+.account-security-danger-copy {
+  color: rgba(15, 23, 35, 0.64);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.account-security-danger-button {
+  background: #9d2525;
+  border: 1px solid #9d2525;
+  border-radius: var(--brand-radius-pill, 999px);
+  color: #ffffff;
+  cursor: pointer;
+  flex: 0 0 auto;
+  font: inherit;
+  font-weight: 850;
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.account-security-danger-button:hover {
+  background: #7f1d1d;
+}
+
+.account-security-danger-button:focus-visible {
+  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.14));
+  outline: none;
+}
+
 .account-security-state,
 .account-security-error,
 .account-security-notice {
@@ -319,6 +414,15 @@ onMounted(async () => {
 
   .account-security-summary {
     align-self: flex-start;
+  }
+
+  .account-security-danger {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .account-security-danger-button {
+    width: 100%;
   }
 }
 </style>

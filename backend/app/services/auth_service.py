@@ -9,6 +9,7 @@ from tortoise import timezone
 from app.models.user import User
 from app.models.user_auth_account import UserAuthAccount
 from app.models.verification_code import VerificationCode
+from app.services.csv_service import purge_user_storage_dir
 from app.services.jwt_service import create_access_token
 from app.services.password_service import hash_password, verify_password
 
@@ -278,6 +279,16 @@ async def unlink_auth_account(user: User, provider: str) -> None:
     if provider == "github" and user.github_id == account.provider_user_id:
         user.github_id = None
         await user.save(update_fields=["github_id", "updated_at"])
+
+
+async def delete_user_account(user: User) -> None:
+    accounts = await UserAuthAccount.filter(user=user)
+    emails = {value.strip().lower() for value in [user.email, *(account.provider_email for account in accounts)] if value}
+    for email in emails:
+        await VerificationCode.filter(email=email).delete()
+
+    await user.delete()
+    purge_user_storage_dir(user)
 
 
 async def _enforce_send_rate_limits(email: str, purpose: str) -> None:

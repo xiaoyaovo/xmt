@@ -20,6 +20,7 @@ declare global {
   const defineAsyncComponent: typeof import('vue').defineAsyncComponent
   const defineComponent: typeof import('vue').defineComponent
   const deleteCsvFile: typeof import('./lib/csvFiles.js').deleteCsvFile
+  const deleteCurrentUser: typeof import('./lib/auth.js').deleteCurrentUser
   const deleteSyncItem: typeof import('./lib/accountSync.js').deleteSyncItem
   const effectScope: typeof import('vue').effectScope
   const getAccessToken: typeof import('./lib/auth.js').getAccessToken

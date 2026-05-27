@@ -29,6 +29,7 @@ from app.services.auth_service import (
     authenticate_password_user,
     create_login_token,
     create_verification_code,
+    delete_user_account,
     get_or_create_oauth_user,
     link_oauth_account,
     list_auth_accounts,
@@ -550,6 +551,12 @@ async def delete_auth_account(provider: str, user: User = Depends(require_curren
 @router.get("/me", response_model=AuthMeResponse, summary="Get current user")
 async def get_me(user: User | None = Depends(get_current_user)) -> AuthMeResponse:
     return AuthMeResponse(authenticated=bool(user), user=serialize_user(user) if user else None)
+
+
+@router.delete("/me", response_model=GenericOkResponse, summary="Delete current user")
+async def delete_me(user: User = Depends(require_current_user)) -> GenericOkResponse:
+    await delete_user_account(user)
+    return GenericOkResponse(message="账号已删除")
 
 
 @router.post("/logout", summary="Logout")

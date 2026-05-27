@@ -223,6 +223,7 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
 - OAuth APIs: `GET /api/v1/auth/{github|linuxdo}/login`, `GET /api/v1/auth/{github|linuxdo}/callback`.
 - Account binding APIs: `GET /api/v1/auth/accounts`, `GET /api/v1/auth/{github|linuxdo}/link`,
   `DELETE /api/v1/auth/accounts/{provider}`.
+- Account deletion API: `DELETE /api/v1/auth/me` deletes only the currently authenticated user.
 - CLI: `cd backend && uv run python -m app.cli.create_password_user <username> [--email ...] [--password ...]`.
 
 ### 3. Contracts
@@ -246,6 +247,9 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
 - OAuth account-linking callbacks are browser navigations, so expected user-facing failures must redirect back to the
   frontend callback instead of returning raw JSON. The account security page owns the final Reka Dialog or inline
   success/error copy.
+- Deleting a user should rely on database `ON DELETE CASCADE` for `user_auth_accounts`, `csv_files`, and
+  `tool_sync_items`, and the auth service must explicitly purge the user's CSV storage directory because file storage
+  is outside the database. It should also remove verification codes for the user's email and linked account emails.
 - Env keys: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `LINUXDO_CLIENT_ID`,
   `LINUXDO_CLIENT_SECRET`, optional `LINUXDO_AUTHORIZE_URL`, `LINUXDO_TOKEN_URL`, `LINUXDO_USER_URL`.
 
@@ -261,6 +265,7 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
   `provider_status=conflict` and a user-facing `message`.
 - Unbinding the last login method -> `400 至少保留一种登录方式`.
 - Unbinding password login -> `400 暂不支持解绑账号密码登录`.
+- Deleting the current user without a valid bearer token -> `401 Authentication required`.
 
 ### 5. Good/Base/Bad Cases
 
