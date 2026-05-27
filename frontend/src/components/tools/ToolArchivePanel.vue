@@ -139,7 +139,7 @@ const emit = defineEmits(['login', 'refresh'])
 .tool-archive-primary-action,
 .tool-archive-ghost-action {
   align-items: center;
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   cursor: pointer;
   display: inline-flex;
   font: inherit;

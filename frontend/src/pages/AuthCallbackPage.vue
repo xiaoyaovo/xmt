@@ -120,7 +120,7 @@ function retryLogin() {
 .auth-callback-button,
 .auth-callback-link {
   align-items: center;
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   display: inline-flex;
   font: inherit;
   font-weight: 800;

@@ -407,7 +407,7 @@ onMounted(async () => {
 .account-security-danger-button {
   background: #9d2525;
   border: 1px solid #9d2525;
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   color: #ffffff;
   cursor: pointer;
   flex: 0 0 auto;
@@ -453,7 +453,7 @@ onMounted(async () => {
 .account-security-login {
   background: var(--brand-color-accent, #102542);
   border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   color: #ffffff;
   cursor: pointer;
   font: inherit;

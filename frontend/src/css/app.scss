@@ -27,6 +27,7 @@
   --brand-radius-md: 16px;
   --brand-radius-lg: 24px;
   --brand-radius-pill: 999px;
+  --brand-action-radius: var(--brand-radius-md);
   --brand-font-family: "Avenir Next", "Segoe UI", sans-serif;
   --brand-font-display: "Georgia", "Times New Roman", serif;
   --brand-shadow-card: var(--shell-shadow);
@@ -526,7 +527,7 @@ body::before {
 
 .brand-action-button {
   background: var(--brand-color-accent) !important;
-  border-radius: var(--brand-radius-pill, 999px) !important;
+  border-radius: var(--brand-action-radius, var(--brand-radius-md, 16px)) !important;
   color: var(--ui-text-inverted, #ffffff) !important;
 }
 
@@ -574,7 +575,7 @@ body::before {
 }
 
 .nav-tab {
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-action-radius, var(--brand-radius-md, 16px));
   color: var(--brand-color-muted);
   font-weight: 600;
   padding: 0 10px;
@@ -720,7 +721,7 @@ body::before {
 }
 
 .hero-button {
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-action-radius, var(--brand-radius-md, 16px));
   font-weight: 700;
   min-height: 48px;
   padding: 0 18px;

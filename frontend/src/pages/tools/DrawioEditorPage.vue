@@ -636,7 +636,7 @@ watch(editorMode, async () => {
   align-items: center;
   background: #ffffff;
   border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   color: var(--shell-navy);
   display: inline-flex;
   flex: 0 0 auto;
@@ -732,7 +732,7 @@ watch(editorMode, async () => {
 .drawio-primary-action,
 .drawio-ghost-action {
   align-items: center;
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   cursor: pointer;
   display: inline-flex;
   font: inherit;

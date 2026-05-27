@@ -63,6 +63,7 @@ const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 
 let renderTimer = 0
 let renderSequence = 0
+let themeRenderTimer = 0
 let themeObserver = null
 
 const sourceLines = computed(() => source.value.split('\n').length)
@@ -162,13 +163,30 @@ function configureMermaid() {
 
 function watchThemeChanges() {
   themeObserver = new MutationObserver(() => {
-    configureMermaid()
-    renderDiagram()
+    window.clearTimeout(themeRenderTimer)
+    themeRenderTimer = window.setTimeout(() => {
+      configureMermaid()
+      renderDiagram()
+    }, 80)
   })
   themeObserver.observe(document.documentElement, {
     attributeFilter: ['class', 'data-brand-theme'],
     attributes: true
   })
+}
+
+function bindRenderedDiagram(result, sequence) {
+  if (sequence !== renderSequence || typeof result.bindFunctions !== 'function') return
+
+  const previewElement = previewRef.value
+  if (!previewElement) return
+
+  try {
+    result.bindFunctions(previewElement)
+  } catch (error) {
+    // Mermaid binding is optional for static diagrams and can throw on stale DOM nodes.
+    void error
+  }
 }
 
 function cleanupMermaidArtifacts() {
@@ -244,7 +262,7 @@ async function renderDiagram() {
 
     renderedSvg.value = result.svg
     await nextTick()
-    result.bindFunctions?.(previewRef.value)
+    bindRenderedDiagram(result, currentSequence)
   } catch (error) {
     if (currentSequence !== renderSequence) return
     renderedSvg.value = ''
@@ -402,6 +420,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.clearTimeout(renderTimer)
+  window.clearTimeout(themeRenderTimer)
   themeObserver?.disconnect()
 })
 </script>
@@ -775,7 +794,7 @@ onUnmounted(() => {
 .mermaid-example-item {
   background: var(--brand-color-surface, rgba(255, 255, 255, 0.62));
   border: 1px solid var(--brand-color-border, var(--shell-line));
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   color: var(--brand-color-text, var(--shell-navy));
   cursor: pointer;
   font: inherit;
@@ -811,7 +830,7 @@ onUnmounted(() => {
   align-items: center;
   background: var(--brand-color-surface, rgba(255, 255, 255, 0.62));
   border: 1px solid var(--brand-color-border, var(--shell-line));
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   color: var(--brand-color-text, var(--shell-navy));
   cursor: pointer;
   display: inline-flex;

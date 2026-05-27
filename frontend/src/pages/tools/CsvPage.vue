@@ -880,7 +880,7 @@ onMounted(async () => {
   align-items: center;
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   color: var(--shell-navy);
   cursor: pointer;
   display: inline-flex;

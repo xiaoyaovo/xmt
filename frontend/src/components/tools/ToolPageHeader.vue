@@ -61,7 +61,7 @@ defineProps({
   align-items: center;
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   color: var(--shell-navy);
   display: inline-flex;
   font-size: 0.84rem;

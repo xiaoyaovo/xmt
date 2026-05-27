@@ -211,7 +211,7 @@ function handleAction() {
 .auth-account-action {
   background: #ffffff;
   border: 1px solid rgba(16, 37, 66, 0.12);
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   color: var(--shell-navy);
   cursor: pointer;
   font: inherit;

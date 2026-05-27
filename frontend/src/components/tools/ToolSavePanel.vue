@@ -168,7 +168,7 @@ const emit = defineEmits(['save', 'save-as', 'login'])
 .tool-save-primary-action,
 .tool-save-ghost-action {
   align-items: center;
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   cursor: pointer;
   display: inline-flex;
   font: inherit;

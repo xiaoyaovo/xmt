@@ -99,7 +99,7 @@ const emit = defineEmits(['login'])
 .account-sync-button,
 .account-sync-link {
   align-items: center;
-  border-radius: var(--brand-radius-pill, 999px);
+  border-radius: var(--brand-radius-md, 16px);
   display: inline-flex;
   font: inherit;
   font-size: 0.86rem;
