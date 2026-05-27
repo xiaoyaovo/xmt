@@ -154,12 +154,12 @@ const isExternal = computed(() => Boolean(!props.to && props.href))
 
 .numbered-row[href]:hover,
 .numbered-row[role='link']:hover {
-  background: rgba(16, 37, 66, 0.04);
+  background: var(--brand-color-accent-soft, rgba(16, 37, 66, 0.04));
 }
 
 .numbered-row[href]:focus-visible,
 .numbered-row[role='link']:focus-visible {
-  background: rgba(16, 37, 66, 0.06);
+  background: var(--brand-color-accent-soft, rgba(16, 37, 66, 0.06));
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
   outline: none;
 }
@@ -172,8 +172,8 @@ const isExternal = computed(() => Boolean(!props.to && props.href))
 }
 
 .numbered-row-index {
-  color: var(--shell-coral, #ff7a59);
-  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--brand-color-accent2, #ff7a59);
+  font-family: var(--brand-font-display, "Georgia", "Times New Roman", serif);
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0.04em;
@@ -188,28 +188,28 @@ const isExternal = computed(() => Boolean(!props.to && props.href))
 }
 
 .numbered-row-title {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--brand-color-text, var(--shell-navy));
+  font-family: var(--brand-font-display, "Georgia", "Times New Roman", serif);
   font-size: clamp(1.2rem, 2.2vw, 1.6rem);
   font-weight: 600;
   line-height: 1.2;
 }
 
 .numbered-row-description {
-  color: rgba(15, 23, 35, 0.72);
+  color: var(--brand-color-muted, rgba(15, 23, 35, 0.72));
   font-size: 1rem;
   line-height: 1.68;
 }
 
 .numbered-row-meta {
-  color: rgba(15, 23, 35, 0.5);
+  color: var(--brand-color-muted, rgba(15, 23, 35, 0.5));
   font-size: 0.86rem;
   letter-spacing: 0.02em;
   margin-top: 2px;
 }
 
 .numbered-row-cta {
-  color: var(--shell-navy);
+  color: var(--brand-color-accent, var(--shell-navy));
   font-size: 1.4rem;
   font-weight: 700;
   padding-top: 4px;

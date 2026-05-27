@@ -53,10 +53,10 @@ const emit = defineEmits(['select'])
 <style scoped>
 .auth-provider-button {
   align-items: center;
-  background: rgba(255, 255, 255, 0.76);
+  background: var(--shell-panel);
   border: 1px solid var(--shell-line);
   border-radius: var(--brand-radius-md, 16px);
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
   cursor: pointer;
   display: grid;
   font: inherit;
@@ -75,9 +75,9 @@ const emit = defineEmits(['select'])
 
 .auth-provider-button:hover,
 .auth-provider-button:focus-visible {
-  background: #ffffff;
-  border-color: rgba(16, 37, 66, 0.2);
-  box-shadow: 0 16px 34px rgba(16, 37, 66, 0.1);
+  background: var(--brand-color-surface, #ffffff);
+  border-color: var(--brand-color-border, rgba(16, 37, 66, 0.2));
+  box-shadow: var(--brand-shadow-card, 0 16px 34px rgba(16, 37, 66, 0.1));
   outline: none;
   transform: translateY(-1px);
 }
@@ -91,9 +91,9 @@ const emit = defineEmits(['select'])
 .auth-provider-mark {
   align-items: center;
   aspect-ratio: 1;
-  background: rgba(16, 37, 66, 0.08);
+  background: var(--brand-color-accent-soft, rgba(16, 37, 66, 0.08));
   border-radius: 14px;
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
   display: inline-flex;
   font-size: 0.8rem;
   font-weight: 900;
@@ -114,13 +114,13 @@ const emit = defineEmits(['select'])
 }
 
 .auth-provider-caption {
-  color: rgba(15, 23, 35, 0.58);
+  color: var(--brand-color-muted, rgba(15, 23, 35, 0.58));
   font-size: 0.8rem;
   line-height: 1.45;
 }
 
 .auth-provider-arrow {
-  color: rgba(16, 37, 66, 0.42);
+  color: var(--brand-color-muted, rgba(16, 37, 66, 0.42));
   font-weight: 900;
 }
 

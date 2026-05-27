@@ -99,8 +99,24 @@ function isRouteActive(to, exact = false) {
   min-height: 42px;
 }
 
+.site-nav-link[aria-current='page'] {
+  background: var(--brand-color-accent);
+  color: var(--ui-text-inverted, #ffffff);
+}
+
+.site-nav-link[aria-current='page']:hover,
+.site-nav-link[aria-current='page']:focus-visible {
+  background: var(--brand-color-accent-hover, var(--brand-color-accent));
+}
+
 .site-nav-trigger {
   min-height: 46px;
+}
+
+.site-nav-trigger[aria-pressed='true'],
+.site-nav-trigger[data-state='open'] {
+  background: var(--brand-color-accent);
+  color: var(--ui-text-inverted, #ffffff);
 }
 
 .site-nav-trigger-copy {

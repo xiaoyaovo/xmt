@@ -114,7 +114,7 @@ defineProps({
 }
 
 .narrative-kicker {
-  color: rgba(16, 37, 66, 0.62);
+  color: var(--brand-color-muted, rgba(16, 37, 66, 0.62));
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -122,8 +122,8 @@ defineProps({
 }
 
 .narrative-title {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--brand-color-text, var(--shell-navy));
+  font-family: var(--brand-font-display, "Georgia", "Times New Roman", serif);
   font-size: clamp(1.7rem, 3.2vw, 2.4rem);
   font-weight: 600;
   line-height: 1.12;
@@ -132,7 +132,7 @@ defineProps({
 }
 
 .narrative-description {
-  color: rgba(15, 23, 35, 0.74);
+  color: var(--brand-color-muted, rgba(15, 23, 35, 0.74));
   font-size: 1.02rem;
   line-height: 1.74;
   margin: 0;

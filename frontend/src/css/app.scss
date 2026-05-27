@@ -1,7 +1,10 @@
 :root {
+  color-scheme: light;
   --shell-navy: #102542;
   --shell-ink: #0f1723;
   --shell-mist: #eef3f8;
+  --shell-bg: #f2f6fb;
+  --shell-header-bg: rgba(247, 250, 253, 0.88);
   --shell-panel: rgba(255, 255, 255, 0.74);
   --shell-panel-strong: rgba(255, 255, 255, 0.88);
   --shell-line: rgba(16, 37, 66, 0.12);
@@ -28,6 +31,262 @@
   --brand-font-display: "Georgia", "Times New Roman", serif;
   --brand-shadow-card: var(--shell-shadow);
   --brand-shadow-focus: 0 0 0 3px rgba(16, 37, 66, 0.16);
+  --ui-primary: var(--brand-color-accent);
+  --ui-text-inverted: var(--brand-color-surface);
+  --color-primary: var(--brand-color-accent);
+  --q-primary: var(--brand-color-accent);
+  --ui-radius: var(--brand-radius-sm);
+}
+
+html[data-brand-theme='terminal'],
+html[data-brand-theme='spotify'] {
+  color-scheme: dark;
+  --shell-navy: #edf4ff;
+  --shell-ink: #edf4ff;
+  --shell-mist: #070b12;
+  --shell-bg: #070b12;
+  --shell-header-bg: rgba(8, 13, 20, 0.9);
+  --shell-panel: rgba(17, 24, 39, 0.78);
+  --shell-panel-strong: rgba(17, 24, 39, 0.92);
+  --shell-line: rgba(255, 255, 255, 0.1);
+  --shell-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+}
+
+html[data-brand-theme='terminal'] {
+  --shell-lime: #c6ff6a;
+  --shell-coral: #7ed7ff;
+  --brand-color-accent: #c6ff6a;
+  --brand-color-accent-hover: #b1ef55;
+  --brand-color-accent-soft: rgba(198, 255, 106, 0.16);
+  --brand-color-accent2: #7ed7ff;
+  --brand-color-highlight: #f4ff8f;
+  --brand-color-glow: rgba(126, 215, 255, 0.2);
+  --brand-color-surface: #10151d;
+  --brand-color-surface-2: #1a2230;
+  --brand-color-text: #edf4ff;
+  --brand-color-muted: #9bb0cc;
+  --brand-color-border: rgba(255, 255, 255, 0.08);
+  --brand-radius-xs: 2px;
+  --brand-radius-sm: 6px;
+  --brand-radius-md: 12px;
+  --brand-radius-lg: 18px;
+  --brand-font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --brand-shadow-card: 0 16px 40px rgba(0, 0, 0, 0.24);
+  --brand-shadow-focus: 0 0 0 3px rgba(198, 255, 106, 0.22);
+}
+
+html[data-brand-theme='apple'] {
+  --shell-navy: #1d1d1f;
+  --shell-ink: #1d1d1f;
+  --shell-mist: #f5f5f7;
+  --shell-bg: #f5f5f7;
+  --shell-header-bg: rgba(245, 245, 247, 0.86);
+  --shell-line: rgba(29, 29, 31, 0.08);
+  --shell-lime: #9df0ff;
+  --shell-coral: #5ac8fa;
+  --shell-shadow: 0 18px 52px rgba(0, 0, 0, 0.1);
+  --brand-color-accent: #0071e3;
+  --brand-color-accent-hover: #0077ed;
+  --brand-color-accent-soft: rgba(0, 113, 227, 0.1);
+  --brand-color-accent2: #5ac8fa;
+  --brand-color-highlight: #9df0ff;
+  --brand-color-glow: rgba(90, 200, 250, 0.22);
+  --brand-color-surface: #ffffff;
+  --brand-color-surface-2: #f5f5f7;
+  --brand-color-text: #1d1d1f;
+  --brand-color-muted: #6e6e73;
+  --brand-color-border: rgba(29, 29, 31, 0.08);
+  --brand-radius-xs: 2px;
+  --brand-radius-sm: 6px;
+  --brand-radius-md: 10px;
+  --brand-radius-lg: 18px;
+  --brand-radius-pill: 980px;
+  --brand-font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  --brand-shadow-card: 0 2px 14px rgba(0, 0, 0, 0.06);
+  --brand-shadow-focus: 0 0 0 4px rgba(0, 113, 227, 0.2);
+}
+
+html[data-brand-theme='carbon'] {
+  --brand-color-accent: #0f62fe;
+  --brand-color-accent-hover: #0353e9;
+  --brand-color-accent-soft: rgba(15, 98, 254, 0.12);
+  --brand-color-accent2: #42be65;
+  --brand-color-highlight: #a7f0ba;
+  --brand-color-glow: rgba(66, 190, 101, 0.2);
+  --brand-color-surface: #ffffff;
+  --brand-color-surface-2: #f4f4f4;
+  --brand-color-text: #161616;
+  --brand-color-muted: #525252;
+  --brand-color-border: #e0e0e0;
+  --brand-radius-xs: 0;
+  --brand-radius-sm: 0;
+  --brand-radius-md: 0;
+  --brand-radius-lg: 0;
+  --brand-radius-pill: 16px;
+  --brand-font-family: "IBM Plex Sans", "Helvetica Neue", sans-serif;
+  --brand-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --brand-shadow-focus: 0 0 0 2px #0f62fe inset;
+}
+
+html[data-brand-theme='fluent'] {
+  --brand-color-accent: #0f6cbd;
+  --brand-color-accent-hover: #115ea3;
+  --brand-color-accent-soft: rgba(15, 108, 189, 0.1);
+  --brand-color-accent2: #66c7f4;
+  --brand-color-highlight: #b8e8ff;
+  --brand-color-glow: rgba(102, 199, 244, 0.22);
+  --brand-color-text: #242424;
+  --brand-color-muted: #616161;
+  --brand-color-border: #d1d1d1;
+  --brand-radius-xs: 2px;
+  --brand-radius-sm: 4px;
+  --brand-radius-md: 4px;
+  --brand-radius-lg: 8px;
+  --brand-font-family: "Segoe UI", -apple-system, sans-serif;
+  --brand-shadow-card: 0 2px 4px rgba(0, 0, 0, 0.14), 0 0 2px rgba(0, 0, 0, 0.12);
+  --brand-shadow-focus: 0 0 0 2px #0f6cbd;
+}
+
+html[data-brand-theme='primer'] {
+  --brand-color-accent: #0969da;
+  --brand-color-accent-hover: #0860c8;
+  --brand-color-accent-soft: rgba(9, 105, 218, 0.1);
+  --brand-color-accent2: #2da44e;
+  --brand-color-highlight: #b7f0c1;
+  --brand-color-glow: rgba(45, 164, 78, 0.18);
+  --brand-color-surface-2: #f6f8fa;
+  --brand-color-text: #1f2328;
+  --brand-color-muted: #656d76;
+  --brand-color-border: #d0d7de;
+  --brand-radius-sm: 6px;
+  --brand-radius-md: 6px;
+  --brand-radius-lg: 12px;
+  --brand-radius-pill: 2em;
+  --brand-font-family: -apple-system, "Segoe UI", "Mona Sans", sans-serif;
+  --brand-shadow-card: 0 1px 0 rgba(31, 35, 40, 0.04), 0 1px 3px rgba(66, 74, 83, 0.12);
+  --brand-shadow-focus: 0 0 0 3px rgba(9, 105, 218, 0.28);
+}
+
+html[data-brand-theme='stripe'] {
+  --brand-color-accent: #635bff;
+  --brand-color-accent-hover: #5851e8;
+  --brand-color-accent-soft: rgba(99, 91, 255, 0.12);
+  --brand-color-accent2: #00d4ff;
+  --brand-color-highlight: #9bf1ff;
+  --brand-color-glow: rgba(0, 212, 255, 0.2);
+  --brand-color-surface-2: #f7f9fc;
+  --brand-color-text: #1a1f36;
+  --brand-color-muted: #6b7280;
+  --brand-color-border: rgba(99, 91, 255, 0.14);
+  --brand-radius-sm: 8px;
+  --brand-radius-md: 14px;
+  --brand-radius-lg: 22px;
+  --brand-font-family: "Soehne", "Avenir Next", "Segoe UI", sans-serif;
+  --brand-shadow-card: 0 16px 44px rgba(99, 91, 255, 0.1);
+  --brand-shadow-focus: 0 0 0 4px rgba(99, 91, 255, 0.2);
+}
+
+html[data-brand-theme='linear'] {
+  --brand-color-accent: #5e6ad2;
+  --brand-color-accent-hover: #4c57c1;
+  --brand-color-accent-soft: rgba(94, 106, 210, 0.12);
+  --brand-color-accent2: #a78bfa;
+  --brand-color-highlight: #ddd6fe;
+  --brand-color-glow: rgba(167, 139, 250, 0.18);
+  --brand-color-surface-2: #f7f7f8;
+  --brand-color-text: #0f1013;
+  --brand-color-muted: #6b6f76;
+  --brand-color-border: rgba(15, 16, 19, 0.1);
+  --brand-radius-sm: 8px;
+  --brand-radius-md: 12px;
+  --brand-radius-lg: 16px;
+  --brand-font-family: "Inter", "Segoe UI", sans-serif;
+  --brand-shadow-card: 0 10px 28px rgba(15, 16, 19, 0.08);
+  --brand-shadow-focus: 0 0 0 3px rgba(94, 106, 210, 0.18);
+}
+
+html[data-brand-theme='material'] {
+  --shell-bg: #fffbfe;
+  --shell-mist: #f3edf7;
+  --brand-color-accent: #6750a4;
+  --brand-color-accent-hover: #7c65bf;
+  --brand-color-accent-soft: rgba(103, 80, 164, 0.12);
+  --brand-color-accent2: #ffb4ab;
+  --brand-color-highlight: #ffd8d2;
+  --brand-color-glow: rgba(255, 180, 171, 0.18);
+  --brand-color-surface: #fffbfe;
+  --brand-color-surface-2: #f3edf7;
+  --brand-color-text: #1c1b1f;
+  --brand-color-muted: #49454f;
+  --brand-color-border: rgba(103, 80, 164, 0.14);
+  --brand-radius-sm: 8px;
+  --brand-radius-md: 12px;
+  --brand-radius-lg: 16px;
+  --brand-radius-pill: 100px;
+  --brand-font-family: "Roboto", -apple-system, sans-serif;
+  --brand-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15);
+  --brand-shadow-focus: 0 0 0 3px rgba(103, 80, 164, 0.24);
+}
+
+html[data-brand-theme='spotify'] {
+  --brand-color-accent: #1db954;
+  --brand-color-accent-hover: #1ed760;
+  --brand-color-accent-soft: rgba(29, 185, 84, 0.16);
+  --brand-color-accent2: #7dd3fc;
+  --brand-color-highlight: #d9f99d;
+  --brand-color-glow: rgba(29, 185, 84, 0.22);
+  --brand-color-surface: #121212;
+  --brand-color-surface-2: #1e1e1e;
+  --brand-color-text: #f5f5f5;
+  --brand-color-muted: #b3b3b3;
+  --brand-color-border: rgba(255, 255, 255, 0.08);
+  --brand-font-family: "Circular Std", "Avenir Next", "Segoe UI", sans-serif;
+  --brand-shadow-card: 0 16px 42px rgba(0, 0, 0, 0.26);
+  --brand-shadow-focus: 0 0 0 3px rgba(29, 185, 84, 0.24);
+}
+
+html[data-brand-theme='claude'] {
+  --shell-bg: #faf7f2;
+  --shell-mist: #f2ece3;
+  --shell-header-bg: rgba(250, 247, 242, 0.88);
+  --brand-color-accent: #c56f4d;
+  --brand-color-accent-hover: #b5603f;
+  --brand-color-accent-soft: rgba(197, 111, 77, 0.12);
+  --brand-color-accent2: #8c6a5d;
+  --brand-color-highlight: #f6d8c9;
+  --brand-color-glow: rgba(197, 111, 77, 0.18);
+  --brand-color-surface: #faf7f2;
+  --brand-color-surface-2: #f2ece3;
+  --brand-color-text: #2f241f;
+  --brand-color-muted: #7c6e66;
+  --brand-color-border: rgba(108, 88, 76, 0.14);
+  --brand-radius-xs: 6px;
+  --brand-radius-sm: 10px;
+  --brand-radius-md: 18px;
+  --brand-radius-lg: 26px;
+  --brand-font-family: "Source Serif 4", "Avenir Next", "Segoe UI", serif;
+  --brand-shadow-card: 0 12px 34px rgba(108, 88, 76, 0.1);
+  --brand-shadow-focus: 0 0 0 3px rgba(197, 111, 77, 0.16);
+}
+
+html[data-brand-theme='vercel'] {
+  --brand-color-accent: #111111;
+  --brand-color-accent-hover: #2b2b2b;
+  --brand-color-accent-soft: rgba(17, 17, 17, 0.06);
+  --brand-color-accent2: #666666;
+  --brand-color-highlight: #d4d4d4;
+  --brand-color-glow: rgba(17, 17, 17, 0.12);
+  --brand-color-surface: #ffffff;
+  --brand-color-surface-2: #fafafa;
+  --brand-color-text: #111111;
+  --brand-color-muted: #666666;
+  --brand-color-border: #eaeaea;
+  --brand-radius-sm: 6px;
+  --brand-radius-md: 8px;
+  --brand-radius-lg: 12px;
+  --brand-font-family: "Geist Sans", "Inter", "Segoe UI", sans-serif;
+  --brand-shadow-card: 0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --brand-shadow-focus: 0 0 0 3px rgba(17, 17, 17, 0.14);
 }
 
 html.dark {
@@ -35,6 +294,8 @@ html.dark {
   --shell-navy: #edf4ff;
   --shell-ink: #e6edf7;
   --shell-mist: #0e1724;
+  --shell-bg: #0b111c;
+  --shell-header-bg: rgba(12, 18, 29, 0.88);
   --shell-panel: rgba(17, 24, 39, 0.74);
   --shell-panel-strong: rgba(17, 24, 39, 0.9);
   --shell-line: rgba(148, 163, 184, 0.2);
@@ -54,6 +315,177 @@ html.dark {
   --brand-color-border: rgba(148, 163, 184, 0.2);
   --brand-shadow-card: var(--shell-shadow);
   --brand-shadow-focus: 0 0 0 3px rgba(125, 211, 252, 0.24);
+  --ui-primary: var(--brand-color-accent);
+  --ui-text-inverted: var(--brand-color-surface);
+  --color-primary: var(--brand-color-accent);
+  --q-primary: var(--brand-color-accent);
+  --ui-bg: var(--brand-color-surface);
+  --ui-bg-muted: var(--brand-color-surface-2);
+  --ui-bg-elevated: var(--shell-panel-strong);
+  --ui-bg-accented: rgba(148, 163, 184, 0.16);
+  --ui-bg-inverted: var(--brand-color-text);
+  --ui-text: var(--brand-color-text);
+  --ui-text-muted: var(--brand-color-muted);
+  --ui-text-toned: var(--brand-color-muted);
+  --ui-text-highlighted: var(--brand-color-text);
+  --ui-border: var(--brand-color-border);
+  --ui-border-muted: var(--brand-color-border);
+  --ui-border-accented: var(--shell-line);
+  --ui-border-inverted: var(--brand-color-text);
+}
+
+html.dark[data-brand-theme='apple'] {
+  --brand-color-accent: #2997ff;
+  --brand-color-accent-hover: #46a6ff;
+  --brand-color-accent-soft: rgba(41, 151, 255, 0.14);
+  --brand-color-accent2: #64d2ff;
+  --brand-color-highlight: #9df0ff;
+  --brand-color-glow: rgba(100, 210, 255, 0.16);
+  --brand-shadow-focus: 0 0 0 4px rgba(41, 151, 255, 0.22);
+}
+
+html.dark[data-brand-theme='carbon'] {
+  --brand-color-accent: #78a9ff;
+  --brand-color-accent-hover: #a6c8ff;
+  --brand-color-accent-soft: rgba(120, 169, 255, 0.14);
+  --brand-color-accent2: #42be65;
+  --brand-shadow-focus: 0 0 0 2px #78a9ff;
+}
+
+html.dark[data-brand-theme='fluent'] {
+  --brand-color-accent: #60cdff;
+  --brand-color-accent-hover: #8dddff;
+  --brand-color-accent-soft: rgba(96, 205, 255, 0.14);
+  --brand-color-accent2: #7fdbff;
+  --brand-shadow-focus: 0 0 0 2px #60cdff;
+}
+
+html.dark[data-brand-theme='primer'] {
+  --brand-color-accent: #2f81f7;
+  --brand-color-accent-hover: #58a6ff;
+  --brand-color-accent-soft: rgba(47, 129, 247, 0.14);
+  --brand-color-accent2: #3fb950;
+  --brand-shadow-focus: 0 0 0 3px rgba(47, 129, 247, 0.28);
+}
+
+html.dark[data-brand-theme='stripe'] {
+  --brand-color-accent: #8b85ff;
+  --brand-color-accent-hover: #a49fff;
+  --brand-color-accent-soft: rgba(139, 133, 255, 0.16);
+  --brand-color-accent2: #00d4ff;
+}
+
+html.dark[data-brand-theme='linear'] {
+  --brand-color-accent: #7f88e8;
+  --brand-color-accent-hover: #9aa2ff;
+  --brand-color-accent-soft: rgba(127, 136, 232, 0.16);
+  --brand-color-accent2: #a78bfa;
+}
+
+html.dark[data-brand-theme='material'] {
+  --brand-color-accent: #d0bcff;
+  --brand-color-accent-hover: #eaddff;
+  --brand-color-accent-soft: rgba(208, 188, 255, 0.16);
+  --brand-color-accent2: #ffb4ab;
+}
+
+html.dark[data-brand-theme='claude'] {
+  --brand-color-accent: #f0a37e;
+  --brand-color-accent-hover: #f4b391;
+  --brand-color-accent-soft: rgba(240, 163, 126, 0.16);
+  --brand-color-accent2: #c9a894;
+}
+
+html.dark[data-brand-theme='vercel'] {
+  --brand-color-accent: #ffffff;
+  --brand-color-accent-hover: #e5e7eb;
+  --brand-color-accent-soft: rgba(255, 255, 255, 0.12);
+  --brand-color-accent2: #a3a3a3;
+  --brand-shadow-focus: 0 0 0 3px rgba(255, 255, 255, 0.16);
+}
+
+html.dark,
+html[data-brand-theme='terminal'],
+html[data-brand-theme='spotify'] {
+  --brand-color-surface: #111827;
+  --brand-color-surface-2: #0b1220;
+  --brand-color-text: #e6edf7;
+  --brand-color-muted: #9aa7b8;
+  --brand-color-border: rgba(148, 163, 184, 0.2);
+}
+
+html.dark[data-brand-theme='terminal'],
+html[data-brand-theme='terminal'] {
+  --shell-bg: #070b12;
+  --shell-header-bg: rgba(8, 13, 20, 0.9);
+  --shell-panel: rgba(17, 24, 39, 0.78);
+  --shell-panel-strong: rgba(17, 24, 39, 0.92);
+  --shell-line: rgba(255, 255, 255, 0.1);
+  --brand-color-accent: #c6ff6a;
+  --brand-color-accent-hover: #b1ef55;
+  --brand-color-accent-soft: rgba(198, 255, 106, 0.16);
+  --brand-color-accent2: #7ed7ff;
+  --brand-color-highlight: #f4ff8f;
+  --brand-color-glow: rgba(126, 215, 255, 0.2);
+  --brand-color-surface: #10151d;
+  --brand-color-surface-2: #1a2230;
+  --brand-color-text: #edf4ff;
+  --brand-color-muted: #9bb0cc;
+  --brand-color-border: rgba(255, 255, 255, 0.08);
+  --brand-shadow-focus: 0 0 0 3px rgba(198, 255, 106, 0.22);
+  --ui-primary: var(--brand-color-accent);
+  --ui-text-inverted: #10151d;
+  --color-primary: var(--brand-color-accent);
+  --q-primary: var(--brand-color-accent);
+  --ui-bg: var(--brand-color-surface);
+  --ui-bg-muted: var(--brand-color-surface-2);
+  --ui-bg-elevated: var(--shell-panel-strong);
+  --ui-bg-accented: rgba(255, 255, 255, 0.08);
+  --ui-bg-inverted: var(--brand-color-text);
+  --ui-text: var(--brand-color-text);
+  --ui-text-muted: var(--brand-color-muted);
+  --ui-text-toned: var(--brand-color-muted);
+  --ui-text-highlighted: var(--brand-color-text);
+  --ui-border: var(--brand-color-border);
+  --ui-border-muted: var(--brand-color-border);
+  --ui-border-accented: var(--shell-line);
+}
+
+html.dark[data-brand-theme='spotify'],
+html[data-brand-theme='spotify'] {
+  --shell-bg: #070b12;
+  --shell-header-bg: rgba(8, 13, 20, 0.9);
+  --shell-panel: rgba(17, 24, 39, 0.78);
+  --shell-panel-strong: rgba(17, 24, 39, 0.92);
+  --shell-line: rgba(255, 255, 255, 0.1);
+  --brand-color-accent: #1db954;
+  --brand-color-accent-hover: #1ed760;
+  --brand-color-accent-soft: rgba(29, 185, 84, 0.16);
+  --brand-color-accent2: #7dd3fc;
+  --brand-color-highlight: #d9f99d;
+  --brand-color-glow: rgba(29, 185, 84, 0.22);
+  --brand-color-surface: #121212;
+  --brand-color-surface-2: #1e1e1e;
+  --brand-color-text: #f5f5f5;
+  --brand-color-muted: #b3b3b3;
+  --brand-color-border: rgba(255, 255, 255, 0.08);
+  --brand-shadow-focus: 0 0 0 3px rgba(29, 185, 84, 0.24);
+  --ui-primary: var(--brand-color-accent);
+  --ui-text-inverted: #121212;
+  --color-primary: var(--brand-color-accent);
+  --q-primary: var(--brand-color-accent);
+  --ui-bg: var(--brand-color-surface);
+  --ui-bg-muted: var(--brand-color-surface-2);
+  --ui-bg-elevated: var(--shell-panel-strong);
+  --ui-bg-accented: rgba(255, 255, 255, 0.08);
+  --ui-bg-inverted: var(--brand-color-text);
+  --ui-text: var(--brand-color-text);
+  --ui-text-muted: var(--brand-color-muted);
+  --ui-text-toned: var(--brand-color-muted);
+  --ui-text-highlighted: var(--brand-color-text);
+  --ui-border: var(--brand-color-border);
+  --ui-border-muted: var(--brand-color-border);
+  --ui-border-accented: var(--shell-line);
 }
 
 html {
@@ -61,15 +493,15 @@ html {
 }
 
 body {
-  background: #f2f6fb;
+  background: var(--shell-bg);
   color: var(--shell-ink);
-  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--brand-font-family, "Avenir Next", "Segoe UI", sans-serif);
   min-height: 100vh;
   position: relative;
 }
 
 html.dark body {
-  background: #070b12;
+  background: var(--shell-bg);
   color: var(--shell-ink);
 }
 
@@ -85,7 +517,7 @@ body::before {
 }
 
 .shell-header {
-  background: rgba(246, 249, 252, 0.78);
+  background: var(--shell-header-bg);
   backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--shell-line);
 }
@@ -102,7 +534,7 @@ body::before {
 }
 
 .brand-kicker {
-  color: rgba(16, 37, 66, 0.54);
+  color: var(--brand-color-muted);
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -110,7 +542,7 @@ body::before {
 }
 
 .brand-title {
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -124,7 +556,7 @@ body::before {
 
 .nav-tab {
   border-radius: 999px;
-  color: rgba(16, 37, 66, 0.72);
+  color: var(--brand-color-muted);
   font-weight: 600;
   padding: 0 10px;
 }
@@ -151,11 +583,11 @@ body::before {
 }
 
 .mobile-trigger {
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
 }
 
 .mobile-drawer {
-  background: #f8fbfe;
+  background: var(--brand-color-surface);
 }
 
 .drawer-inner {
@@ -163,7 +595,7 @@ body::before {
 }
 
 .drawer-title {
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 18px;
@@ -210,7 +642,7 @@ body::before {
 .admin-card,
 .error-shell {
   background: var(--shell-panel);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--brand-color-border);
   border-radius: var(--brand-radius-lg, 24px);
   box-shadow: var(--brand-shadow-card, var(--shell-shadow));
 }
@@ -231,7 +663,7 @@ body::before {
 .signal-label,
 .tool-status,
 .admin-card-label {
-  color: rgba(16, 37, 66, 0.66);
+  color: var(--brand-color-muted);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.16em;
@@ -241,8 +673,8 @@ body::before {
 .hero-title,
 .section-title,
 .error-title {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--brand-color-text);
+  font-family: var(--brand-font-display, "Georgia", "Times New Roman", serif);
   font-size: clamp(2.3rem, 5vw, 4.4rem);
   font-weight: 600;
   line-height: 0.98;
@@ -256,7 +688,7 @@ body::before {
 .admin-card-text,
 .error-text,
 .signal-text {
-  color: rgba(15, 23, 35, 0.74);
+  color: var(--brand-color-muted);
   font-size: 1rem;
   line-height: 1.72;
 }
@@ -276,18 +708,18 @@ body::before {
 }
 
 .hero-button-primary {
-  background: var(--shell-navy);
-  color: white;
+  background: var(--brand-color-accent);
+  color: var(--ui-text-inverted, #ffffff);
 }
 
 .hero-button-secondary {
-  border: 1px solid rgba(16, 37, 66, 0.16);
-  color: var(--shell-navy);
+  border: 1px solid var(--brand-color-border);
+  color: var(--brand-color-accent);
 }
 
 .signal-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--shell-line);
+  background: var(--shell-panel);
+  border: 1px solid var(--brand-color-border);
   border-radius: 22px;
   padding: 18px;
 }
@@ -306,7 +738,7 @@ body::before {
 .feature-title,
 .tool-title,
 .admin-card-title {
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
   font-size: 1.2rem;
   font-weight: 700;
   margin: 10px 0;
@@ -332,7 +764,7 @@ body::before {
 }
 
 .feature-index {
-  color: var(--shell-coral);
+  color: var(--brand-color-accent2);
   font-size: 1.05rem;
   font-weight: 800;
   margin-bottom: 16px;
@@ -360,16 +792,16 @@ body::before {
 }
 
 .metric-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--shell-line);
+  background: var(--shell-panel);
+  border: 1px solid var(--brand-color-border);
   border-radius: var(--brand-radius-md, 16px);
   padding: 18px;
 }
 
 .metric-value,
 .dashboard-stat {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--brand-color-text);
+  font-family: var(--brand-font-display, "Georgia", "Times New Roman", serif);
   font-size: 2rem;
   font-weight: 700;
 }
@@ -378,7 +810,7 @@ body::before {
 .dashboard-label,
 .tool-meta,
 .admin-card-footer {
-  color: rgba(15, 23, 35, 0.6);
+  color: var(--brand-color-muted);
   font-size: 0.92rem;
   line-height: 1.5;
   margin-top: 8px;
@@ -395,8 +827,8 @@ body::before {
 
 .content-title,
 .content-card-title {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--brand-color-text);
+  font-family: var(--brand-font-display, "Georgia", "Times New Roman", serif);
   font-size: clamp(1.6rem, 3vw, 2.4rem);
   font-weight: 600;
   line-height: 1.08;
@@ -408,14 +840,14 @@ body::before {
 }
 
 .content-card {
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(16, 37, 66, 0.08);
+  background: var(--shell-panel);
+  border: 1px solid var(--brand-color-border);
   border-radius: 24px;
-  box-shadow: var(--shell-shadow);
+  box-shadow: var(--brand-shadow-card, var(--shell-shadow));
 }
 
 .content-card-tag {
-  color: var(--shell-coral);
+  color: var(--brand-color-accent2);
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -423,14 +855,14 @@ body::before {
 }
 
 .content-card-text {
-  color: rgba(15, 23, 35, 0.72);
+  color: var(--brand-color-muted);
   line-height: 1.72;
 }
 
 .workspace-panel {
   align-items: stretch;
   background: var(--shell-panel);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--brand-color-border);
   border-radius: var(--brand-radius-lg, 24px);
   box-shadow: var(--brand-shadow-card, var(--shell-shadow));
   display: grid;
@@ -442,7 +874,7 @@ body::before {
 
 .tool-link {
   align-self: flex-start;
-  color: var(--shell-navy);
+  color: var(--brand-color-accent);
   font-weight: 700;
   margin-top: 16px;
   padding-left: 0;
@@ -455,15 +887,15 @@ body::before {
 }
 
 .workspace-pane {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--shell-line);
+  background: var(--shell-panel-strong);
+  border: 1px solid var(--brand-color-border);
   border-radius: var(--brand-radius-md, 16px);
   min-height: 190px;
   padding: 18px;
 }
 
 .workspace-pane-title {
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
   font-size: 1rem;
   font-weight: 700;
   margin-bottom: 12px;
@@ -471,7 +903,7 @@ body::before {
 
 .workspace-pane-body {
   align-items: center;
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
   display: flex;
   font-size: 0.98rem;
   justify-content: center;
@@ -481,8 +913,8 @@ body::before {
 }
 
 .workspace-pane-body-muted {
-  color: rgba(15, 23, 35, 0.56);
-  background: rgba(16, 37, 66, 0.05);
+  color: var(--brand-color-muted);
+  background: var(--brand-color-accent-soft);
   border-radius: var(--brand-radius-md, 16px);
 }
 
@@ -515,13 +947,13 @@ body::before {
 
 .bench-card {
   background: var(--shell-panel);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--brand-color-border);
   border-radius: var(--brand-radius-lg, 24px);
   box-shadow: var(--brand-shadow-card, var(--shell-shadow));
 }
 
 .bench-title {
-  color: var(--shell-navy);
+  color: var(--brand-color-text);
   font-size: 1.05rem;
   font-weight: 700;
   margin-bottom: 14px;
@@ -529,7 +961,7 @@ body::before {
 
 .bench-area {
   align-items: center;
-  color: rgba(15, 23, 35, 0.78);
+  color: var(--brand-color-muted);
   display: flex;
   justify-content: center;
   line-height: 1.7;
@@ -538,15 +970,15 @@ body::before {
 }
 
 .bench-area-muted {
-  background: rgba(16, 37, 66, 0.06);
+  background: var(--brand-color-accent-soft);
   border-radius: var(--brand-radius-md, 16px);
 }
 
 .csv-notice {
-  background: rgba(16, 37, 66, 0.06);
-  border: 1px solid rgba(16, 37, 66, 0.08);
+  background: var(--brand-color-accent-soft);
+  border: 1px solid var(--brand-color-border);
   border-radius: 16px;
-  color: rgba(15, 23, 35, 0.72);
+  color: var(--brand-color-muted);
   line-height: 1.6;
   padding: 14px 16px;
 }
@@ -572,15 +1004,15 @@ body::before {
 
 .csv-table th,
 .csv-table td {
-  border-bottom: 1px solid rgba(16, 37, 66, 0.08);
+  border-bottom: 1px solid var(--brand-color-border);
   padding: 12px 14px;
   text-align: left;
   vertical-align: top;
 }
 
 .csv-table th {
-  background: rgba(16, 37, 66, 0.04);
-  color: var(--shell-navy);
+  background: var(--brand-color-accent-soft);
+  color: var(--brand-color-text);
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -590,7 +1022,7 @@ body::before {
 }
 
 .csv-table td {
-  color: rgba(15, 23, 35, 0.78);
+  color: var(--brand-color-muted);
   font-size: 0.94rem;
   line-height: 1.5;
 }
@@ -603,7 +1035,7 @@ body::before {
 
 .dashboard-card {
   background: var(--shell-panel);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--brand-color-border);
   border-radius: var(--brand-radius-lg, 24px);
   box-shadow: var(--brand-shadow-card, var(--shell-shadow));
 }
@@ -620,8 +1052,8 @@ body::before {
 }
 
 .error-code {
-  color: var(--shell-coral);
-  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--brand-color-accent2);
+  font-family: var(--brand-font-display, "Georgia", "Times New Roman", serif);
   font-size: clamp(4rem, 12vw, 8rem);
   font-weight: 700;
   line-height: 1;

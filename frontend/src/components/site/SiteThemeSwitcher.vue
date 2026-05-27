@@ -1,8 +1,18 @@
 <script setup>
 import { onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
 
+import {
+  applyBrandTheme,
+  brandThemeItems,
+  readStoredBrandTheme,
+  writeStoredBrandTheme
+} from 'src/lib/brandThemes'
+
 const COLOR_MODE_KEY = 'xinming-color-mode'
+
+const brandTheme = shallowRef('editorial')
 const colorMode = shallowRef('system')
+
 const colorModeItems = [
   { label: '跟随系统', value: 'system' },
   { label: '浅色', value: 'light' },
@@ -31,13 +41,21 @@ function handleSystemChange() {
 
 onMounted(() => {
   mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  brandTheme.value = readStoredBrandTheme()
   colorMode.value = window.localStorage.getItem(COLOR_MODE_KEY) || 'system'
+  applyBrandTheme(brandTheme.value)
   applyColorMode()
   mediaQuery.addEventListener('change', handleSystemChange)
 })
 
 onBeforeUnmount(() => {
   mediaQuery?.removeEventListener('change', handleSystemChange)
+})
+
+watch(brandTheme, (value) => {
+  const normalized = applyBrandTheme(value)
+  brandTheme.value = normalized
+  writeStoredBrandTheme(normalized)
 })
 
 watch(colorMode, (value) => {
@@ -48,15 +66,29 @@ watch(colorMode, (value) => {
 
 <template>
   <div class="theme-switcher">
-    <span class="theme-switcher-label">系统主题</span>
-    <USelect
-      v-model="colorMode"
-      class="theme-switcher-select"
-      :items="colorModeItems"
-      value-key="value"
-      label-key="label"
-      size="sm"
-    />
+    <label class="theme-switcher-field">
+      <span class="theme-switcher-label">品牌主题</span>
+      <USelect
+        v-model="brandTheme"
+        class="theme-switcher-select"
+        :items="brandThemeItems"
+        value-key="value"
+        label-key="label"
+        size="sm"
+      />
+    </label>
+
+    <label class="theme-switcher-field">
+      <span class="theme-switcher-label">系统主题</span>
+      <USelect
+        v-model="colorMode"
+        class="theme-switcher-select theme-switcher-select-mode"
+        :items="colorModeItems"
+        value-key="value"
+        label-key="label"
+        size="sm"
+      />
+    </label>
   </div>
 </template>
 
@@ -64,11 +96,17 @@ watch(colorMode, (value) => {
 .theme-switcher {
   align-items: center;
   display: inline-flex;
-  gap: 10px;
+  gap: 14px;
+}
+
+.theme-switcher-field {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
 }
 
 .theme-switcher-label {
-  color: rgba(16, 37, 66, 0.54);
+  color: var(--brand-color-muted, rgba(16, 37, 66, 0.54));
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -76,5 +114,15 @@ watch(colorMode, (value) => {
 
 .theme-switcher-select {
   min-width: 126px;
+}
+
+.theme-switcher-select-mode {
+  min-width: 118px;
+}
+
+@media (max-width: 1120px) {
+  .theme-switcher-label {
+    display: none;
+  }
 }
 </style>

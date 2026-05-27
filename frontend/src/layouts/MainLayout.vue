@@ -100,9 +100,9 @@ onMounted(() => {
 
 <style scoped>
 .site-shell-header {
-  background: rgba(247, 250, 253, 0.88);
+  background: var(--shell-header-bg, rgba(247, 250, 253, 0.88));
   backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(16, 37, 66, 0.08);
+  border-bottom: 1px solid var(--shell-line);
   left: 0;
   position: sticky;
   right: 0;
@@ -136,7 +136,7 @@ onMounted(() => {
   aspect-ratio: 1;
   background: var(--brand-color-accent);
   border-radius: var(--brand-radius-md, 16px);
-  box-shadow: 0 10px 24px rgba(16, 37, 66, 0.16);
+  box-shadow: var(--brand-shadow-card, 0 10px 24px rgba(16, 37, 66, 0.16));
   color: var(--brand-color-highlight, #ffffff);
   display: inline-flex;
   flex: 0 0 auto;
@@ -157,7 +157,7 @@ onMounted(() => {
 }
 
 .site-brand-title {
-  color: var(--shell-navy);
+  color: var(--brand-color-text, var(--shell-navy));
   font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -177,6 +177,16 @@ onMounted(() => {
 
 .site-auth-button {
   min-height: 36px;
+}
+
+.site-auth-login {
+  background: var(--brand-color-accent);
+  color: var(--ui-text-inverted, #ffffff);
+}
+
+.site-auth-login:hover,
+.site-auth-login:focus-visible {
+  background: var(--brand-color-accent-hover, var(--brand-color-accent));
 }
 
 @media (max-width: 1023px) {

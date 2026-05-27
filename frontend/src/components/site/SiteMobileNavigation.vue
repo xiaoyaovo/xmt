@@ -176,7 +176,14 @@ async function handleLogout() {
 
 <style scoped>
 .mobile-nav-trigger {
+  background: var(--brand-color-accent);
+  color: var(--ui-text-inverted, #ffffff);
   min-height: 44px;
+}
+
+.mobile-nav-trigger:hover,
+.mobile-nav-trigger:focus-visible {
+  background: var(--brand-color-accent-hover, var(--brand-color-accent));
 }
 
 .mobile-nav-shell {
@@ -192,7 +199,7 @@ async function handleLogout() {
 }
 
 .mobile-nav-group-label {
-  color: rgba(16, 37, 66, 0.56);
+  color: var(--brand-color-muted, rgba(16, 37, 66, 0.56));
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -204,7 +211,7 @@ async function handleLogout() {
 }
 
 .mobile-nav-card-caption {
-  color: rgba(15, 23, 35, 0.58);
+  color: var(--brand-color-muted, rgba(15, 23, 35, 0.58));
   font-size: 0.84rem;
   line-height: 1.5;
 }
@@ -214,10 +221,16 @@ async function handleLogout() {
 }
 
 .mobile-nav-account {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(16, 37, 66, 0.1);
+  background: var(--shell-panel);
+  border: 1px solid var(--shell-line);
   border-radius: var(--brand-radius-md, 16px);
   padding: 13px;
+}
+
+.mobile-nav-link[aria-current='page'],
+.mobile-nav-card[aria-current='page'] {
+  background: var(--brand-color-accent-soft);
+  color: var(--brand-color-accent);
 }
 
 .mobile-nav-card-topline {
@@ -237,8 +250,9 @@ async function handleLogout() {
   margin-top: 12px;
 }
 
-html.dark .mobile-nav-link,
-html.dark .mobile-nav-card {
-  background: rgba(17, 24, 39, 0.7);
+html.dark .mobile-nav-account,
+html[data-brand-theme='terminal'] .mobile-nav-account,
+html[data-brand-theme='spotify'] .mobile-nav-account {
+  background: var(--shell-panel);
 }
 </style>

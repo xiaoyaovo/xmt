@@ -7,9 +7,13 @@
 export {}
 declare global {
   const AUTH_TOKEN_STORAGE_KEY: typeof import('./lib/auth.js').AUTH_TOKEN_STORAGE_KEY
+  const BRAND_THEME_KEY: typeof import('./lib/brandThemes.js').BRAND_THEME_KEY
+  const DEFAULT_BRAND_THEME: typeof import('./lib/brandThemes.js').DEFAULT_BRAND_THEME
   const EffectScope: typeof import('vue').EffectScope
   const aboutSection: typeof import('./lib/siteHome.js').aboutSection
+  const applyBrandTheme: typeof import('./lib/brandThemes.js').applyBrandTheme
   const bindEmailLogin: typeof import('./lib/auth.js').bindEmailLogin
+  const brandThemeItems: typeof import('./lib/brandThemes.js').brandThemeItems
   const clearAccessToken: typeof import('./lib/auth.js').clearAccessToken
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
@@ -51,6 +55,7 @@ declare global {
   const logout: typeof import('./lib/auth.js').logout
   const markRaw: typeof import('vue').markRaw
   const nextTick: typeof import('vue').nextTick
+  const normalizeBrandTheme: typeof import('./lib/brandThemes.js').normalizeBrandTheme
   const oauthLoginUrl: typeof import('./lib/auth.js').oauthLoginUrl
   const onActivated: typeof import('vue').onActivated
   const onBeforeMount: typeof import('vue').onBeforeMount
@@ -72,6 +77,7 @@ declare global {
   const primaryNavItems: typeof import('./lib/siteNavigation.js').primaryNavItems
   const provide: typeof import('vue').provide
   const reactive: typeof import('vue').reactive
+  const readStoredBrandTheme: typeof import('./lib/brandThemes.js').readStoredBrandTheme
   const readonly: typeof import('vue').readonly
   const ref: typeof import('vue').ref
   const registerWithCode: typeof import('./lib/auth.js').registerWithCode
@@ -109,6 +115,7 @@ declare global {
   const watchPostEffect: typeof import('vue').watchPostEffect
   const watchSyncEffect: typeof import('vue').watchSyncEffect
   const workspaceNavItems: typeof import('./lib/siteNavigation.js').workspaceNavItems
+  const writeStoredBrandTheme: typeof import('./lib/brandThemes.js').writeStoredBrandTheme
 }
 // for type re-export
 declare global {

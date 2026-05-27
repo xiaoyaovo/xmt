@@ -93,7 +93,7 @@ const { root } = useScrollReveal()
 }
 
 .home-hero-badge {
-  color: rgba(16, 37, 66, 0.66);
+  color: var(--brand-color-muted, rgba(16, 37, 66, 0.66));
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -101,8 +101,8 @@ const { root } = useScrollReveal()
 }
 
 .home-hero-title {
-  color: var(--shell-navy);
-  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--brand-color-text, var(--shell-navy));
+  font-family: var(--brand-font-display, "Georgia", "Times New Roman", serif);
   font-size: clamp(2.2rem, 5vw, 3.6rem);
   font-weight: 600;
   line-height: 1.04;
@@ -112,7 +112,7 @@ const { root } = useScrollReveal()
 }
 
 .home-hero-description {
-  color: rgba(15, 23, 35, 0.74);
+  color: var(--brand-color-muted, rgba(15, 23, 35, 0.74));
   font-size: 1.05rem;
   line-height: 1.7;
   margin: 0;
@@ -127,7 +127,7 @@ const { root } = useScrollReveal()
   align-items: center;
   background: var(--brand-color-accent, var(--shell-navy));
   border-radius: var(--brand-radius-pill, 999px);
-  color: #ffffff;
+  color: var(--ui-text-inverted, #ffffff);
   display: inline-flex;
   font-size: 0.94rem;
   font-weight: 700;
@@ -139,8 +139,9 @@ const { root } = useScrollReveal()
 }
 
 .home-hero-cta:hover {
+  background: var(--brand-color-accent-hover, var(--brand-color-accent));
   transform: translateY(-1px);
-  box-shadow: 0 14px 30px rgba(16, 37, 66, 0.18);
+  box-shadow: var(--brand-shadow-card, 0 14px 30px rgba(16, 37, 66, 0.18));
 }
 
 .home-hero-cta:focus-visible {
