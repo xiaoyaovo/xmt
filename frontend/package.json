@@ -15,6 +15,7 @@
     "postinstall": "node ./scripts/postinstall.cjs"
   },
   "dependencies": {
+    "@nuxt/ui": "^4.8.0",
     "@quasar/extras": "^1.18.0",
     "axios": "^1.16.1",
     "mermaid": "^11.15.0",
@@ -23,6 +24,7 @@
     "quasar": "^2.19.3",
     "register-service-worker": "^1.7.2",
     "reka-ui": "^2.9.7",
+    "tailwindcss": "^4.3.0",
     "vue": "^3.5.34",
     "vue-router": "^4.6.4"
   },

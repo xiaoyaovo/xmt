@@ -2,6 +2,7 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app/wrappers'
+import NuxtUI from '@nuxt/ui/vite'
 import UnoCSS from 'unocss/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 
@@ -14,7 +15,8 @@ export default defineConfig((/* ctx */) => {
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
     boot: [
-      'design-system'
+      'design-system',
+      'nuxt-ui'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
@@ -63,6 +65,18 @@ export default defineConfig((/* ctx */) => {
       // viteVuePluginOptions: {},
 
       vitePlugins: [
+        [NuxtUI, {
+          autoImport: false,
+          colorMode: false,
+          dts: 'src/components.d.ts',
+          components: {
+            importPathTransform: (path) => (
+              path.includes('/node_modules/@nuxt/ui/dist/runtime/components/')
+                ? path.replace(/^.*\/node_modules\/@nuxt\/ui\/dist\/runtime\/components\//, '@nuxt/ui/components/')
+                : path
+            )
+          }
+        }],
         [UnoCSS],
         [AutoImport, {
           imports: ['vue', 'vue-router'],

@@ -1,11 +1,12 @@
 # Frontend Development Guidelines
 
-Frontend code lives under `frontend/` and is a Quasar + Vue 3 application using JavaScript, Pinia, Vue Router, Reka UI, UnoCSS, and project CSS/design tokens.
+Frontend code lives under `frontend/` and is a Quasar + Vue 3 application using JavaScript, Pinia, Vue Router, Nuxt UI, Reka UI, UnoCSS, Tailwind CSS, and project CSS/design tokens.
 
 ## Stack
 
 - Vue 3 single-file components with `<script setup>`
 - Quasar app-vite
+- Nuxt UI for new form-heavy screens and future UI migration
 - Pinia for cross-page state
 - Vue Router hash mode
 - Axios request helpers under `src/lib/`

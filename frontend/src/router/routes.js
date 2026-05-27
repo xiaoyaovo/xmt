@@ -13,6 +13,7 @@ const routes = [
       { path: 'tools/csv', component: () => import('pages/tools/CsvPage.vue') },
       { path: 'tools/drawio', redirect: { path: '/tools/drawio/editor', query: { mode: 'diagram' } } },
       { path: 'admin', component: () => import('pages/AdminPage.vue') },
+      { path: 'ui-preview', component: () => import('pages/UiPreviewPage.vue') },
       { path: 'auth/callback', component: () => import('pages/AuthCallbackPage.vue') }
     ]
   },

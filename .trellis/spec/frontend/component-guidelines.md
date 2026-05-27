@@ -115,6 +115,8 @@ Every interactive primitive (links, buttons, row entries, chip buttons) must hav
 
 ## Third-Party UI
 
+Nuxt UI is the preferred UI library for new form-heavy account surfaces and future UI migration work. Register it through the Quasar boot file (`src/boot/nuxt-ui.js`), keep the app wrapped with `UApp`, and import its CSS once from `src/css/nuxt-ui.css`. For validation-heavy flows, prefer `UForm` + `UFormField` so field errors live next to their inputs instead of being hand-rendered in page-specific markup.
+
 Reka UI primitives are used for hover cards, selects, and popovers. Keep imported primitives at the top of `<script setup>` and wrap them in project classes so styles remain local to this app.
 
 **Popover vs Select.** Reach for `SelectRoot` family when the dropdown represents a single bound value with no secondary actions per option (e.g., the CSV page-size selector). Reach for `PopoverRoot / PopoverTrigger / PopoverPortal / PopoverContent` when items have per-row secondary actions (delete, archive, edit) — `SelectItem`'s Enter-commits-and-closes semantics conflict with focused action buttons inside the row. The history dropdown on each tool page uses Popover for exactly this reason: rows have an inline `×` delete, and `@click.stop` on the delete keeps the popover open so users can delete several in a row.
