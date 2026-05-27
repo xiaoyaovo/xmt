@@ -1,26 +1,67 @@
 <script setup>
-import { useBrandTheme } from 'src/composables/useBrandTheme'
+import { onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
 
-const { brandOptions, currentBrandId, setBrandTheme } = useBrandTheme()
+const COLOR_MODE_KEY = 'xinming-color-mode'
+const colorMode = shallowRef('system')
+const colorModeItems = [
+  { label: '跟随系统', value: 'system' },
+  { label: '浅色', value: 'light' },
+  { label: '深色', value: 'dark' }
+]
+
+let mediaQuery = null
+
+function resolveMode(value = colorMode.value) {
+  if (value === 'system') {
+    return mediaQuery?.matches ? 'dark' : 'light'
+  }
+
+  return value
+}
+
+function applyColorMode(value = colorMode.value) {
+  document.documentElement.classList.toggle('dark', resolveMode(value) === 'dark')
+}
+
+function handleSystemChange() {
+  if (colorMode.value === 'system') {
+    applyColorMode()
+  }
+}
+
+onMounted(() => {
+  mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  colorMode.value = window.localStorage.getItem(COLOR_MODE_KEY) || 'system'
+  applyColorMode()
+  mediaQuery.addEventListener('change', handleSystemChange)
+})
+
+onBeforeUnmount(() => {
+  mediaQuery?.removeEventListener('change', handleSystemChange)
+})
+
+watch(colorMode, (value) => {
+  window.localStorage.setItem(COLOR_MODE_KEY, value)
+  applyColorMode(value)
+})
 </script>
 
 <template>
-  <label class="theme-switcher">
-    <span class="theme-switcher-label">品牌主题</span>
+  <div class="theme-switcher">
+    <span class="theme-switcher-label">系统主题</span>
     <select
+      v-model="colorMode"
       class="theme-switcher-select"
-      :value="currentBrandId"
-      @change="setBrandTheme($event.target.value)"
     >
       <option
-        v-for="option in brandOptions"
-        :key="option.id"
-        :value="option.id"
+        v-for="item in colorModeItems"
+        :key="item.value"
+        :value="item.value"
       >
-        {{ option.name }}
+        {{ item.label }}
       </option>
     </select>
-  </label>
+  </div>
 </template>
 
 <style scoped>
@@ -45,24 +86,11 @@ const { brandOptions, currentBrandId, setBrandTheme } = useBrandTheme()
   border-radius: var(--brand-radius-pill, 999px);
   color: var(--brand-color-accent, #102542);
   cursor: pointer;
-  font-family: var(--brand-font-family, "Avenir Next", "Segoe UI", sans-serif);
-  font-size: 0.92rem;
-  font-weight: 700;
-  min-height: 40px;
-  max-width: 150px;
-  padding: 0 30px 0 14px;
-  text-overflow: ellipsis;
-  transition:
-    border-color 180ms ease,
-    box-shadow 180ms ease,
-    transform 180ms ease;
-}
-
-.theme-switcher-select:hover,
-.theme-switcher-select:focus-visible {
-  border-color: color-mix(in srgb, var(--brand-color-accent, #102542) 22%, transparent);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
-  outline: none;
-  transform: translateY(-1px);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 750;
+  min-height: 34px;
+  min-width: 126px;
+  padding: 0 28px 0 12px;
 }
 </style>

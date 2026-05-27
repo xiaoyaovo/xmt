@@ -4,7 +4,5 @@ import 'uno.css'
 </script>
 
 <template>
-  <UApp>
-    <router-view />
-  </UApp>
+  <router-view />
 </template>

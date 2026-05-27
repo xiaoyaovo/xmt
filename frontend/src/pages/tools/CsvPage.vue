@@ -1,19 +1,5 @@
 <script setup>
 import Papa from 'papaparse'
-import {
-  PopoverContent,
-  PopoverPortal,
-  PopoverRoot,
-  PopoverTrigger,
-  SelectContent,
-  SelectItem,
-  SelectItemText,
-  SelectPortal,
-  SelectRoot,
-  SelectTrigger,
-  SelectValue,
-  SelectViewport
-} from 'reka-ui'
 import { computed, onMounted, shallowRef } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
@@ -46,6 +32,10 @@ const errorMessage = shallowRef('')
 const page = shallowRef(1)
 const rowsPerPage = shallowRef(200)
 const rowsPerPageOptions = [200, 500, 1000]
+const rowsPerPageItems = rowsPerPageOptions.map(option => ({
+  label: `${option} 行/页`,
+  value: String(option)
+}))
 const historyOpen = shallowRef(false)
 const saveDialogOpen = shallowRef(false)
 const saveDialogDefaults = shallowRef({ title: '', remark: '' })
@@ -470,9 +460,13 @@ onMounted(async () => {
                 清空
               </button>
 
-              <PopoverRoot v-model:open="historyOpen">
-                <PopoverTrigger
+              <UPopover
+                v-model:open="historyOpen"
+                :content="{ align: 'end', sideOffset: 8 }"
+              >
+                <button
                   class="csv-ghost-action csv-history-trigger"
+                  type="button"
                   :disabled="historyTriggerDisabled"
                   aria-label="历史存档"
                 >
@@ -481,14 +475,10 @@ onMounted(async () => {
                     class="csv-history-trigger-caret"
                     aria-hidden="true"
                   >▾</span>
-                </PopoverTrigger>
+                </button>
 
-                <PopoverPortal>
-                  <PopoverContent
-                    class="csv-history-popover"
-                    align="end"
-                    :side-offset="8"
-                  >
+                <template #content>
+                  <div class="csv-history-popover">
                     <div class="csv-history-popover-head">
                       <div class="csv-toolbar-head-left">
                         <div class="section-kicker">历史</div>
@@ -548,9 +538,9 @@ onMounted(async () => {
                         </button>
                       </div>
                     </div>
-                  </PopoverContent>
-                </PopoverPortal>
-              </PopoverRoot>
+                  </div>
+                </template>
+              </UPopover>
             </div>
 
             <AccountSyncPanel
@@ -631,37 +621,13 @@ onMounted(async () => {
             <div class="csv-table-toolbar">
               <span>第 {{ page }} / {{ totalPages }} 页</span>
               <div class="csv-table-controls">
-                <SelectRoot
+                <USelect
+                  class="csv-page-size-select"
+                  :items="rowsPerPageItems"
                   :model-value="String(rowsPerPage)"
+                  aria-label="每页行数"
                   @update:model-value="changeRowsPerPage"
-                >
-                  <SelectTrigger
-                    class="csv-page-size-trigger"
-                    aria-label="每页行数"
-                  >
-                    <SelectValue :placeholder="`${rowsPerPage} 行/页`" />
-                    <span aria-hidden="true">/</span>
-                  </SelectTrigger>
-
-                  <SelectPortal>
-                    <SelectContent
-                      class="csv-page-size-content"
-                      position="popper"
-                      :side-offset="8"
-                    >
-                      <SelectViewport class="csv-page-size-viewport">
-                        <SelectItem
-                          v-for="option in rowsPerPageOptions"
-                          :key="option"
-                          class="csv-page-size-item"
-                          :value="String(option)"
-                        >
-                          <SelectItemText>{{ option }} 行/页</SelectItemText>
-                        </SelectItem>
-                      </SelectViewport>
-                    </SelectContent>
-                  </SelectPortal>
-                </SelectRoot>
+                />
                 <button
                   class="csv-ghost-action"
                   type="button"
@@ -897,8 +863,7 @@ onMounted(async () => {
 }
 
 .csv-primary-action,
-.csv-ghost-action,
-.csv-page-size-trigger {
+.csv-ghost-action {
   align-items: center;
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--shell-line);
@@ -930,15 +895,12 @@ onMounted(async () => {
 
 .csv-primary-action:focus-visible,
 .csv-ghost-action:focus-visible,
-.csv-page-size-trigger:focus-visible,
 .csv-file-picker:focus-within {
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
   outline: none;
 }
 
-.csv-ghost-action:hover,
-.csv-page-size-trigger:hover,
-.csv-page-size-trigger[data-state='open'] {
+.csv-ghost-action:hover {
   background: rgba(255, 255, 255, 0.9);
   border-color: rgba(16, 37, 66, 0.18);
 }
@@ -952,28 +914,8 @@ onMounted(async () => {
   border-color: rgba(245, 158, 11, 0.2);
 }
 
-.csv-page-size-content {
-  background: rgba(250, 252, 255, 0.98);
-  border: 1px solid rgba(16, 37, 66, 0.1);
-  border-radius: var(--brand-radius-md, 16px);
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
-  color: var(--shell-navy);
-  min-width: 132px;
-  padding: 6px;
-  z-index: 90;
-}
-
-.csv-page-size-item {
-  border-radius: var(--brand-radius-sm, 12px);
-  cursor: pointer;
-  font-size: 0.88rem;
-  font-weight: 800;
-  outline: none;
-  padding: 9px 10px;
-}
-
-.csv-page-size-item[data-highlighted] {
-  background: rgba(16, 37, 66, 0.07);
+.csv-page-size-select {
+  min-width: 126px;
 }
 
 .csv-table-toolbar {
@@ -1060,9 +1002,6 @@ onMounted(async () => {
 </style>
 
 <style>
-/* Unscoped: PopoverPortal teleports PopoverContent to <body>, so scoped
-   selectors with data-v-XXX attributes do not reliably reach the
-   portal-mounted subtree. These classes are namespaced enough not to leak. */
 .csv-history-popover {
   background: #ffffff;
   border: 1px solid rgba(16, 37, 66, 0.1);

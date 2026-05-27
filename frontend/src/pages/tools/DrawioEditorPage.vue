@@ -1,10 +1,4 @@
 <script setup>
-import {
-  PopoverContent,
-  PopoverPortal,
-  PopoverRoot,
-  PopoverTrigger
-} from 'reka-ui'
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
@@ -463,9 +457,13 @@ watch(editorMode, async () => {
           原始编辑器
         </button>
 
-        <PopoverRoot v-model:open="historyOpen">
-          <PopoverTrigger
+        <UPopover
+          v-model:open="historyOpen"
+          :content="{ align: 'end', sideOffset: 8 }"
+        >
+          <button
             class="drawio-ghost-action drawio-history-trigger"
+            type="button"
             :disabled="historyTriggerDisabled"
             aria-label="历史存档"
           >
@@ -474,14 +472,10 @@ watch(editorMode, async () => {
               class="drawio-history-trigger-caret"
               aria-hidden="true"
             >▾</span>
-          </PopoverTrigger>
+          </button>
 
-          <PopoverPortal>
-            <PopoverContent
-              class="drawio-history-popover"
-              align="end"
-              :side-offset="8"
-            >
+          <template #content>
+            <div class="drawio-history-popover">
               <div class="drawio-history-popover-head">
                 <div class="drawio-toolbar-head-left">
                   <div class="section-kicker">历史</div>
@@ -541,9 +535,9 @@ watch(editorMode, async () => {
                   </button>
                 </div>
               </div>
-            </PopoverContent>
-          </PopoverPortal>
-        </PopoverRoot>
+            </div>
+          </template>
+        </UPopover>
       </div>
 
       <div class="drawio-toolbar-meta">
@@ -880,9 +874,6 @@ watch(editorMode, async () => {
 </style>
 
 <style>
-/* Unscoped: PopoverPortal teleports PopoverContent to <body>, so scoped
-   selectors with data-v-XXX attributes do not reliably reach the
-   portal-mounted subtree. These classes are namespaced enough not to leak. */
 .drawio-history-popover {
   background: #ffffff;
   border: 1px solid rgba(16, 37, 66, 0.1);

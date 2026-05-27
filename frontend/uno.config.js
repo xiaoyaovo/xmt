@@ -3,9 +3,21 @@ import { FileSystemIconLoader } from '@iconify/utils/lib/loader/node-loaders'
 import { defineConfig, presetAttributify, presetIcons, presetUno } from 'unocss'
 
 import { getIcons } from './build/index.js'
-import { activeBrandTokens } from './src/design-system/tokens/brands.js'
 
 const icons = getIcons()
+const brandColors = {
+  accent: '#102542',
+  'accent-hover': '#17345d',
+  'accent-soft': 'rgba(16, 37, 66, 0.08)',
+  accent2: '#ff7a59',
+  highlight: '#c6ff6a',
+  glow: 'rgba(198, 255, 106, 0.24)',
+  surface: '#ffffff',
+  'surface-2': '#eef3f8',
+  text: '#0f1723',
+  muted: '#5f6b7a',
+  border: 'rgba(16, 37, 66, 0.12)'
+}
 const brandSafelist = [
   'brand-glass-panel',
   'brand-glass-panel-soft',
@@ -64,7 +76,7 @@ export default defineConfig({
   theme: {
     colors: {
       ...Object.fromEntries(
-        Object.entries(activeBrandTokens.colors).map(([key, value]) => [
+        Object.entries(brandColors).map(([key, value]) => [
           `brand-${key}`,
           `var(--brand-color-${key}, ${value})`
         ])

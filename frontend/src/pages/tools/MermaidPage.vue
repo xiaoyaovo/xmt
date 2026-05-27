@@ -1,11 +1,5 @@
 <script setup>
 import mermaid from 'mermaid'
-import {
-  PopoverContent,
-  PopoverPortal,
-  PopoverRoot,
-  PopoverTrigger
-} from 'reka-ui'
 import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
@@ -408,9 +402,13 @@ onMounted(async () => {
                 重置示例
               </button>
 
-              <PopoverRoot v-model:open="historyOpen">
-                <PopoverTrigger
+              <UPopover
+                v-model:open="historyOpen"
+                :content="{ align: 'end', sideOffset: 8 }"
+              >
+                <button
                   class="mermaid-ghost-action mermaid-history-trigger"
+                  type="button"
                   :disabled="historyTriggerDisabled"
                   aria-label="历史存档"
                 >
@@ -419,14 +417,10 @@ onMounted(async () => {
                     class="mermaid-history-trigger-caret"
                     aria-hidden="true"
                   >▾</span>
-                </PopoverTrigger>
+                </button>
 
-                <PopoverPortal>
-                  <PopoverContent
-                    class="mermaid-history-popover"
-                    align="end"
-                    :side-offset="8"
-                  >
+                <template #content>
+                  <div class="mermaid-history-popover">
                     <div class="mermaid-history-popover-head">
                       <div class="mermaid-toolbar-head-left">
                         <div class="section-kicker">历史</div>
@@ -486,9 +480,9 @@ onMounted(async () => {
                         </button>
                       </div>
                     </div>
-                  </PopoverContent>
-                </PopoverPortal>
-              </PopoverRoot>
+                  </div>
+                </template>
+              </UPopover>
             </div>
 
             <div class="mermaid-example-strip">
@@ -874,9 +868,6 @@ onMounted(async () => {
 </style>
 
 <style>
-/* Unscoped: PopoverPortal teleports PopoverContent to <body>, so scoped
-   selectors with data-v-XXX attributes do not reliably reach the
-   portal-mounted subtree. These classes are namespaced enough not to leak. */
 .mermaid-history-popover {
   background: #ffffff;
   border: 1px solid rgba(16, 37, 66, 0.1);

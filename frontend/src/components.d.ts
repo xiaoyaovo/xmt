@@ -31,12 +31,17 @@ declare module 'vue' {
     ToolSavePanel: typeof import('./components/tools/ToolSavePanel.vue')['default']
     ToolWorkbench: typeof import('./components/tools/ToolWorkbench.vue')['default']
     UAlert: typeof import('@nuxt/ui/components/Alert.vue')['default']
-    UApp: typeof import('@nuxt/ui/components/App.vue')['default']
+    UAvatar: typeof import('@nuxt/ui/components/Avatar.vue')['default']
     UBadge: typeof import('@nuxt/ui/components/Badge.vue')['default']
     UButton: typeof import('@nuxt/ui/components/Button.vue')['default']
     UCard: typeof import('@nuxt/ui/components/Card.vue')['default']
     UForm: typeof import('@nuxt/ui/components/Form.vue')['default']
     UFormField: typeof import('@nuxt/ui/components/FormField.vue')['default']
     UInput: typeof import('@nuxt/ui/components/Input.vue')['default']
+    UModal: typeof import('@nuxt/ui/components/Modal.vue')['default']
+    UPopover: typeof import('@nuxt/ui/components/Popover.vue')['default']
+    USelect: typeof import('@nuxt/ui/components/Select.vue')['default']
+    USlideover: typeof import('@nuxt/ui/components/Slideover.vue')['default']
+    UTextarea: typeof import('@nuxt/ui/components/Textarea.vue')['default']
   }
 }

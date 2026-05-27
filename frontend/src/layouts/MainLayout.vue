@@ -48,7 +48,10 @@
             </button>
           </div>
 
-          <div class="lt-md">
+          <div
+            v-if="isMobileNavigationMounted"
+            class="lt-md"
+          >
             <SiteMobileNavigation
               :items="primaryNavItems"
               :workspace-items="workspaceNavItems"
@@ -81,13 +84,15 @@ import SiteThemeSwitcher from 'src/components/site/SiteThemeSwitcher.vue'
 import SiteUserMenu from 'src/components/site/SiteUserMenu.vue'
 import { primaryNavItems, workspaceNavItems } from 'src/lib/siteNavigation'
 import { useAuthStore } from 'src/stores/auth'
-import { onMounted } from 'vue'
+import { onMounted, shallowRef } from 'vue'
 import { RouterLink } from 'vue-router'
 
 const auth = useAuthStore()
+const isMobileNavigationMounted = shallowRef(false)
 
 onMounted(() => {
   auth.refreshMe()
+  isMobileNavigationMounted.value = window.matchMedia('(max-width: 1023px)').matches
 })
 </script>
 

@@ -8,6 +8,52 @@
   --shell-lime: #c6ff6a;
   --shell-coral: #ff7a59;
   --shell-shadow: 0 24px 80px rgba(16, 37, 66, 0.16);
+  --brand-color-accent: #102542;
+  --brand-color-accent-hover: #17345d;
+  --brand-color-accent-soft: rgba(16, 37, 66, 0.08);
+  --brand-color-accent2: #ff7a59;
+  --brand-color-highlight: #c6ff6a;
+  --brand-color-glow: rgba(198, 255, 106, 0.24);
+  --brand-color-surface: #ffffff;
+  --brand-color-surface-2: #eef3f8;
+  --brand-color-text: #0f1723;
+  --brand-color-muted: #5f6b7a;
+  --brand-color-border: rgba(16, 37, 66, 0.12);
+  --brand-radius-xs: 4px;
+  --brand-radius-sm: 8px;
+  --brand-radius-md: 16px;
+  --brand-radius-lg: 24px;
+  --brand-radius-pill: 999px;
+  --brand-font-family: "Avenir Next", "Segoe UI", sans-serif;
+  --brand-font-display: "Georgia", "Times New Roman", serif;
+  --brand-shadow-card: var(--shell-shadow);
+  --brand-shadow-focus: 0 0 0 3px rgba(16, 37, 66, 0.16);
+}
+
+html.dark {
+  color-scheme: dark;
+  --shell-navy: #edf4ff;
+  --shell-ink: #e6edf7;
+  --shell-mist: #0e1724;
+  --shell-panel: rgba(17, 24, 39, 0.74);
+  --shell-panel-strong: rgba(17, 24, 39, 0.9);
+  --shell-line: rgba(148, 163, 184, 0.2);
+  --shell-lime: #bef264;
+  --shell-coral: #fb7185;
+  --shell-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+  --brand-color-accent: #7dd3fc;
+  --brand-color-accent-hover: #38bdf8;
+  --brand-color-accent-soft: rgba(125, 211, 252, 0.14);
+  --brand-color-accent2: #fb7185;
+  --brand-color-highlight: #bef264;
+  --brand-color-glow: rgba(190, 242, 100, 0.18);
+  --brand-color-surface: #111827;
+  --brand-color-surface-2: #0b1220;
+  --brand-color-text: #e6edf7;
+  --brand-color-muted: #9aa7b8;
+  --brand-color-border: rgba(148, 163, 184, 0.2);
+  --brand-shadow-card: var(--shell-shadow);
+  --brand-shadow-focus: 0 0 0 3px rgba(125, 211, 252, 0.24);
 }
 
 html {
@@ -20,6 +66,11 @@ body {
   font-family: "Avenir Next", "Segoe UI", sans-serif;
   min-height: 100vh;
   position: relative;
+}
+
+html.dark body {
+  background: #070b12;
+  color: var(--shell-ink);
 }
 
 body::before {

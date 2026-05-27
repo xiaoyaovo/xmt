@@ -15,7 +15,6 @@ export default defineConfig((/* ctx */) => {
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
     boot: [
-      'design-system',
       'nuxt-ui'
     ],
 
@@ -71,6 +70,9 @@ export default defineConfig((/* ctx */) => {
           dts: 'src/components.d.ts',
           components: {
             importPathTransform: (path) => (
+              path.includes('/node_modules/@nuxt/ui/dist/runtime/vue/components/')
+                ? path.replace(/^.*\/node_modules\/@nuxt\/ui\/dist\/runtime\/vue\/components\//, '@nuxt/ui/components/')
+                :
               path.includes('/node_modules/@nuxt/ui/dist/runtime/components/')
                 ? path.replace(/^.*\/node_modules\/@nuxt\/ui\/dist\/runtime\/components\//, '@nuxt/ui/components/')
                 : path
