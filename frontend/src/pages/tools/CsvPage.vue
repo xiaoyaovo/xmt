@@ -440,15 +440,15 @@ onMounted(async () => {
                 variant="subtle"
                 :disabled="uploading || localPreview.loading.value"
                 :loading="localPreview.loading.value"
-                :label="localPreview.loading.value ? '正在解析...' : '选择 CSV'"
               >
-                <UInput
+                <span>{{ localPreview.loading.value ? '正在解析...' : '选择 CSV' }}</span>
+                <input
                   class="csv-file-input"
                   type="file"
                   accept=".csv,text/csv"
                   :disabled="uploading || localPreview.loading.value"
                   @change="handleFileInput"
-                />
+                >
               </UButton>
               <UButton
                 class="csv-primary-action"
@@ -627,6 +627,8 @@ onMounted(async () => {
               placeholder="粘贴 CSV 内容，或拖入 .csv 文件"
               aria-label="CSV 源码编辑器"
               spellcheck="false"
+              :rows="18"
+              :ui="{ base: 'csv-text-editor-base' }"
               @input="updateCsvText"
               @update:model-value="updateCsvTextValue"
               @dragenter.prevent="onDragEnter"
@@ -866,9 +868,10 @@ onMounted(async () => {
 }
 
 .csv-file-input {
-  height: 1px;
+  height: 0;
   opacity: 0;
   position: absolute;
+  pointer-events: none;
   width: 1px;
 }
 
@@ -957,11 +960,19 @@ onMounted(async () => {
 }
 
 .csv-text-editor {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 560px;
+  width: 100%;
+}
+
+.csv-text-editor :deep(.csv-text-editor-base) {
   background: #0f1723;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--brand-radius-md, 16px);
   color: #edf6ff;
   font: 0.9rem/1.65 "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+  height: 100%;
   margin-top: 0;
   min-height: 560px;
   outline: none;
@@ -971,22 +982,22 @@ onMounted(async () => {
   width: 100%;
 }
 
-.csv-text-editor:focus-visible {
+.csv-text-editor :deep(.csv-text-editor-base:focus-visible) {
   border-color: var(--brand-color-accent, #102542);
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
 }
 
-.csv-text-editor::placeholder {
+.csv-text-editor :deep(.csv-text-editor-base::placeholder) {
   color: rgba(237, 246, 255, 0.45);
 }
 
-.csv-edit-panel-drag .csv-text-editor {
+.csv-edit-panel-drag .csv-text-editor :deep(.csv-text-editor-base) {
   border-color: var(--brand-color-accent, #102542);
   box-shadow: inset 0 0 0 2px var(--brand-color-accent, #102542);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .csv-text-editor {
+  .csv-text-editor :deep(.csv-text-editor-base) {
     transition: none;
   }
 }
