@@ -44,6 +44,8 @@ Use existing CSS variables before adding new colors or radii:
 - `--shell-*` variables from `src/css/app.scss`
 - `--brand-color-*`, `--brand-radius-*`, `--brand-shadow-*` from the design system
 
+Do not hardcode component radii (`16px`, `24px`, `999px`, etc.) for buttons, chips, cards, dialogs, scroll thumbs, inputs, or repeated rows. Use `--brand-radius-sm/md/lg/pill` so presets such as Apple, Carbon, Linear, and Terminal can change the UI shape globally. Fixed pixel radii are acceptable only for asset-internal geometry where the shape is not a UI component contract.
+
 Local component styles should use stable class names and responsive media queries. The current UI favors dense, tool-like panels and restrained visual styling over marketing-page ornamentation on tool pages.
 
 Avoid nested card-like containers unless they represent genuinely separate repeated items or overlays. Keep tool workspaces structured with panels, sidebars, and main content areas like `CsvPage.vue` and `MermaidPage.vue`.

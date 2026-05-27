@@ -420,7 +420,7 @@ watch(editorMode, async () => {
 
       <div class="drawio-toolbar-main">
         <UButton
-          class="drawio-primary-action"
+          class="drawio-primary-action brand-action-button"
           color="primary"
           :label="syncButtonText"
           type="button"
@@ -937,7 +937,7 @@ watch(editorMode, async () => {
 
 .drawio-archive-list::-webkit-scrollbar-thumb {
   background: rgba(16, 37, 66, 0.2);
-  border-radius: 999px;
+  border-radius: var(--brand-radius-pill, 999px);
 }
 
 .drawio-archive-row {

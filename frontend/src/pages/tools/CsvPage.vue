@@ -451,7 +451,7 @@ onMounted(async () => {
                 >
               </UButton>
               <UButton
-                class="csv-primary-action"
+                class="csv-primary-action brand-action-button"
                 color="primary"
                 :label="saveButtonText"
                 type="button"
@@ -1089,7 +1089,7 @@ onMounted(async () => {
 
 .csv-history-list::-webkit-scrollbar-thumb {
   background: rgba(16, 37, 66, 0.2);
-  border-radius: 999px;
+  border-radius: var(--brand-radius-pill, 999px);
 }
 
 .csv-history-row {

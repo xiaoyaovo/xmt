@@ -92,7 +92,7 @@ const emit = defineEmits(['select'])
   align-items: center;
   aspect-ratio: 1;
   background: var(--brand-color-accent-soft, rgba(16, 37, 66, 0.08));
-  border-radius: 14px;
+  border-radius: var(--brand-radius-sm, 8px);
   color: var(--brand-color-text);
   display: inline-flex;
   font-size: 0.8rem;

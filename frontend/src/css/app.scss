@@ -574,7 +574,7 @@ body::before {
 }
 
 .nav-tab {
-  border-radius: 999px;
+  border-radius: var(--brand-radius-pill, 999px);
   color: var(--brand-color-muted);
   font-weight: 600;
   padding: 0 10px;
@@ -720,7 +720,7 @@ body::before {
 }
 
 .hero-button {
-  border-radius: 999px;
+  border-radius: var(--brand-radius-pill, 999px);
   font-weight: 700;
   min-height: 48px;
   padding: 0 18px;
@@ -739,7 +739,7 @@ body::before {
 .signal-card {
   background: var(--shell-panel);
   border: 1px solid var(--brand-color-border);
-  border-radius: 22px;
+  border-radius: var(--brand-radius-lg, 24px);
   padding: 18px;
 }
 
@@ -861,7 +861,7 @@ body::before {
 .content-card {
   background: var(--shell-panel);
   border: 1px solid var(--brand-color-border);
-  border-radius: 24px;
+  border-radius: var(--brand-radius-lg, 24px);
   box-shadow: var(--brand-shadow-card, var(--shell-shadow));
 }
 
@@ -996,7 +996,7 @@ body::before {
 .csv-notice {
   background: var(--brand-color-accent-soft);
   border: 1px solid var(--brand-color-border);
-  border-radius: 16px;
+  border-radius: var(--brand-radius-md, 16px);
   color: var(--brand-color-muted);
   line-height: 1.6;
   padding: 14px 16px;
@@ -1010,7 +1010,7 @@ body::before {
 
 .csv-table-wrap {
   border: 1px solid var(--shell-line);
-  border-radius: 18px;
+  border-radius: var(--brand-radius-md, 16px);
   overflow: auto;
   width: 100%;
 }

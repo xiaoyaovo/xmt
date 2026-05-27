@@ -138,7 +138,7 @@ function handleAction() {
 .auth-account-mark {
   align-items: center;
   background: rgba(16, 37, 66, 0.08);
-  border-radius: 18px;
+  border-radius: var(--brand-radius-md, 16px);
   color: var(--shell-navy);
   display: inline-flex;
   font-size: 0.82rem;

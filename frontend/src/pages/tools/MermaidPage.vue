@@ -1024,7 +1024,7 @@ onUnmounted(() => {
 
 .mermaid-archive-list::-webkit-scrollbar-thumb {
   background: rgba(16, 37, 66, 0.2);
-  border-radius: 999px;
+  border-radius: var(--brand-radius-pill, 999px);
 }
 
 .mermaid-archive-row {
