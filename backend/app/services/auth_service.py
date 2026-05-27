@@ -1,9 +1,10 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 import hashlib
 import hmac
 import secrets
 
 from fastapi import HTTPException, status
+from tortoise import timezone
 
 from app.models.user import User
 from app.models.user_auth_account import UserAuthAccount
@@ -21,8 +22,14 @@ DAILY_SEND_LIMIT = 10
 VALID_PURPOSES = ("register", "password_reset")
 
 
-def now_naive_utc() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+def now_local() -> datetime:
+    return timezone.now()
+
+
+def _verification_expires_at(record: VerificationCode) -> datetime:
+    if record.expires_at < record.created_at:
+        return record.created_at + timedelta(minutes=CODE_TTL_MINUTES)
+    return record.expires_at
 
 
 def _normalize_email(email: str) -> str:
@@ -84,7 +91,7 @@ async def ensure_auth_account(
     avatar_url: str | None = None,
     password_hash: str | None = None,
 ) -> UserAuthAccount:
-    now = now_naive_utc()
+    now = now_local()
     account, created = await UserAuthAccount.get_or_create(
         provider=provider,
         provider_user_id=provider_user_id,
@@ -123,7 +130,7 @@ async def ensure_auth_account(
 
 
 async def mark_login_used(account: UserAuthAccount) -> None:
-    now = now_naive_utc()
+    now = now_local()
     account.last_used_at = now
     account.user.last_login_at = now
     await account.save(update_fields=["last_used_at", "updated_at"])
@@ -179,7 +186,7 @@ async def get_or_create_oauth_user(
             avatar_url=avatar_url,
             email=email,
             email_verified=True,
-            last_login_at=now_naive_utc(),
+            last_login_at=now_local(),
         )
     else:
         user.auth_provider = provider
@@ -190,7 +197,7 @@ async def get_or_create_oauth_user(
         user.avatar_url = avatar_url
         user.email = email
         user.email_verified = True
-        user.last_login_at = now_naive_utc()
+        user.last_login_at = now_local()
         await user.save(
             update_fields=[
                 "auth_provider",
@@ -274,7 +281,7 @@ async def unlink_auth_account(user: User, provider: str) -> None:
 
 
 async def _enforce_send_rate_limits(email: str, purpose: str) -> None:
-    now = now_naive_utc()
+    now = now_local()
     last = (
         await VerificationCode.filter(email=email, purpose=purpose)
         .order_by("-created_at")
@@ -317,7 +324,7 @@ async def create_verification_code(email: str, purpose: str) -> str:
     await _enforce_send_rate_limits(normalized, purpose)
 
     code = _generate_code()
-    expires_at = now_naive_utc() + timedelta(minutes=CODE_TTL_MINUTES)
+    expires_at = now_local() + timedelta(minutes=CODE_TTL_MINUTES)
     await VerificationCode.create(
         email=normalized,
         code_hash=_hash_code(code),
@@ -329,7 +336,7 @@ async def create_verification_code(email: str, purpose: str) -> str:
 
 async def verify_code(email: str, code: str, purpose: str) -> VerificationCode:
     normalized = _normalize_email(email)
-    now = now_naive_utc()
+    now = now_local()
     record = (
         await VerificationCode.filter(
             email=normalized,
@@ -342,7 +349,7 @@ async def verify_code(email: str, code: str, purpose: str) -> VerificationCode:
     if not record:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码无效或已过期")
 
-    if record.expires_at < now:
+    if _verification_expires_at(record) < now:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码无效或已过期")
 
     if record.attempts >= CODE_MAX_ATTEMPTS:
@@ -363,7 +370,7 @@ async def verify_code(email: str, code: str, purpose: str) -> VerificationCode:
 
 
 async def _consume_code(record: VerificationCode) -> None:
-    record.consumed_at = now_naive_utc()
+    record.consumed_at = now_local()
     await record.save(update_fields=["consumed_at", "updated_at"])
 
 
@@ -384,7 +391,7 @@ async def register_with_code(
 
     record = await verify_code(normalized, code, "register")
 
-    now = now_naive_utc()
+    now = now_local()
     display_username = (username or "").strip() or normalized.split("@", 1)[0]
     password_hash = hash_password(password)
 

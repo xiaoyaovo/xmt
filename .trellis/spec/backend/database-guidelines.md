@@ -196,7 +196,9 @@ Do not use this table for binary or file-backed resources. CSV files keep `csv_f
 
 ## Time
 
-The database config sets `use_tz = False` and `timezone = "Asia/Shanghai"`. Current model timestamps are naive datetimes. When deriving application times, match the current pattern unless the project explicitly migrates to timezone-aware storage.
+The database config sets `use_tz = False` and `timezone = "Asia/Shanghai"`. Tortoise returns `DatetimeField` values as `Asia/Shanghai` aware datetimes even though MySQL stores `DATETIME(6)` values without timezone metadata. When deriving application times for ORM datetime fields, use `tortoise.timezone.now()` so comparisons and stored values match Tortoise's Python representation.
+
+Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in this project. MySQL will store that UTC wall-clock value as local `DATETIME`, and Tortoise will read it back as `Asia/Shanghai`, shifting expiration logic by eight hours and causing offset-naive/offset-aware comparison errors.
 
 ## Avoid
 
