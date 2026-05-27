@@ -36,6 +36,14 @@
   --color-primary: var(--brand-color-accent);
   --q-primary: var(--brand-color-accent);
   --ui-radius: var(--brand-radius-sm);
+  --radius-xs: var(--brand-radius-xs);
+  --radius-sm: var(--brand-radius-sm);
+  --radius-md: var(--brand-radius-md);
+  --radius-lg: var(--brand-radius-lg);
+  --radius-xl: var(--brand-radius-lg);
+  --radius-2xl: var(--brand-radius-lg);
+  --radius-3xl: var(--brand-radius-lg);
+  --radius-full: var(--brand-radius-pill);
 }
 
 html[data-brand-theme='terminal'],
@@ -514,6 +522,17 @@ body::before {
 
 .app-shell {
   background: transparent;
+}
+
+.brand-action-button {
+  background: var(--brand-color-accent) !important;
+  border-radius: var(--brand-radius-pill, 999px) !important;
+  color: var(--ui-text-inverted, #ffffff) !important;
+}
+
+.brand-action-button:hover,
+.brand-action-button:focus-visible {
+  background: var(--brand-color-accent-hover, var(--brand-color-accent)) !important;
 }
 
 .shell-header {

@@ -58,7 +58,7 @@ async function handleLogout() {
     side="right"
   >
     <UButton
-      class="mobile-nav-trigger"
+      class="mobile-nav-trigger brand-action-button"
       color="primary"
       trailing-icon="i-lucide-menu"
       type="button"
@@ -161,6 +161,7 @@ async function handleLogout() {
           <UButton
             v-else
             block
+            class="brand-action-button"
             color="primary"
             icon="i-lucide-log-in"
             type="button"
@@ -176,14 +177,7 @@ async function handleLogout() {
 
 <style scoped>
 .mobile-nav-trigger {
-  background: var(--brand-color-accent);
-  color: var(--ui-text-inverted, #ffffff);
   min-height: 44px;
-}
-
-.mobile-nav-trigger:hover,
-.mobile-nav-trigger:focus-visible {
-  background: var(--brand-color-accent-hover, var(--brand-color-accent));
 }
 
 .mobile-nav-shell {

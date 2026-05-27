@@ -43,7 +43,7 @@
             />
             <UButton
               v-else
-              class="site-auth-button site-auth-login"
+              class="site-auth-button site-auth-login brand-action-button"
               color="primary"
               label="登录"
               type="button"
@@ -177,16 +177,6 @@ onMounted(() => {
 
 .site-auth-button {
   min-height: 36px;
-}
-
-.site-auth-login {
-  background: var(--brand-color-accent);
-  color: var(--ui-text-inverted, #ffffff);
-}
-
-.site-auth-login:hover,
-.site-auth-login:focus-visible {
-  background: var(--brand-color-accent-hover, var(--brand-color-accent));
 }
 
 @media (max-width: 1023px) {

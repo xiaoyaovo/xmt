@@ -27,7 +27,7 @@ const { root } = useScrollReveal()
           <div class="home-hero-actions">
             <UButton
               :to="heroAction.to"
-              class="home-hero-cta"
+              class="home-hero-cta brand-action-button"
               color="primary"
               trailing-icon="i-lucide-arrow-right"
               variant="solid"
@@ -125,9 +125,6 @@ const { root } = useScrollReveal()
 
 .home-hero-cta {
   align-items: center;
-  background: var(--brand-color-accent, var(--shell-navy));
-  border-radius: var(--brand-radius-pill, 999px);
-  color: var(--ui-text-inverted, #ffffff);
   display: inline-flex;
   font-size: 0.94rem;
   font-weight: 700;
@@ -139,7 +136,6 @@ const { root } = useScrollReveal()
 }
 
 .home-hero-cta:hover {
-  background: var(--brand-color-accent-hover, var(--brand-color-accent));
   transform: translateY(-1px);
   box-shadow: var(--brand-shadow-card, 0 14px 30px rgba(16, 37, 66, 0.18));
 }
