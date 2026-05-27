@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, reactive, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from 'src/stores/auth'
@@ -10,11 +10,13 @@ const router = useRouter()
 const RESEND_COOLDOWN_SECONDS = 60
 
 const step = shallowRef(1)
-const email = shallowRef('')
-const code = shallowRef('')
-const password = shallowRef('')
+const formState = reactive({
+  email: '',
+  code: '',
+  password: '',
+  username: ''
+})
 const passwordVisible = shallowRef(false)
-const username = shallowRef('')
 const loading = shallowRef(false)
 const errorMessage = shallowRef('')
 const noticeMessage = shallowRef('')
@@ -45,7 +47,7 @@ onBeforeUnmount(() => {
   }
 })
 
-const emailLooksValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()))
+const emailLooksValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email.trim()))
 
 const canRequestCode = computed(
   () => !loading.value && cooldownLeft.value === 0 && emailLooksValid.value
@@ -54,9 +56,34 @@ const canRequestCode = computed(
 const canSubmitRegister = computed(
   () =>
     !loading.value &&
-    code.value.trim().length >= 4 &&
-    password.value.length >= 8
+    formState.code.trim().length >= 4 &&
+    formState.password.length >= 8
 )
+
+function validateEmailStep(state) {
+  const errors = []
+  if (!state.email?.trim()) {
+    errors.push({ name: 'email', message: '请输入邮箱' })
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim())) {
+    errors.push({ name: 'email', message: '邮箱格式不正确' })
+  }
+  return errors
+}
+
+function validateRegisterStep(state) {
+  const errors = []
+  if (!state.code?.trim()) {
+    errors.push({ name: 'code', message: '请输入验证码' })
+  } else if (state.code.trim().length < 4) {
+    errors.push({ name: 'code', message: '验证码长度不正确' })
+  }
+  if (!state.password) {
+    errors.push({ name: 'password', message: '请输入密码' })
+  } else if (state.password.length < 8) {
+    errors.push({ name: 'password', message: '密码至少 8 位' })
+  }
+  return errors
+}
 
 function pickFriendlyMessage(error, fallback) {
   if (!error) return fallback
@@ -79,7 +106,7 @@ async function submitEmailStep() {
   errorMessage.value = ''
   noticeMessage.value = ''
   try {
-    await auth.requestRegisterCode(email.value.trim())
+    await auth.requestRegisterCode(formState.email.trim())
     step.value = 2
     noticeMessage.value = '验证码已发送，请在 10 分钟内填写。若未收到请检查垃圾箱。'
     startCooldown()
@@ -97,7 +124,7 @@ async function resendCode() {
   errorMessage.value = ''
   noticeMessage.value = ''
   try {
-    await auth.requestRegisterCode(email.value.trim())
+    await auth.requestRegisterCode(formState.email.trim())
     noticeMessage.value = '验证码已重新发送。'
     startCooldown()
   } catch (error) {
@@ -108,11 +135,11 @@ async function resendCode() {
 }
 
 async function submitRegister() {
-  if (password.value.length < 8) {
+  if (formState.password.length < 8) {
     errorMessage.value = '密码至少 8 位'
     return
   }
-  if (!code.value.trim()) {
+  if (!formState.code.trim()) {
     errorMessage.value = '请输入验证码'
     return
   }
@@ -122,10 +149,10 @@ async function submitRegister() {
   noticeMessage.value = ''
   try {
     await auth.register({
-      email: email.value.trim(),
-      code: code.value.trim(),
-      password: password.value,
-      username: username.value.trim() || undefined
+      email: formState.email.trim(),
+      code: formState.code.trim(),
+      password: formState.password,
+      username: formState.username.trim() || undefined
     })
     await router.replace('/tools')
   } catch (error) {
@@ -165,136 +192,154 @@ function backToEmailStep() {
           <span class="register-form-badge">EMAIL</span>
         </div>
 
-        <p
+        <UAlert
           v-if="noticeMessage"
-          class="register-notice"
-        >
-          {{ noticeMessage }}
-        </p>
-        <p
+          color="success"
+          variant="soft"
+          :description="noticeMessage"
+        />
+        <UAlert
           v-if="errorMessage"
-          class="register-error"
-        >
-          {{ errorMessage }}
-        </p>
+          color="error"
+          variant="soft"
+          :description="errorMessage"
+        />
 
-        <form
+        <UForm
           v-if="step === 1"
+          :state="formState"
+          :validate="validateEmailStep"
           class="register-form"
-          @submit.prevent="submitEmailStep"
+          @submit="submitEmailStep"
         >
-          <label class="register-field">
-            <span class="register-field-label">邮箱</span>
-            <input
-              v-model="email"
-              class="register-input"
+          <UFormField
+            label="邮箱"
+            name="email"
+            required
+          >
+            <UInput
+              v-model="formState.email"
               autocomplete="email"
               name="email"
               placeholder="you@example.com"
               type="email"
-            >
-          </label>
+            />
+          </UFormField>
 
-          <button
-            class="register-submit"
-            type="submit"
+          <UButton
+            block
+            color="primary"
             :disabled="loading || !emailLooksValid"
-          >
-            {{ loading ? '发送中...' : '获取验证码' }}
-          </button>
-        </form>
+            :label="loading ? '发送中...' : '获取验证码'"
+            :loading="loading"
+            type="submit"
+          />
+        </UForm>
 
-        <form
+        <UForm
           v-else
+          :state="formState"
+          :validate="validateRegisterStep"
           class="register-form"
-          @submit.prevent="submitRegister"
+          @submit="submitRegister"
         >
           <p class="register-hint">
-            已向 <strong>{{ email }}</strong> 发送 6 位验证码，10 分钟内有效。
+            已向 <strong>{{ formState.email }}</strong> 发送 6 位验证码，10 分钟内有效。
           </p>
 
-          <label class="register-field">
-            <span class="register-field-label">验证码</span>
-            <input
-              v-model="code"
-              class="register-input"
+          <UFormField
+            label="验证码"
+            name="code"
+            required
+          >
+            <UInput
+              v-model="formState.code"
               autocomplete="one-time-code"
               inputmode="numeric"
               maxlength="6"
               name="code"
               placeholder="6 位数字"
               type="text"
+            />
+          </UFormField>
+
+          <UFormField
+            label="密码"
+            name="password"
+            required
+          >
+            <UInput
+              v-model="formState.password"
+              autocomplete="new-password"
+              name="new-password"
+              placeholder="至少 8 位"
+              :type="passwordVisible ? 'text' : 'password'"
             >
-          </label>
+              <template #trailing>
+                <UButton
+                  color="neutral"
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                  :label="passwordVisible ? '隐藏' : '显示'"
+                  @click="passwordVisible = !passwordVisible"
+                />
+              </template>
+            </UInput>
+          </UFormField>
 
-          <label class="register-field">
-            <span class="register-field-label">密码</span>
-            <span class="register-password-wrap">
-              <input
-                v-model="password"
-                class="register-input register-password-input"
-                autocomplete="new-password"
-                name="new-password"
-                placeholder="至少 8 位"
-                :type="passwordVisible ? 'text' : 'password'"
-              >
-              <button
-                class="register-password-toggle"
-                type="button"
-                @click="passwordVisible = !passwordVisible"
-              >
-                {{ passwordVisible ? '隐藏' : '显示' }}
-              </button>
-            </span>
-          </label>
-
-          <label class="register-field">
-            <span class="register-field-label">用户名（可选）</span>
-            <input
-              v-model="username"
-              class="register-input"
+          <UFormField
+            label="用户名（可选）"
+            name="username"
+          >
+            <UInput
+              v-model="formState.username"
               autocomplete="username"
               name="username"
               placeholder="留空则用邮箱前缀"
               type="text"
-            >
-          </label>
+            />
+          </UFormField>
 
-          <button
-            class="register-submit"
-            type="submit"
+          <UButton
+            block
+            color="primary"
             :disabled="!canSubmitRegister"
-          >
-            {{ loading ? '注册中...' : '完成注册' }}
-          </button>
+            :label="loading ? '注册中...' : '完成注册'"
+            :loading="loading"
+            type="submit"
+          />
 
           <div class="register-aux">
-            <button
-              class="register-aux-button"
+            <UButton
+              color="neutral"
+              size="sm"
               type="button"
+              variant="subtle"
               :disabled="!canRequestCode"
+              :label="cooldownLeft > 0 ? `重新发送（${cooldownLeft}s）` : '重新发送验证码'"
               @click="resendCode"
-            >
-              {{ cooldownLeft > 0 ? `重新发送（${cooldownLeft}s）` : '重新发送验证码' }}
-            </button>
-            <button
-              class="register-aux-button"
+            />
+            <UButton
+              color="neutral"
+              label="修改邮箱"
+              size="sm"
               type="button"
+              variant="subtle"
               :disabled="loading"
               @click="backToEmailStep"
-            >
-              修改邮箱
-            </button>
+            />
           </div>
-        </form>
+        </UForm>
 
         <div class="register-footer">
-          <RouterLink
-            class="register-aux-link"
+          <UButton
+            color="neutral"
+            label="已有账号？去登录"
+            size="sm"
             to="/login"
-          >
-            已有账号？去登录
-          </RouterLink>
+            variant="link"
+          />
         </div>
       </div>
     </section>
@@ -382,112 +427,11 @@ function backToEmailStep() {
   padding: 6px 9px;
 }
 
-.register-field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.register-field-label {
-  color: rgba(16, 37, 66, 0.72);
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.register-input {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-md, 16px);
-  color: var(--shell-ink);
-  font: inherit;
-  min-height: 46px;
-  padding: 0 13px;
-  width: 100%;
-}
-
-.register-input:focus {
-  border-color: rgba(16, 37, 66, 0.28);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.14));
-  outline: none;
-}
-
-.register-password-wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  position: relative;
-}
-
-.register-password-input {
-  padding-right: 66px;
-}
-
-.register-password-toggle {
-  align-self: center;
-  background: transparent;
-  border: 0;
-  color: rgba(16, 37, 66, 0.62);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 800;
-  margin-right: 10px;
-  padding: 6px;
-  position: absolute;
-  right: 0;
-}
-
 .register-hint {
   color: rgba(15, 23, 35, 0.7);
   font-size: 0.88rem;
   line-height: 1.6;
   margin: 0;
-}
-
-.register-error {
-  background: rgba(255, 122, 89, 0.1);
-  border: 1px solid rgba(255, 122, 89, 0.22);
-  border-radius: var(--brand-radius-md, 16px);
-  color: #9f2f17;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  margin: 0;
-  padding: 10px 12px;
-}
-
-.register-notice {
-  background: rgba(38, 194, 129, 0.12);
-  border: 1px solid rgba(38, 194, 129, 0.24);
-  border-radius: var(--brand-radius-md, 16px);
-  color: #137a4d;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  margin: 0;
-  padding: 10px 12px;
-}
-
-.register-submit {
-  align-items: center;
-  background: var(--brand-color-accent, var(--shell-navy));
-  border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
-  color: #ffffff;
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-weight: 850;
-  justify-content: center;
-  min-height: 46px;
-  padding: 0 16px;
-}
-
-.register-submit:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  outline: none;
-}
-
-.register-submit:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
 }
 
 .register-aux {
@@ -497,43 +441,12 @@ function backToEmailStep() {
   justify-content: space-between;
 }
 
-.register-aux-button {
-  background: rgba(255, 255, 255, 0.66);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-pill, 999px);
-  color: var(--shell-navy);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 800;
-  min-height: 36px;
-  padding: 0 14px;
-}
-
-.register-aux-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
 .register-footer {
   border-top: 1px dashed var(--shell-line);
   display: flex;
   justify-content: center;
   margin-top: 4px;
   padding-top: 12px;
-}
-
-.register-aux-link {
-  color: rgba(15, 23, 35, 0.66);
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.register-aux-link:hover,
-.register-aux-link:focus-visible {
-  color: var(--shell-navy);
-  text-decoration: underline;
 }
 
 @media (max-width: 899px) {

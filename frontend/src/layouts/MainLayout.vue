@@ -2,15 +2,17 @@
   <div class="app-shell">
     <header class="site-shell-header">
       <div class="site-shell-bar">
-        <RouterLink
+        <UButton
           to="/"
           class="site-brand"
+          color="neutral"
+          variant="ghost"
         >
           <span class="site-brand-mark">XM</span>
           <span class="site-brand-copy">
             <span class="site-brand-title">Xinming</span>
           </span>
-        </RouterLink>
+        </UButton>
 
         <div class="gt-sm site-shell-nav">
           <SiteHeaderNavigation
@@ -25,27 +27,28 @@
           </div>
 
           <div class="site-auth gt-sm">
-            <button
+            <UButton
               v-if="!auth.initialized || auth.loading"
               class="site-auth-button"
+              color="neutral"
+              label="检查登录"
+              loading
               type="button"
               disabled
-            >
-              检查登录
-            </button>
+            />
             <SiteUserMenu
               v-else-if="auth.authenticated"
               :user="auth.user"
               @logout="auth.logout"
             />
-            <button
+            <UButton
               v-else
               class="site-auth-button site-auth-login"
+              color="primary"
+              label="登录"
               type="button"
               @click="auth.openLoginPage()"
-            >
-              登录
-            </button>
+            />
           </div>
 
           <div
@@ -85,7 +88,6 @@ import SiteUserMenu from 'src/components/site/SiteUserMenu.vue'
 import { primaryNavItems, workspaceNavItems } from 'src/lib/siteNavigation'
 import { useAuthStore } from 'src/stores/auth'
 import { onMounted, shallowRef } from 'vue'
-import { RouterLink } from 'vue-router'
 
 const auth = useAuthStore()
 const isMobileNavigationMounted = shallowRef(false)
@@ -125,12 +127,8 @@ onMounted(() => {
 }
 
 .site-brand {
-  align-items: center;
-  color: inherit;
-  display: inline-flex;
   gap: 12px;
   min-width: 0;
-  text-decoration: none;
 }
 
 .site-brand-mark {
@@ -178,24 +176,7 @@ onMounted(() => {
 }
 
 .site-auth-button {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--brand-color-border, rgba(16, 37, 66, 0.12));
-  border-radius: var(--brand-radius-pill, 999px);
-  color: var(--shell-navy);
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 700;
-  gap: 8px;
   min-height: 36px;
-  padding: 0 13px;
-}
-
-.site-auth-login {
-  background: var(--brand-color-accent, #102542);
-  color: #ffffff;
 }
 
 @media (max-width: 1023px) {

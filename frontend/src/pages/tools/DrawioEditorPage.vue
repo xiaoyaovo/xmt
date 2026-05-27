@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { useRoute } from 'vue-router'
 
 import ToolSaveDialog from 'src/components/tools/ToolSaveDialog.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
@@ -405,12 +405,13 @@ watch(editorMode, async () => {
   <div class="drawio-editor-page">
     <header class="drawio-editor-toolbar">
       <div class="drawio-editor-title-block">
-        <RouterLink
+        <UButton
           class="drawio-back-link"
+          color="neutral"
+          label="← 工具"
           to="/tools"
-        >
-          ← 工具
-        </RouterLink>
+          variant="subtle"
+        />
         <div class="drawio-title-copy">
           <span class="drawio-kicker">Xinming · 全屏编辑</span>
           <h1 class="drawio-title">{{ editorModeLabel }}</h1>
@@ -418,52 +419,58 @@ watch(editorMode, async () => {
       </div>
 
       <div class="drawio-toolbar-main">
-        <button
+        <UButton
           class="drawio-primary-action"
+          color="primary"
+          :label="syncButtonText"
           type="button"
           :disabled="syncButtonDisabled"
           @click="saveSyncedDiagram"
-        >
-          {{ syncButtonText }}
-        </button>
-        <button
+        />
+        <UButton
           class="drawio-ghost-action"
+          color="neutral"
+          label="导出 XML"
           type="button"
+          variant="subtle"
           :disabled="!editorReady"
           @click="requestExport"
-        >
-          导出 XML
-        </button>
-        <button
+        />
+        <UButton
           class="drawio-ghost-action"
+          color="neutral"
+          label="重新载入"
           type="button"
+          variant="subtle"
           :disabled="!editorReady"
           @click="loadXml()"
-        >
-          重新载入
-        </button>
-        <button
+        />
+        <UButton
           class="drawio-ghost-action"
+          color="neutral"
+          label="重置"
           type="button"
+          variant="subtle"
           @click="resetDemo"
-        >
-          重置
-        </button>
-        <button
+        />
+        <UButton
           class="drawio-ghost-action"
+          color="neutral"
+          label="原始编辑器"
           type="button"
+          variant="subtle"
           @click="openStandalone"
-        >
-          原始编辑器
-        </button>
+        />
 
         <UPopover
           v-model:open="historyOpen"
           :content="{ align: 'end', sideOffset: 8 }"
         >
-          <button
+          <UButton
             class="drawio-ghost-action drawio-history-trigger"
+            color="neutral"
             type="button"
+            variant="subtle"
             :disabled="historyTriggerDisabled"
             aria-label="历史存档"
           >
@@ -472,7 +479,7 @@ watch(editorMode, async () => {
               class="drawio-history-trigger-caret"
               aria-hidden="true"
             >▾</span>
-          </button>
+          </UButton>
 
           <template #content>
             <div class="drawio-history-popover">
@@ -484,14 +491,17 @@ watch(editorMode, async () => {
                     class="drawio-archive-count"
                   >· {{ archiveCountText }}</span>
                 </div>
-                <button
+                <UButton
                   class="drawio-ghost-action drawio-history-refresh"
+                  color="neutral"
+                  :label="accountSync.loading.value ? '刷新中' : '刷新'"
+                  :loading="accountSync.loading.value"
+                  size="sm"
                   type="button"
+                  variant="subtle"
                   :disabled="accountSync.loading.value"
                   @click="accountSync.loadItems"
-                >
-                  {{ accountSync.loading.value ? '刷新中' : '刷新' }}
-                </button>
+                />
               </div>
 
               <div
@@ -516,23 +526,27 @@ watch(editorMode, async () => {
                   class="drawio-archive-row"
                   :class="{ 'drawio-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
                 >
-                  <button
+                  <UButton
                     class="drawio-archive-open"
+                    color="neutral"
                     type="button"
+                    variant="ghost"
                     @click="openArchive(item)"
                   >
                     <span class="drawio-archive-title">{{ archiveDisplayTitle(item) }}</span>
                     <span class="drawio-archive-meta">{{ archiveSecondaryLine(item) }}</span>
-                  </button>
-                  <button
+                  </UButton>
+                  <UButton
                     class="drawio-archive-delete"
+                    color="error"
+                    :label="deletingArchiveKey === item.item_key ? '...' : '×'"
+                    size="xs"
                     type="button"
+                    variant="ghost"
                     :disabled="deletingArchiveKey === item.item_key"
                     :aria-label="`删除 ${archiveDisplayTitle(item)}`"
                     @click.stop="deleteSyncedDiagram(item)"
-                  >
-                    {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
-                  </button>
+                  />
                 </div>
               </div>
             </div>

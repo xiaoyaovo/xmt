@@ -104,15 +104,17 @@ function handleAction() {
       <p class="auth-account-caption">{{ caption }}</p>
     </div>
 
-    <button
+    <UButton
       class="auth-account-action"
       :class="{ 'auth-account-action-danger': account.linked && account.can_unlink }"
+      :color="account.linked && account.can_unlink ? 'error' : 'primary'"
+      :label="actionLabel"
+      :loading="busy"
+      :variant="account.linked && account.can_unlink ? 'soft' : 'solid'"
       type="button"
       :disabled="actionDisabled"
       @click="handleAction"
-    >
-      {{ actionLabel }}
-    </button>
+    />
   </article>
 </template>
 

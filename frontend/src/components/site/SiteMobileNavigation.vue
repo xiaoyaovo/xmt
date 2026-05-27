@@ -1,10 +1,10 @@
 <script setup>
-import { shallowRef, watch } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { computed, shallowRef, watch } from 'vue'
+import { useRoute } from 'vue-router'
 
 import { useAuthStore } from 'src/stores/auth'
 
-defineProps({
+const props = defineProps({
   items: {
     type: Array,
     default: () => []
@@ -18,6 +18,16 @@ defineProps({
 const route = useRoute()
 const open = shallowRef(false)
 const auth = useAuthStore()
+
+const primaryItems = computed(() => props.items.map(item => ({
+  ...item,
+  active: isRouteActive(item.to, item.exact)
+})))
+
+const workspaceMenuItems = computed(() => props.workspaceItems.map(item => ({
+  ...item,
+  active: isRouteActive(item.to)
+})))
 
 watch(
   () => route.fullPath,
@@ -62,45 +72,39 @@ async function handleLogout() {
         <div class="mobile-nav-group">
           <div class="mobile-nav-group-label">主导航</div>
 
-          <RouterLink
-            v-for="item in items"
+          <UButton
+            v-for="item in primaryItems"
             :key="item.to"
+            block
+            :active="item.active"
+            active-color="primary"
+            active-variant="soft"
+            color="neutral"
+            :icon="item.icon"
+            :label="item.label"
             :to="item.to"
             class="mobile-nav-link"
-            :class="{ 'mobile-nav-link-active': isRouteActive(item.to, item.exact) }"
-          >
-            <span
-              :class="item.icon"
-              class="mobile-nav-link-icon"
-              aria-hidden="true"
-            />
-            <span class="mobile-nav-link-copy">
-              <span class="mobile-nav-link-title">{{ item.label }}</span>
-              <span class="mobile-nav-link-caption">{{ item.caption }}</span>
-            </span>
-          </RouterLink>
+            variant="subtle"
+          />
         </div>
 
         <div class="mobile-nav-group">
           <div class="mobile-nav-group-label">功能分区</div>
 
-          <RouterLink
-            v-for="item in workspaceItems"
+          <UButton
+            v-for="item in workspaceMenuItems"
             :key="item.to"
+            block
+            :active="item.active"
+            active-color="primary"
+            active-variant="soft"
+            color="neutral"
+            :icon="item.icon"
+            :label="item.label"
             :to="item.to"
             class="mobile-nav-card"
-            :class="{ 'mobile-nav-card-active': isRouteActive(item.to) }"
-          >
-            <div class="mobile-nav-card-topline">
-              <span
-                :class="item.icon"
-                class="mobile-nav-card-icon"
-                aria-hidden="true"
-              />
-              <span class="mobile-nav-card-label">{{ item.label }}</span>
-            </div>
-            <p class="mobile-nav-card-caption">{{ item.caption }}</p>
-          </RouterLink>
+            variant="subtle"
+          />
         </div>
 
         <div class="mobile-nav-group">
@@ -195,47 +199,10 @@ async function handleLogout() {
   text-transform: uppercase;
 }
 
-.mobile-nav-link,
-.mobile-nav-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(16, 37, 66, 0.1);
-  border-radius: var(--brand-radius-md, 16px);
-  color: var(--shell-navy);
-  text-decoration: none;
-}
-
-.mobile-nav-link {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-}
-
-.mobile-nav-link-active,
-.mobile-nav-card-active {
-  border-color: var(--brand-color-accent, #102542);
-  box-shadow: inset 3px 0 0 var(--brand-color-accent, #102542);
-}
-
-.mobile-nav-link-icon,
-.mobile-nav-card-icon {
-  color: var(--shell-coral);
-  font-size: 1.1rem;
-}
-
-.mobile-nav-link-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.mobile-nav-link-title,
 .mobile-nav-card-label {
   font-weight: 800;
 }
 
-.mobile-nav-link-caption,
 .mobile-nav-card-caption {
   color: rgba(15, 23, 35, 0.58);
   font-size: 0.84rem;
@@ -243,7 +210,13 @@ async function handleLogout() {
 }
 
 .mobile-nav-card {
-  display: block;
+  min-height: 42px;
+}
+
+.mobile-nav-account {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(16, 37, 66, 0.1);
+  border-radius: var(--brand-radius-md, 16px);
   padding: 13px;
 }
 

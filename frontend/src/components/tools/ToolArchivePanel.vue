@@ -57,14 +57,15 @@ const emit = defineEmits(['login', 'refresh'])
       <p class="tool-archive-helper">
         {{ loginDescription }}
       </p>
-      <button
+      <UButton
         class="tool-archive-primary-action tool-archive-auth-action"
+        color="primary"
+        :label="authLoading ? '正在跳转...' : '登录'"
+        :loading="authLoading"
         type="button"
         :disabled="authLoading"
         @click="emit('login')"
-      >
-        {{ authLoading ? '正在跳转...' : '登录' }}
-      </button>
+      />
     </template>
 
     <template v-else>
@@ -73,14 +74,16 @@ const emit = defineEmits(['login', 'refresh'])
           <div class="section-kicker">{{ title }}</div>
           <h2 class="bench-title">{{ title }}</h2>
         </div>
-        <button
+        <UButton
           class="tool-archive-ghost-action"
+          color="neutral"
+          :label="loading ? '刷新中' : '刷新'"
+          :loading="loading"
           type="button"
+          variant="subtle"
           :disabled="loading"
           @click="emit('refresh')"
-        >
-          {{ loading ? '刷新中' : '刷新' }}
-        </button>
+        />
       </div>
 
       <div

@@ -49,18 +49,14 @@ watch(colorMode, (value) => {
 <template>
   <div class="theme-switcher">
     <span class="theme-switcher-label">系统主题</span>
-    <select
+    <USelect
       v-model="colorMode"
       class="theme-switcher-select"
-    >
-      <option
-        v-for="item in colorModeItems"
-        :key="item.value"
-        :value="item.value"
-      >
-        {{ item.label }}
-      </option>
-    </select>
+      :items="colorModeItems"
+      value-key="value"
+      label-key="label"
+      size="sm"
+    />
   </div>
 </template>
 
@@ -75,22 +71,10 @@ watch(colorMode, (value) => {
   color: rgba(16, 37, 66, 0.54);
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 
 .theme-switcher-select {
-  appearance: none;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid var(--brand-color-border, rgba(16, 37, 66, 0.12));
-  border-radius: var(--brand-radius-pill, 999px);
-  color: var(--brand-color-accent, #102542);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 750;
-  min-height: 34px;
   min-width: 126px;
-  padding: 0 28px 0 12px;
 }
 </style>

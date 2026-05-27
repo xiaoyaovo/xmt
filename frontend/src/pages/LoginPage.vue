@@ -1,5 +1,5 @@
 <script setup>
-import { computed, shallowRef } from 'vue'
+import { computed, reactive, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AuthProviderButton from 'src/components/site/AuthProviderButton.vue'
@@ -10,8 +10,10 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const email = shallowRef('')
-const password = shallowRef('')
+const formState = reactive({
+  email: '',
+  password: ''
+})
 const passwordVisible = shallowRef(false)
 const loading = shallowRef(false)
 const providerLoading = shallowRef('')
@@ -29,8 +31,24 @@ const targetPath = computed(() => {
   return '/tools'
 })
 
-const hasCredentials = computed(() => email.value.trim() && password.value)
+const hasCredentials = computed(() => formState.email.trim() && formState.password)
 const canSubmit = computed(() => !loading.value)
+
+function validatePasswordLogin(state) {
+  const errors = []
+
+  if (!state.email?.trim()) {
+    errors.push({ name: 'email', message: '请输入邮箱' })
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim())) {
+    errors.push({ name: 'email', message: '邮箱格式不正确' })
+  }
+
+  if (!state.password) {
+    errors.push({ name: 'password', message: '请输入密码' })
+  }
+
+  return errors
+}
 
 async function submitPasswordLogin() {
   if (!hasCredentials.value) {
@@ -42,8 +60,8 @@ async function submitPasswordLogin() {
   errorMessage.value = ''
   try {
     await auth.loginWithPassword({
-      email: email.value.trim(),
-      password: password.value
+      email: formState.email.trim(),
+      password: formState.password
     })
     await router.replace(targetPath.value)
   } catch (error) {
@@ -76,87 +94,103 @@ function startProviderLogin(provider) {
       </div>
 
       <div class="login-panel">
-        <form
+        <UForm
+          :state="formState"
+          :validate="validatePasswordLogin"
           class="login-form"
-          @submit.prevent="submitPasswordLogin"
+          @submit="submitPasswordLogin"
         >
           <div class="login-form-head">
             <div>
               <div class="section-kicker">账号密码</div>
               <h2 class="login-form-title">本地账号</h2>
             </div>
-            <span class="login-form-badge">JWT</span>
+            <UBadge
+              color="primary"
+              label="JWT"
+              variant="soft"
+            />
           </div>
 
-          <label class="login-field">
-            <span class="login-field-label">邮箱</span>
-            <input
-              v-model="email"
+          <UFormField
+            label="邮箱"
+            name="email"
+            required
+          >
+            <UInput
+              v-model="formState.email"
               class="login-input"
               autocomplete="email"
               name="email"
               placeholder="输入邮箱"
               type="email"
+            />
+          </UFormField>
+
+          <UFormField
+            label="密码"
+            name="password"
+            required
+          >
+            <UInput
+              v-model="formState.password"
+              autocomplete="current-password"
+              name="password"
+              placeholder="输入密码"
+              :type="passwordVisible ? 'text' : 'password'"
             >
-          </label>
+              <template #trailing>
+                <UButton
+                  color="neutral"
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                  :label="passwordVisible ? '隐藏' : '显示'"
+                  @click="passwordVisible = !passwordVisible"
+                />
+              </template>
+            </UInput>
+          </UFormField>
 
-          <label class="login-field">
-            <span class="login-field-label">密码</span>
-            <span class="login-password-wrap">
-              <input
-                v-model="password"
-                class="login-input login-password-input"
-                autocomplete="current-password"
-                name="password"
-                placeholder="输入密码"
-                :type="passwordVisible ? 'text' : 'password'"
-              >
-              <button
-                class="login-password-toggle"
-                type="button"
-                @click="passwordVisible = !passwordVisible"
-              >
-                {{ passwordVisible ? '隐藏' : '显示' }}
-              </button>
-            </span>
-          </label>
-
-          <p
+          <UAlert
             v-if="noticeMessage"
-            class="login-notice"
-          >
-            {{ noticeMessage }}
-          </p>
-          <p
+            color="success"
+            variant="soft"
+            :description="noticeMessage"
+          />
+          <UAlert
             v-if="errorMessage"
-            class="login-error"
-          >
-            {{ errorMessage }}
-          </p>
+            color="error"
+            variant="soft"
+            :description="errorMessage"
+          />
 
-          <button
-            class="login-submit"
+          <UButton
+            block
+            color="primary"
             type="submit"
             :disabled="!canSubmit"
-          >
-            {{ loading ? '登录中...' : '登录' }}
-          </button>
+            :label="loading ? '登录中...' : '登录'"
+            :loading="loading"
+          />
 
           <div class="login-aux">
-            <RouterLink
-              class="login-aux-link"
+            <UButton
+              color="neutral"
+              label="还没有账号？注册"
+              size="sm"
               to="/register"
-            >
-              还没有账号？注册
-            </RouterLink>
-            <RouterLink
-              class="login-aux-link"
+              variant="link"
+            />
+            <UButton
+              color="neutral"
+              label="忘记密码？"
+              size="sm"
               to="/forgot-password"
-            >
-              忘记密码？
-            </RouterLink>
+              variant="link"
+            />
           </div>
-        </form>
+        </UForm>
 
         <div class="login-divider">
           <span>或使用第三方账号</span>
@@ -254,115 +288,8 @@ function startProviderLogin(provider) {
   margin: 4px 0 0;
 }
 
-.login-form-badge {
-  background: rgba(198, 255, 106, 0.42);
-  border: 1px solid rgba(16, 37, 66, 0.08);
-  border-radius: var(--brand-radius-pill, 999px);
-  color: var(--shell-navy);
-  font-size: 0.72rem;
-  font-weight: 900;
-  padding: 6px 9px;
-}
-
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.login-field-label {
-  color: rgba(16, 37, 66, 0.72);
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
 .login-input {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-md, 16px);
-  color: var(--shell-ink);
-  font: inherit;
-  min-height: 46px;
-  padding: 0 13px;
   width: 100%;
-}
-
-.login-input:focus {
-  border-color: rgba(16, 37, 66, 0.28);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.14));
-  outline: none;
-}
-
-.login-password-wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  position: relative;
-}
-
-.login-password-input {
-  padding-right: 66px;
-}
-
-.login-password-toggle {
-  align-self: center;
-  background: transparent;
-  border: 0;
-  color: rgba(16, 37, 66, 0.62);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 800;
-  margin-right: 10px;
-  padding: 6px;
-  position: absolute;
-  right: 0;
-}
-
-.login-error {
-  background: rgba(255, 122, 89, 0.1);
-  border: 1px solid rgba(255, 122, 89, 0.22);
-  border-radius: var(--brand-radius-md, 16px);
-  color: #9f2f17;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  margin: 0;
-  padding: 10px 12px;
-}
-
-.login-notice {
-  background: rgba(38, 194, 129, 0.12);
-  border: 1px solid rgba(38, 194, 129, 0.24);
-  border-radius: var(--brand-radius-md, 16px);
-  color: #137a4d;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  margin: 0;
-  padding: 10px 12px;
-}
-
-.login-submit {
-  align-items: center;
-  background: var(--brand-color-accent, var(--shell-navy));
-  border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
-  color: #ffffff;
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-weight: 850;
-  justify-content: center;
-  min-height: 46px;
-  padding: 0 16px;
-}
-
-.login-submit:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  outline: none;
-}
-
-.login-submit:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
 }
 
 .login-aux {
@@ -371,19 +298,6 @@ function startProviderLogin(provider) {
   gap: 12px;
   justify-content: space-between;
   margin-top: 2px;
-}
-
-.login-aux-link {
-  color: rgba(15, 23, 35, 0.66);
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.login-aux-link:hover,
-.login-aux-link:focus-visible {
-  color: var(--shell-navy);
-  text-decoration: underline;
 }
 
 .login-divider {

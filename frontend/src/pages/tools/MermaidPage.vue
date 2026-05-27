@@ -378,37 +378,42 @@ onMounted(async () => {
             <p class="mermaid-source-meta">{{ sourceMetaText }}</p>
 
             <div class="mermaid-toolbar-actions">
-              <button
+              <UButton
                 class="mermaid-primary-action"
+                color="primary"
+                :label="accountSync.auth.authenticated ? '保存' : '登录后保存'"
+                :loading="accountSync.saving.value"
                 type="button"
                 :disabled="accountSync.saving.value"
                 @click="saveSyncedSource"
-              >
-                {{ accountSync.saving.value ? '保存中...' : accountSync.auth.authenticated ? '保存' : '登录后保存' }}
-              </button>
-              <button
+              />
+              <UButton
                 class="mermaid-ghost-action"
+                color="neutral"
+                label="另存为新存档"
                 type="button"
+                variant="subtle"
                 :disabled="accountSync.saving.value"
                 @click="saveSyncedSourceAsNew"
-              >
-                另存为新存档
-              </button>
-              <button
+              />
+              <UButton
                 class="mermaid-ghost-action"
+                color="neutral"
+                label="重置示例"
                 type="button"
+                variant="subtle"
                 @click="resetSource"
-              >
-                重置示例
-              </button>
+              />
 
               <UPopover
                 v-model:open="historyOpen"
                 :content="{ align: 'end', sideOffset: 8 }"
               >
-                <button
+                <UButton
                   class="mermaid-ghost-action mermaid-history-trigger"
+                  color="neutral"
                   type="button"
+                  variant="subtle"
                   :disabled="historyTriggerDisabled"
                   aria-label="历史存档"
                 >
@@ -417,7 +422,7 @@ onMounted(async () => {
                     class="mermaid-history-trigger-caret"
                     aria-hidden="true"
                   >▾</span>
-                </button>
+                </UButton>
 
                 <template #content>
                   <div class="mermaid-history-popover">
@@ -429,14 +434,17 @@ onMounted(async () => {
                           class="mermaid-archive-count"
                         >· {{ archiveCountText }}</span>
                       </div>
-                      <button
+                      <UButton
                         class="mermaid-ghost-action mermaid-history-refresh"
+                        color="neutral"
+                        :label="accountSync.loading.value ? '刷新中' : '刷新'"
+                        :loading="accountSync.loading.value"
+                        size="sm"
                         type="button"
+                        variant="subtle"
                         :disabled="accountSync.loading.value"
                         @click="accountSync.loadItems"
-                      >
-                        {{ accountSync.loading.value ? '刷新中' : '刷新' }}
-                      </button>
+                      />
                     </div>
 
                     <div
@@ -461,23 +469,27 @@ onMounted(async () => {
                         class="mermaid-archive-row"
                         :class="{ 'mermaid-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
                       >
-                        <button
+                        <UButton
                           class="mermaid-archive-open"
+                          color="neutral"
                           type="button"
+                          variant="ghost"
                           @click="openArchive(item)"
                         >
                           <span class="mermaid-archive-title">{{ archiveDisplayTitle(item) }}</span>
                           <span class="mermaid-archive-meta">{{ archiveSecondaryLine(item) }}</span>
-                        </button>
-                        <button
+                        </UButton>
+                        <UButton
                           class="mermaid-archive-delete"
+                          color="error"
+                          :label="deletingArchiveKey === item.item_key ? '...' : '×'"
+                          size="xs"
                           type="button"
+                          variant="ghost"
                           :disabled="deletingArchiveKey === item.item_key"
                           :aria-label="`删除 ${archiveDisplayTitle(item)}`"
                           @click.stop="deleteSyncedSource(item)"
-                        >
-                          {{ deletingArchiveKey === item.item_key ? '...' : '×' }}
-                        </button>
+                        />
                       </div>
                     </div>
                   </div>
@@ -486,16 +498,19 @@ onMounted(async () => {
             </div>
 
             <div class="mermaid-example-strip">
-              <button
+              <UButton
                 v-for="example in examples"
                 :key="example.name"
                 class="mermaid-example-item"
-                :class="{ 'mermaid-example-item-active': activeExampleName === example.name }"
+                color="neutral"
+                :label="example.name"
+                :active="activeExampleName === example.name"
+                active-color="primary"
+                active-variant="solid"
                 type="button"
+                variant="subtle"
                 @click="useExample(example)"
-              >
-                {{ example.name }}
-              </button>
+              />
             </div>
 
             <AccountSyncPanel
@@ -525,25 +540,27 @@ onMounted(async () => {
           <article class="mermaid-panel mermaid-editor-panel">
             <div class="mermaid-preview-header">
               <div class="mermaid-actions">
-                <button
+                <UButton
                   class="mermaid-ghost-action"
+                  color="neutral"
+                  :label="copied ? '已复制' : '复制源码'"
                   type="button"
+                  variant="subtle"
                   @click="copySource"
-                >
-                  {{ copied ? '已复制' : '复制源码' }}
-                </button>
-                <button
+                />
+                <UButton
                   class="mermaid-ghost-action"
+                  color="neutral"
+                  label="下载 SVG"
                   type="button"
+                  variant="subtle"
                   :disabled="!canDownload"
                   @click="downloadSvg"
-                >
-                  下载 SVG
-                </button>
+                />
               </div>
             </div>
 
-            <textarea
+            <UTextarea
               v-model="source"
               class="mermaid-editor"
               spellcheck="false"

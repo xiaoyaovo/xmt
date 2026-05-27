@@ -73,19 +73,20 @@ function retryLogin() {
         v-if="status === 'error'"
         class="auth-callback-actions"
       >
-        <button
+        <UButton
           class="auth-callback-button"
+          color="primary"
+          label="重新登录"
           type="button"
           @click="retryLogin"
-        >
-          重新登录
-        </button>
-        <RouterLink
+        />
+        <UButton
           class="auth-callback-link"
+          color="neutral"
+          label="返回工具区"
           to="/tools"
-        >
-          返回工具区
-        </RouterLink>
+          variant="subtle"
+        />
       </div>
     </section>
   </div>

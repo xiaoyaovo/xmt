@@ -73,23 +73,24 @@ const emit = defineEmits(['save', 'save-as', 'login'])
     <slot />
 
     <div class="tool-save-actions">
-      <button
+      <UButton
         class="tool-save-primary-action"
+        color="primary"
+        :label="saveLabel"
         type="button"
         :disabled="saveDisabled"
         @click="emit('save')"
-      >
-        {{ saveLabel }}
-      </button>
-      <button
+      />
+      <UButton
         v-if="saveAsLabel"
         class="tool-save-ghost-action"
+        color="neutral"
+        :label="saveAsLabel"
         type="button"
+        variant="subtle"
         :disabled="saveAsDisabled"
         @click="emit('save-as')"
-      >
-        {{ saveAsLabel }}
-      </button>
+      />
       <slot name="actions" />
     </div>
 

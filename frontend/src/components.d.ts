@@ -35,6 +35,7 @@ declare module 'vue' {
     UBadge: typeof import('@nuxt/ui/components/Badge.vue')['default']
     UButton: typeof import('@nuxt/ui/components/Button.vue')['default']
     UCard: typeof import('@nuxt/ui/components/Card.vue')['default']
+    UDropdownMenu: typeof import('@nuxt/ui/components/DropdownMenu.vue')['default']
     UForm: typeof import('@nuxt/ui/components/Form.vue')['default']
     UFormField: typeof import('@nuxt/ui/components/FormField.vue')['default']
     UInput: typeof import('@nuxt/ui/components/Input.vue')['default']

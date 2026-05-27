@@ -332,6 +332,10 @@ async function changeRowsPerPage(value) {
 
 function updateCsvText(event) {
   const nextValue = event.target.value
+  updateCsvTextValue(nextValue)
+}
+
+function updateCsvTextValue(nextValue) {
   localPreview.updateFromCsvText(nextValue)
   page.value = 1
   if (!nextValue.trim()) {
@@ -428,45 +432,51 @@ onMounted(async () => {
             >{{ saveMetaText }}</p>
 
             <div class="csv-toolbar-actions">
-              <label
+              <UButton
+                as="label"
                 class="csv-file-picker"
-                :class="{ 'csv-file-picker-disabled': uploading || localPreview.loading.value }"
+                color="neutral"
+                type="button"
+                variant="subtle"
+                :disabled="uploading || localPreview.loading.value"
+                :loading="localPreview.loading.value"
+                :label="localPreview.loading.value ? '正在解析...' : '选择 CSV'"
               >
-                <input
+                <UInput
                   class="csv-file-input"
                   type="file"
                   accept=".csv,text/csv"
                   :disabled="uploading || localPreview.loading.value"
                   @change="handleFileInput"
-                >
-                <span class="csv-file-picker-title">
-                  {{ localPreview.loading.value ? '正在解析...' : '选择 CSV' }}
-                </span>
-              </label>
-              <button
+                />
+              </UButton>
+              <UButton
                 class="csv-primary-action"
+                color="primary"
+                :label="saveButtonText"
                 type="button"
                 :disabled="!canSaveCsv || uploading || localPreview.loading.value"
                 @click="saveLocalFile"
-              >
-                {{ saveButtonText }}
-              </button>
-              <button
+              />
+              <UButton
                 class="csv-ghost-action"
+                color="neutral"
+                label="清空"
                 type="button"
+                variant="subtle"
                 :disabled="!activeFile || uploading || localPreview.loading.value"
                 @click="clearLocalPreview"
-              >
-                清空
-              </button>
+              />
 
               <UPopover
                 v-model:open="historyOpen"
                 :content="{ align: 'end', sideOffset: 8 }"
               >
-                <button
+                <UButton
                   class="csv-ghost-action csv-history-trigger"
+                  color="neutral"
                   type="button"
+                  variant="subtle"
                   :disabled="historyTriggerDisabled"
                   aria-label="历史存档"
                 >
@@ -475,7 +485,7 @@ onMounted(async () => {
                     class="csv-history-trigger-caret"
                     aria-hidden="true"
                   >▾</span>
-                </button>
+                </UButton>
 
                 <template #content>
                   <div class="csv-history-popover">
@@ -487,14 +497,17 @@ onMounted(async () => {
                           class="csv-archive-count"
                         >· {{ archiveCountText }}</span>
                       </div>
-                      <button
+                      <UButton
                         class="csv-ghost-action csv-history-refresh"
+                        color="neutral"
+                        :label="loadingFiles ? '刷新中' : '刷新'"
+                        :loading="loadingFiles"
+                        size="sm"
                         type="button"
+                        variant="subtle"
                         :disabled="loadingFiles"
                         @click="refreshFiles"
-                      >
-                        {{ loadingFiles ? '刷新中' : '刷新' }}
-                      </button>
+                      />
                     </div>
 
                     <div
@@ -519,23 +532,27 @@ onMounted(async () => {
                         class="csv-history-row"
                         :class="{ 'csv-history-row-active': activeSource === 'history' && activeFile?.id === file.id }"
                       >
-                        <button
+                        <UButton
                           class="csv-history-open"
+                          color="neutral"
                           type="button"
+                          variant="ghost"
                           @click="selectHistoryFile(file)"
                         >
                           <span class="csv-history-title">{{ csvFileDisplayTitle(file) }}</span>
                           <span class="csv-history-meta">{{ csvFileSecondaryLine(file) }}</span>
-                        </button>
-                        <button
+                        </UButton>
+                        <UButton
                           class="csv-history-delete"
+                          color="error"
+                          :label="deletingId === file.id ? '...' : '×'"
+                          size="xs"
                           type="button"
+                          variant="ghost"
                           :disabled="deletingId === file.id"
                           :aria-label="`删除 ${csvFileDisplayTitle(file)}`"
                           @click.stop="removeFile(file)"
-                        >
-                          {{ deletingId === file.id ? '...' : '×' }}
-                        </button>
+                        />
                       </div>
                     </div>
                   </div>
@@ -577,20 +594,23 @@ onMounted(async () => {
                 v-if="activeSource === 'history'"
                 class="csv-actions"
               >
-                <a
+                <UButton
                   class="csv-ghost-action"
+                  color="neutral"
                   :href="csvDownloadUrl(activeFile.id)"
-                >
-                  下载原文件
-                </a>
-                <button
+                  label="下载原文件"
+                  variant="subtle"
+                />
+                <UButton
                   class="csv-ghost-action csv-danger-action"
+                  color="error"
+                  :label="deletingId === activeFile.id ? '删除中' : '删除'"
+                  :loading="deletingId === activeFile.id"
                   type="button"
+                  variant="soft"
                   :disabled="deletingId === activeFile.id"
                   @click="removeFile(activeFile)"
-                >
-                  {{ deletingId === activeFile.id ? '删除中' : '删除' }}
-                </button>
+                />
               </div>
             </div>
 
@@ -601,13 +621,14 @@ onMounted(async () => {
               解析提示：{{ localPreview.parseErrors.value.length }} 条
             </div>
 
-            <textarea
+            <UTextarea
               class="csv-text-editor"
               :value="csvTextPreview"
               placeholder="粘贴 CSV 内容，或拖入 .csv 文件"
               aria-label="CSV 源码编辑器"
               spellcheck="false"
               @input="updateCsvText"
+              @update:model-value="updateCsvTextValue"
               @dragenter.prevent="onDragEnter"
               @dragover.prevent="onDragOver"
               @dragleave.prevent="onDragLeave"
@@ -628,22 +649,24 @@ onMounted(async () => {
                   aria-label="每页行数"
                   @update:model-value="changeRowsPerPage"
                 />
-                <button
+                <UButton
                   class="csv-ghost-action"
+                  color="neutral"
+                  label="上一页"
                   type="button"
+                  variant="subtle"
                   :disabled="page <= 1 || loadingRows"
                   @click="goToPage(page - 1)"
-                >
-                  上一页
-                </button>
-                <button
+                />
+                <UButton
                   class="csv-ghost-action"
+                  color="neutral"
+                  label="下一页"
                   type="button"
+                  variant="subtle"
                   :disabled="page >= totalPages || loadingRows"
                   @click="goToPage(page + 1)"
-                >
-                  下一页
-                </button>
+                />
               </div>
             </div>
 
@@ -839,12 +862,7 @@ onMounted(async () => {
 
 .csv-file-picker {
   cursor: pointer;
-  display: inline-flex;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-pill, 999px);
   min-height: 38px;
-  padding: 0 13px;
 }
 
 .csv-file-input {
@@ -852,14 +870,6 @@ onMounted(async () => {
   opacity: 0;
   position: absolute;
   width: 1px;
-}
-
-.csv-file-picker-title {
-  align-items: center;
-  color: var(--shell-navy);
-  display: inline-flex;
-  font-size: 0.88rem;
-  font-weight: 800;
 }
 
 .csv-primary-action,
@@ -888,7 +898,7 @@ onMounted(async () => {
 
 .csv-primary-action:disabled,
 .csv-ghost-action:disabled,
-.csv-file-picker-disabled {
+.csv-file-picker[aria-disabled='true'] {
   cursor: not-allowed;
   opacity: 0.62;
 }

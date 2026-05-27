@@ -22,10 +22,13 @@ const emit = defineEmits(['select'])
 </script>
 
 <template>
-  <button
+  <UButton
     class="auth-provider-button"
+    color="neutral"
+    variant="ghost"
     type="button"
     :disabled="busy"
+    :loading="busy"
     @click="emit('select')"
   >
     <span
@@ -44,7 +47,7 @@ const emit = defineEmits(['select'])
     >
       →
     </span>
-  </button>
+  </UButton>
 </template>
 
 <style scoped>

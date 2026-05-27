@@ -1,6 +1,4 @@
 <script setup>
-import { RouterLink } from 'vue-router'
-
 defineProps({
   title: {
     type: String,
@@ -23,12 +21,13 @@ defineProps({
 
 <template>
   <header class="tool-page-strip">
-    <RouterLink
+    <UButton
       :to="backTo"
       class="tool-page-back"
-    >
-      {{ backLabel }}
-    </RouterLink>
+      color="neutral"
+      :label="backLabel"
+      variant="subtle"
+    />
 
     <div class="tool-page-title-block">
       <div

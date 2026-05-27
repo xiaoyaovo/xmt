@@ -1,6 +1,4 @@
 <script setup>
-import { loginPageUrl } from 'src/lib/auth'
-
 defineProps({
   authenticated: {
     type: Boolean,
@@ -43,20 +41,23 @@ const emit = defineEmits(['login'])
     </div>
 
     <div class="account-sync-actions">
-      <button
+      <UButton
         class="account-sync-button"
+        color="primary"
+        :label="loading ? '正在跳转...' : actionLabel"
+        :loading="loading"
         type="button"
         :disabled="loading"
         @click="emit('login')"
-      >
-        {{ loading ? '正在跳转...' : actionLabel }}
-      </button>
-      <a
+      />
+      <UButton
         class="account-sync-link"
-        :href="loginPageUrl()"
-      >
-        打开登录页
-      </a>
+        color="neutral"
+        href="/#/login"
+        label="打开登录页"
+        size="sm"
+        variant="link"
+      />
     </div>
   </section>
 </template>

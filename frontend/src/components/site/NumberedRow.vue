@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
 
 const props = defineProps({
   index: {
@@ -46,13 +45,14 @@ const isExternal = computed(() => Boolean(!props.to && props.href))
 </script>
 
 <template>
-  <component
-    :is="isInternal ? RouterLink : isExternal ? 'a' : 'div'"
+  <UButton
+    v-if="isInternal || isExternal"
     :to="isInternal ? to : undefined"
     :href="isExternal ? href : undefined"
     class="numbered-row"
-    :class="{ 'numbered-row-link': isInternal || isExternal }"
+    color="neutral"
     data-reveal
+    variant="ghost"
   >
     <span
       v-if="formattedIndex"
@@ -84,7 +84,36 @@ const isExternal = computed(() => Boolean(!props.to && props.href))
     >
       {{ cta }}
     </span>
-  </component>
+  </UButton>
+
+  <div
+    v-else
+    class="numbered-row"
+    data-reveal
+  >
+    <span
+      v-if="formattedIndex"
+      class="numbered-row-index"
+    >
+      {{ formattedIndex }}
+    </span>
+
+    <span class="numbered-row-body">
+      <span class="numbered-row-title">{{ title }}</span>
+      <span
+        v-if="description"
+        class="numbered-row-description"
+      >
+        {{ description }}
+      </span>
+      <span
+        v-if="meta"
+        class="numbered-row-meta"
+      >
+        {{ meta }}
+      </span>
+    </span>
+  </div>
 </template>
 
 <style scoped>
@@ -118,22 +147,27 @@ const isExternal = computed(() => Boolean(!props.to && props.href))
   border-top: 1px solid var(--shell-line);
 }
 
-.numbered-row-link {
+.numbered-row[href],
+.numbered-row[role='link'] {
   cursor: pointer;
 }
 
-.numbered-row-link:hover {
+.numbered-row[href]:hover,
+.numbered-row[role='link']:hover {
   background: rgba(16, 37, 66, 0.04);
 }
 
-.numbered-row-link:focus-visible {
+.numbered-row[href]:focus-visible,
+.numbered-row[role='link']:focus-visible {
   background: rgba(16, 37, 66, 0.06);
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
   outline: none;
 }
 
-.numbered-row-link:hover .numbered-row-cta,
-.numbered-row-link:focus-visible .numbered-row-cta {
+.numbered-row[href]:hover .numbered-row-cta,
+.numbered-row[role='link']:hover .numbered-row-cta,
+.numbered-row[href]:focus-visible .numbered-row-cta,
+.numbered-row[role='link']:focus-visible .numbered-row-cta {
   transform: translateX(4px);
 }
 

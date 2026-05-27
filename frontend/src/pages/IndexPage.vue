@@ -3,7 +3,6 @@ import NarrativeSection from 'src/components/site/NarrativeSection.vue'
 import NumberedRow from 'src/components/site/NumberedRow.vue'
 import { useScrollReveal } from 'src/composables/useScrollReveal'
 import { aboutSection, heroAction, homeHero, homeRows } from 'src/lib/siteHome'
-import { RouterLink } from 'vue-router'
 
 const { root } = useScrollReveal()
 </script>
@@ -26,13 +25,14 @@ const { root } = useScrollReveal()
           <h1 class="home-hero-title">{{ homeHero.title }}</h1>
           <p class="home-hero-description">{{ homeHero.description }}</p>
           <div class="home-hero-actions">
-            <RouterLink
+            <UButton
               :to="heroAction.to"
               class="home-hero-cta"
-            >
-              {{ heroAction.label }}
-              <span aria-hidden="true">→</span>
-            </RouterLink>
+              color="primary"
+              trailing-icon="i-lucide-arrow-right"
+              variant="solid"
+              :label="heroAction.label"
+            />
           </div>
         </div>
       </template>

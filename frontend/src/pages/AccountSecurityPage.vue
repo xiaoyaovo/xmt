@@ -246,13 +246,13 @@ onMounted(async () => {
         class="account-security-state"
       >
         登录后管理账号绑定。
-        <button
+        <UButton
           class="account-security-login"
+          color="primary"
+          label="登录"
           type="button"
           @click="auth.openLoginPage('/account/security')"
-        >
-          登录
-        </button>
+        />
       </div>
 
       <template v-if="auth.initialized && !auth.loading && !loading && auth.authenticated">
@@ -274,13 +274,14 @@ onMounted(async () => {
               删除当前账号会同时清除登录方式、云端同步数据、CSV 历史与已上传文件。
             </p>
           </div>
-          <button
+          <UButton
             class="account-security-danger-button"
+            color="error"
+            label="删除账号"
             type="button"
+            variant="soft"
             @click="openDeleteDialog"
-          >
-            删除账号
-          </button>
+          />
         </section>
       </template>
 

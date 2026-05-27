@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, reactive, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from 'src/stores/auth'
@@ -10,10 +10,12 @@ const router = useRouter()
 const RESEND_COOLDOWN_SECONDS = 60
 
 const step = shallowRef(1)
-const email = shallowRef('')
-const code = shallowRef('')
-const newPassword = shallowRef('')
-const confirmPassword = shallowRef('')
+const formState = reactive({
+  email: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: ''
+})
 const passwordVisible = shallowRef(false)
 const loading = shallowRef(false)
 const errorMessage = shallowRef('')
@@ -45,23 +47,53 @@ onBeforeUnmount(() => {
   }
 })
 
-const emailLooksValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()))
+const emailLooksValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formState.email.trim()))
 
 const canRequestCode = computed(
   () => !loading.value && cooldownLeft.value === 0 && emailLooksValid.value
 )
 
 const passwordsMatch = computed(
-  () => newPassword.value.length > 0 && newPassword.value === confirmPassword.value
+  () => formState.newPassword.length > 0 && formState.newPassword === formState.confirmPassword
 )
 
 const canSubmitReset = computed(
   () =>
     !loading.value &&
-    code.value.trim().length >= 4 &&
-    newPassword.value.length >= 8 &&
+    formState.code.trim().length >= 4 &&
+    formState.newPassword.length >= 8 &&
     passwordsMatch.value
 )
+
+function validateEmailStep(state) {
+  const errors = []
+  if (!state.email?.trim()) {
+    errors.push({ name: 'email', message: '请输入邮箱' })
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(state.email.trim())) {
+    errors.push({ name: 'email', message: '邮箱格式不正确' })
+  }
+  return errors
+}
+
+function validateResetStep(state) {
+  const errors = []
+  if (!state.code?.trim()) {
+    errors.push({ name: 'code', message: '请输入验证码' })
+  } else if (state.code.trim().length < 4) {
+    errors.push({ name: 'code', message: '验证码长度不正确' })
+  }
+  if (!state.newPassword) {
+    errors.push({ name: 'newPassword', message: '请输入新密码' })
+  } else if (state.newPassword.length < 8) {
+    errors.push({ name: 'newPassword', message: '密码至少 8 位' })
+  }
+  if (!state.confirmPassword) {
+    errors.push({ name: 'confirmPassword', message: '请再次输入新密码' })
+  } else if (state.newPassword !== state.confirmPassword) {
+    errors.push({ name: 'confirmPassword', message: '两次输入的密码不一致' })
+  }
+  return errors
+}
 
 function pickFriendlyMessage(error, fallback) {
   if (!error) return fallback
@@ -85,7 +117,7 @@ async function submitEmailStep() {
   noticeMessage.value = ''
   try {
     // 后端统一返回成功(防邮箱枚举),无论邮箱是否存在都进入下一步
-    await auth.requestPasswordResetCode(email.value.trim())
+    await auth.requestPasswordResetCode(formState.email.trim())
     step.value = 2
     noticeMessage.value = '若该邮箱已注册，验证码将在 10 分钟内有效。请检查收件箱与垃圾箱。'
     startCooldown()
@@ -103,7 +135,7 @@ async function resendCode() {
   errorMessage.value = ''
   noticeMessage.value = ''
   try {
-    await auth.requestPasswordResetCode(email.value.trim())
+    await auth.requestPasswordResetCode(formState.email.trim())
     noticeMessage.value = '验证码已重新发送。'
     startCooldown()
   } catch (error) {
@@ -114,7 +146,7 @@ async function resendCode() {
 }
 
 async function submitReset() {
-  if (newPassword.value.length < 8) {
+  if (formState.newPassword.length < 8) {
     errorMessage.value = '密码至少 8 位'
     return
   }
@@ -122,7 +154,7 @@ async function submitReset() {
     errorMessage.value = '两次输入的密码不一致'
     return
   }
-  if (!code.value.trim()) {
+  if (!formState.code.trim()) {
     errorMessage.value = '请输入验证码'
     return
   }
@@ -132,9 +164,9 @@ async function submitReset() {
   noticeMessage.value = ''
   try {
     await auth.resetPassword({
-      email: email.value.trim(),
-      code: code.value.trim(),
-      new_password: newPassword.value
+      email: formState.email.trim(),
+      code: formState.code.trim(),
+      new_password: formState.newPassword
     })
     await router.replace({
       path: '/login',
@@ -177,136 +209,155 @@ function backToEmailStep() {
           <span class="forgot-form-badge">RESET</span>
         </div>
 
-        <p
+        <UAlert
           v-if="noticeMessage"
-          class="forgot-notice"
-        >
-          {{ noticeMessage }}
-        </p>
-        <p
+          color="success"
+          variant="soft"
+          :description="noticeMessage"
+        />
+        <UAlert
           v-if="errorMessage"
-          class="forgot-error"
-        >
-          {{ errorMessage }}
-        </p>
+          color="error"
+          variant="soft"
+          :description="errorMessage"
+        />
 
-        <form
+        <UForm
           v-if="step === 1"
+          :state="formState"
+          :validate="validateEmailStep"
           class="forgot-form"
-          @submit.prevent="submitEmailStep"
+          @submit="submitEmailStep"
         >
-          <label class="forgot-field">
-            <span class="forgot-field-label">邮箱</span>
-            <input
-              v-model="email"
-              class="forgot-input"
+          <UFormField
+            label="邮箱"
+            name="email"
+            required
+          >
+            <UInput
+              v-model="formState.email"
               autocomplete="email"
               name="email"
               placeholder="you@example.com"
               type="email"
-            >
-          </label>
+            />
+          </UFormField>
 
-          <button
-            class="forgot-submit"
-            type="submit"
+          <UButton
+            block
+            color="primary"
             :disabled="loading || !emailLooksValid"
-          >
-            {{ loading ? '发送中...' : '发送验证码' }}
-          </button>
-        </form>
+            :label="loading ? '发送中...' : '发送验证码'"
+            :loading="loading"
+            type="submit"
+          />
+        </UForm>
 
-        <form
+        <UForm
           v-else
+          :state="formState"
+          :validate="validateResetStep"
           class="forgot-form"
-          @submit.prevent="submitReset"
+          @submit="submitReset"
         >
           <p class="forgot-hint">
-            若 <strong>{{ email }}</strong> 已注册，验证码已发送，10 分钟内有效。
+            若 <strong>{{ formState.email }}</strong> 已注册，验证码已发送，10 分钟内有效。
           </p>
 
-          <label class="forgot-field">
-            <span class="forgot-field-label">验证码</span>
-            <input
-              v-model="code"
-              class="forgot-input"
+          <UFormField
+            label="验证码"
+            name="code"
+            required
+          >
+            <UInput
+              v-model="formState.code"
               autocomplete="one-time-code"
               inputmode="numeric"
               maxlength="6"
               name="code"
               placeholder="6 位数字"
               type="text"
+            />
+          </UFormField>
+
+          <UFormField
+            label="新密码"
+            name="newPassword"
+            required
+          >
+            <UInput
+              v-model="formState.newPassword"
+              autocomplete="new-password"
+              name="new-password"
+              placeholder="至少 8 位"
+              :type="passwordVisible ? 'text' : 'password'"
             >
-          </label>
+              <template #trailing>
+                <UButton
+                  color="neutral"
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                  :label="passwordVisible ? '隐藏' : '显示'"
+                  @click="passwordVisible = !passwordVisible"
+                />
+              </template>
+            </UInput>
+          </UFormField>
 
-          <label class="forgot-field">
-            <span class="forgot-field-label">新密码</span>
-            <span class="forgot-password-wrap">
-              <input
-                v-model="newPassword"
-                class="forgot-input forgot-password-input"
-                autocomplete="new-password"
-                name="new-password"
-                placeholder="至少 8 位"
-                :type="passwordVisible ? 'text' : 'password'"
-              >
-              <button
-                class="forgot-password-toggle"
-                type="button"
-                @click="passwordVisible = !passwordVisible"
-              >
-                {{ passwordVisible ? '隐藏' : '显示' }}
-              </button>
-            </span>
-          </label>
-
-          <label class="forgot-field">
-            <span class="forgot-field-label">确认密码</span>
-            <input
-              v-model="confirmPassword"
-              class="forgot-input"
+          <UFormField
+            label="确认密码"
+            name="confirmPassword"
+            required
+          >
+            <UInput
+              v-model="formState.confirmPassword"
               autocomplete="new-password"
               name="confirm-password"
               placeholder="再次输入新密码"
               :type="passwordVisible ? 'text' : 'password'"
-            >
-          </label>
+            />
+          </UFormField>
 
-          <button
-            class="forgot-submit"
-            type="submit"
+          <UButton
+            block
+            color="primary"
             :disabled="!canSubmitReset"
-          >
-            {{ loading ? '提交中...' : '重置密码' }}
-          </button>
+            :label="loading ? '提交中...' : '重置密码'"
+            :loading="loading"
+            type="submit"
+          />
 
           <div class="forgot-aux">
-            <button
-              class="forgot-aux-button"
+            <UButton
+              color="neutral"
+              size="sm"
               type="button"
+              variant="subtle"
               :disabled="!canRequestCode"
+              :label="cooldownLeft > 0 ? `重新发送（${cooldownLeft}s）` : '重新发送验证码'"
               @click="resendCode"
-            >
-              {{ cooldownLeft > 0 ? `重新发送（${cooldownLeft}s）` : '重新发送验证码' }}
-            </button>
-            <button
-              class="forgot-aux-button"
+            />
+            <UButton
+              color="neutral"
+              label="修改邮箱"
+              size="sm"
               type="button"
+              variant="subtle"
               :disabled="loading"
               @click="backToEmailStep"
-            >
-              修改邮箱
-            </button>
+            />
           </div>
-        </form>
+        </UForm>
 
         <div class="forgot-footer">
-          <RouterLink
-            class="forgot-aux-link"
+          <UButton
+            color="neutral"
+            label="返回登录"
+            size="sm"
             to="/login"
-          >
-            返回登录
-          </RouterLink>
+            variant="link"
+          />
         </div>
       </div>
     </section>
@@ -394,112 +445,11 @@ function backToEmailStep() {
   padding: 6px 9px;
 }
 
-.forgot-field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.forgot-field-label {
-  color: rgba(16, 37, 66, 0.72);
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.forgot-input {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-md, 16px);
-  color: var(--shell-ink);
-  font: inherit;
-  min-height: 46px;
-  padding: 0 13px;
-  width: 100%;
-}
-
-.forgot-input:focus {
-  border-color: rgba(16, 37, 66, 0.28);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.14));
-  outline: none;
-}
-
-.forgot-password-wrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  position: relative;
-}
-
-.forgot-password-input {
-  padding-right: 66px;
-}
-
-.forgot-password-toggle {
-  align-self: center;
-  background: transparent;
-  border: 0;
-  color: rgba(16, 37, 66, 0.62);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 800;
-  margin-right: 10px;
-  padding: 6px;
-  position: absolute;
-  right: 0;
-}
-
 .forgot-hint {
   color: rgba(15, 23, 35, 0.7);
   font-size: 0.88rem;
   line-height: 1.6;
   margin: 0;
-}
-
-.forgot-error {
-  background: rgba(255, 122, 89, 0.1);
-  border: 1px solid rgba(255, 122, 89, 0.22);
-  border-radius: var(--brand-radius-md, 16px);
-  color: #9f2f17;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  margin: 0;
-  padding: 10px 12px;
-}
-
-.forgot-notice {
-  background: rgba(38, 194, 129, 0.12);
-  border: 1px solid rgba(38, 194, 129, 0.24);
-  border-radius: var(--brand-radius-md, 16px);
-  color: #137a4d;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  margin: 0;
-  padding: 10px 12px;
-}
-
-.forgot-submit {
-  align-items: center;
-  background: var(--brand-color-accent, var(--shell-navy));
-  border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
-  color: #ffffff;
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-weight: 850;
-  justify-content: center;
-  min-height: 46px;
-  padding: 0 16px;
-}
-
-.forgot-submit:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  outline: none;
-}
-
-.forgot-submit:disabled {
-  cursor: not-allowed;
-  opacity: 0.58;
 }
 
 .forgot-aux {
@@ -509,43 +459,12 @@ function backToEmailStep() {
   justify-content: space-between;
 }
 
-.forgot-aux-button {
-  background: rgba(255, 255, 255, 0.66);
-  border: 1px solid var(--shell-line);
-  border-radius: var(--brand-radius-pill, 999px);
-  color: var(--shell-navy);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 800;
-  min-height: 36px;
-  padding: 0 14px;
-}
-
-.forgot-aux-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
 .forgot-footer {
   border-top: 1px dashed var(--shell-line);
   display: flex;
   justify-content: center;
   margin-top: 4px;
   padding-top: 12px;
-}
-
-.forgot-aux-link {
-  color: rgba(15, 23, 35, 0.66);
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.forgot-aux-link:hover,
-.forgot-aux-link:focus-visible {
-  color: var(--shell-navy);
-  text-decoration: underline;
 }
 
 @media (max-width: 899px) {
