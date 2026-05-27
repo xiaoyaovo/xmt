@@ -20,7 +20,7 @@ CODE_MAX_ATTEMPTS = 5
 RESEND_INTERVAL_SECONDS = 60
 HOURLY_SEND_LIMIT = 5
 DAILY_SEND_LIMIT = 10
-VALID_PURPOSES = ("register", "password_reset")
+VALID_PURPOSES = ("register", "password_reset", "bind_email")
 
 
 def now_local() -> datetime:
@@ -385,6 +385,21 @@ async def _consume_code(record: VerificationCode) -> None:
     await record.save(update_fields=["consumed_at", "updated_at"])
 
 
+async def consume_verification_code(email: str, purpose: str) -> None:
+    normalized = _normalize_email(email)
+    record = (
+        await VerificationCode.filter(
+            email=normalized,
+            purpose=purpose,
+            consumed_at__isnull=True,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+    if record:
+        await _consume_code(record)
+
+
 async def register_with_code(
     *,
     email: str,
@@ -425,6 +440,53 @@ async def register_with_code(
     )
     await _consume_code(record)
     return user
+
+
+async def _ensure_email_can_bind(user: User, normalized: str) -> None:
+    existing_password_account = await UserAuthAccount.get_or_none(provider="password", provider_user_id=normalized)
+    if existing_password_account and existing_password_account.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该邮箱已绑定到其他账号")
+    if existing_password_account and existing_password_account.user_id == user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前账号已绑定邮箱登录")
+
+    email_owner = await User.get_or_none(email=normalized)
+    if email_owner and email_owner.id != user.id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该邮箱已绑定到其他账号")
+
+    current_password_account = await UserAuthAccount.get_or_none(user=user, provider="password")
+    if current_password_account:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前账号已绑定邮箱登录")
+
+
+async def request_bind_email(user: User, email: str) -> str:
+    normalized = _normalize_email(email)
+    await _ensure_email_can_bind(user, normalized)
+    return await create_verification_code(normalized, "bind_email")
+
+
+async def bind_email_login(user: User, *, email: str, code: str, password: str) -> UserAuthAccount:
+    normalized = _normalize_email(email)
+    await _ensure_email_can_bind(user, normalized)
+
+    record = await verify_code(normalized, code, "bind_email")
+    password_hash = hash_password(password)
+    account = await ensure_auth_account(
+        user,
+        provider="password",
+        provider_user_id=normalized,
+        provider_username=user.username,
+        provider_email=normalized,
+        password_hash=password_hash,
+    )
+
+    user.email = normalized
+    user.email_verified = True
+    user.password_hash = password_hash
+    if not user.provider_user_id:
+        user.provider_user_id = normalized
+    await user.save(update_fields=["email", "email_verified", "password_hash", "provider_user_id", "updated_at"])
+    await _consume_code(record)
+    return account
 
 
 async def request_password_reset(email: str) -> None:

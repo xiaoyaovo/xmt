@@ -19,7 +19,7 @@ const providerMeta = {
     label: '账号密码',
     mark: 'P',
     caption: '用于本地账号直接登录',
-    unlinkedCaption: '账号密码由管理员创建，暂不在这里开通'
+    unlinkedCaption: '绑定邮箱并设置密码后可直接登录'
   },
   github: {
     label: 'GitHub',
@@ -59,13 +59,13 @@ const caption = computed(() => {
 
 const actionLabel = computed(() => {
   if (props.busy) return '处理中...'
-  if (!props.account.linked) return props.account.provider === 'password' ? '不可绑定' : '绑定'
+  if (!props.account.linked) return props.account.provider === 'password' ? '绑定邮箱登录' : '绑定'
   return props.account.can_unlink ? '解绑' : '已绑定'
 })
 
 const actionDisabled = computed(() => {
   if (props.busy) return true
-  if (!props.account.linked) return props.account.provider === 'password'
+  if (!props.account.linked) return false
   return !props.account.can_unlink
 })
 

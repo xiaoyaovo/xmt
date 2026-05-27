@@ -14,6 +14,8 @@ from app.schemas.auth import (
     AuthAccountListResponse,
     AuthAccountResponse,
     AuthMeResponse,
+    BindEmailIn,
+    BindEmailRequestCodeIn,
     GenericOkResponse,
     LoginResponse,
     OAuthUrlResponse,
@@ -27,6 +29,8 @@ from app.schemas.auth import (
 from app.services.auth_service import (
     AUTH_PROVIDERS,
     authenticate_password_user,
+    bind_email_login,
+    consume_verification_code,
     create_login_token,
     create_verification_code,
     delete_user_account,
@@ -34,6 +38,7 @@ from app.services.auth_service import (
     link_oauth_account,
     list_auth_accounts,
     register_with_code,
+    request_bind_email,
     request_password_reset,
     reset_password,
     unlink_auth_account,
@@ -305,6 +310,39 @@ async def register_request_code(payload: RegisterRequestCodeIn) -> GenericOkResp
         return GenericOkResponse(message="如该邮箱可注册,验证码已发送")
 
     return GenericOkResponse(message="如该邮箱可注册,验证码已发送")
+
+
+@router.post(
+    "/bind-email/request-code",
+    response_model=GenericOkResponse,
+    summary="Send an email binding verification code",
+)
+async def bind_email_request_code(
+    payload: BindEmailRequestCodeIn,
+    user: User = Depends(require_current_user),
+) -> GenericOkResponse:
+    code = await request_bind_email(user, payload.email)
+    try:
+        await send_verification_code(to=payload.email, code=code)
+    except Exception:
+        await consume_verification_code(payload.email, "bind_email")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="验证码发送失败,请稍后重试")
+    return GenericOkResponse(message="验证码已发送")
+
+
+@router.post(
+    "/bind-email",
+    response_model=AuthAccountResponse,
+    summary="Bind email and password login to current user",
+)
+async def bind_email(payload: BindEmailIn, user: User = Depends(require_current_user)) -> AuthAccountResponse:
+    account = await bind_email_login(
+        user,
+        email=payload.email,
+        code=payload.code,
+        password=payload.password,
+    )
+    return serialize_auth_account(account, can_unlink=False)
 
 
 @router.post("/register", response_model=LoginResponse, summary="Complete registration with code")

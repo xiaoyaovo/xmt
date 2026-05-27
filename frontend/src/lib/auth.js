@@ -23,6 +23,14 @@ export function requestRegisterCode(email) {
   return request.post('/auth/register/request-code', { email })
 }
 
+export function requestBindEmailCode(email) {
+  return request.post('/auth/bind-email/request-code', { email })
+}
+
+export function bindEmailLogin({ email, code, password }) {
+  return request.post('/auth/bind-email', { email, code, password })
+}
+
 export function registerWithCode({ email, code, password, username }) {
   const payload = { email, code, password }
   if (username) {

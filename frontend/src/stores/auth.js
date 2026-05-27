@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 
 import {
+  bindEmailLogin,
   clearAccessToken,
   createOAuthLinkUrl,
   deleteCurrentUser,
@@ -16,6 +17,7 @@ import {
   requestPasswordResetCode,
   requestRegisterCode,
   resetPassword,
+  requestBindEmailCode,
   setAccessToken
 } from 'src/lib/auth'
 
@@ -78,6 +80,14 @@ export const useAuthStore = defineStore('auth', {
 
     async requestRegisterCode(email) {
       return requestRegisterCode(email)
+    },
+
+    async requestBindEmailCode(email) {
+      return requestBindEmailCode(email)
+    },
+
+    async bindEmailLogin(payload) {
+      return bindEmailLogin(payload)
     },
 
     async register({ email, code, password, username }) {

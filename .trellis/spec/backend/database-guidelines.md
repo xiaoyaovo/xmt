@@ -220,6 +220,8 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
 - DB: `user_auth_accounts(provider, provider_user_id)` identifies one provider account, and
   `user_auth_accounts(user_id, provider)` enforces one account per provider per user in the current product.
 - API: `POST /api/v1/auth/login` accepts `{ "username": string, "password": string }`.
+- Email binding APIs: `POST /api/v1/auth/bind-email/request-code` sends a verification code for the current user, and
+  `POST /api/v1/auth/bind-email` adds `password` login to the current user after code verification.
 - OAuth APIs: `GET /api/v1/auth/{github|linuxdo}/login`, `GET /api/v1/auth/{github|linuxdo}/callback`.
 - Account binding APIs: `GET /api/v1/auth/accounts`, `GET /api/v1/auth/{github|linuxdo}/link`,
   `DELETE /api/v1/auth/accounts/{provider}`.
@@ -233,6 +235,8 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
   `UserAuthAccount` first and keep `users.auth_provider/provider_user_id/password_hash` as legacy compatibility only.
 - For password accounts, `provider_user_id` must equal the local username and `password_hash` must be set on
   `user_auth_accounts`.
+- A user who signed in with OAuth should bind email/password through the account security page rather than creating a
+  separate email registration. Binding must reject emails already owned by another user or password account.
 - For OAuth accounts, `provider_user_id` must be the provider's stable user id; `password_hash` stays null.
 - OAuth login state is a signed payload created with `create_signed_payload()` and includes `purpose`, `redirect`,
   `frontend_origin`, `exp`, and for binding, `user_id`. Do not trust unsigned `state` for account linking.
@@ -256,6 +260,8 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
 ### 4. Validation & Error Matrix
 
 - Empty username/password -> `400 请输入账号和密码`.
+- Binding email already used by another user or password account -> `409 该邮箱已绑定到其他账号`.
+- Binding email when the current user already has password login -> `400 当前账号已绑定邮箱登录`.
 - Unknown password user or wrong password -> `401 账号或密码错误`.
 - OAuth provider missing credentials -> `500 <Provider> OAuth is not configured`.
 - OAuth token response without `access_token` -> `400 <Provider> login failed`.

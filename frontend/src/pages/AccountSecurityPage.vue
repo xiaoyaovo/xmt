@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import AccountDeleteDialog from 'src/components/account/AccountDeleteDialog.vue'
 import AccountLinkResultDialog from 'src/components/account/AccountLinkResultDialog.vue'
 import AuthAccountRow from 'src/components/account/AuthAccountRow.vue'
+import BindEmailDialog from 'src/components/account/BindEmailDialog.vue'
 import { listAuthAccounts, unlinkAuthAccount } from 'src/lib/auth'
 import { useAuthStore } from 'src/stores/auth'
 
@@ -21,6 +22,10 @@ const linkResultOpen = shallowRef(false)
 const deleteDialogOpen = shallowRef(false)
 const deletingAccount = shallowRef(false)
 const deleteError = shallowRef('')
+const bindEmailOpen = shallowRef(false)
+const bindingEmail = shallowRef(false)
+const bindEmailError = shallowRef('')
+const bindEmailNotice = shallowRef('')
 const linkResult = shallowRef({
   provider: '',
   providerLabel: '第三方账号',
@@ -77,6 +82,13 @@ async function loadAccounts() {
 }
 
 async function linkProvider(provider, options = {}) {
+  if (provider === 'password') {
+    bindEmailError.value = ''
+    bindEmailNotice.value = ''
+    bindEmailOpen.value = true
+    return
+  }
+
   actionProvider.value = provider
   errorMessage.value = ''
   noticeMessage.value = ''
@@ -88,6 +100,49 @@ async function linkProvider(provider, options = {}) {
   } catch (error) {
     actionProvider.value = ''
     errorMessage.value = error.message || '无法开始绑定，请稍后重试'
+  }
+}
+
+function friendlyAuthMessage(error, fallback) {
+  if (!error) return fallback
+  if (error.code === 429) {
+    return error.message || '请求过于频繁，请稍后再试'
+  }
+  if (error.code === 'NETWORK_ERROR') {
+    return '网络异常，请检查连接后重试'
+  }
+  return error.message || fallback
+}
+
+async function requestBindEmailCode(email, controls = {}) {
+  bindingEmail.value = true
+  bindEmailError.value = ''
+  bindEmailNotice.value = ''
+  try {
+    await auth.requestBindEmailCode(email)
+    bindEmailNotice.value = '验证码已发送，请在 10 分钟内填写。'
+    controls.onSuccess?.()
+  } catch (error) {
+    bindEmailError.value = friendlyAuthMessage(error, '发送验证码失败，请稍后重试')
+  } finally {
+    bindingEmail.value = false
+  }
+}
+
+async function bindEmailLogin(payload) {
+  bindingEmail.value = true
+  bindEmailError.value = ''
+  bindEmailNotice.value = ''
+  try {
+    await auth.bindEmailLogin(payload)
+    bindEmailOpen.value = false
+    noticeMessage.value = '邮箱登录已绑定'
+    await auth.refreshMe()
+    await loadAccounts()
+  } catch (error) {
+    bindEmailError.value = friendlyAuthMessage(error, '绑定失败，请检查验证码后重试')
+  } finally {
+    bindingEmail.value = false
   }
 }
 
@@ -236,6 +291,15 @@ onMounted(async () => {
         :message="linkResult.message"
         @login="handleDialogLogin"
         @retry="handleDialogRetry"
+      />
+
+      <BindEmailDialog
+        v-model:open="bindEmailOpen"
+        :busy="bindingEmail"
+        :error="bindEmailError"
+        :notice="bindEmailNotice"
+        @request-code="requestBindEmailCode"
+        @confirm="bindEmailLogin"
       />
 
       <AccountDeleteDialog

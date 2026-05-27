@@ -9,6 +9,7 @@ declare global {
   const AUTH_TOKEN_STORAGE_KEY: typeof import('./lib/auth.js').AUTH_TOKEN_STORAGE_KEY
   const EffectScope: typeof import('vue').EffectScope
   const aboutSection: typeof import('./lib/siteHome.js').aboutSection
+  const bindEmailLogin: typeof import('./lib/auth.js').bindEmailLogin
   const clearAccessToken: typeof import('./lib/auth.js').clearAccessToken
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
@@ -75,6 +76,7 @@ declare global {
   const ref: typeof import('vue').ref
   const registerWithCode: typeof import('./lib/auth.js').registerWithCode
   const request: typeof import('./lib/index.js').request
+  const requestBindEmailCode: typeof import('./lib/auth.js').requestBindEmailCode
   const requestPasswordResetCode: typeof import('./lib/auth.js').requestPasswordResetCode
   const requestRegisterCode: typeof import('./lib/auth.js').requestRegisterCode
   const resetPassword: typeof import('./lib/auth.js').resetPassword
