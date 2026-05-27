@@ -237,11 +237,15 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
   `frontend_origin`, `exp`, and for binding, `user_id`. Do not trust unsigned `state` for account linking.
 - Binding start endpoints require Bearer auth and return `{ "url": "<provider authorize URL>" }`; the browser cannot
   navigate directly to these endpoints because top-level navigation does not include the Authorization header.
+- GitHub binding retry may pass `prompt=select_account` to the start endpoint; the backend should forward only this
+  known GitHub prompt to the authorize URL so "换一个账号绑定" opens GitHub's account picker instead of silently reusing
+  the current GitHub session.
 - Frontend auth callback receives `/#/auth/callback?access_token=<jwt>&redirect=<safe-path>` for login and
   `/#/auth/callback?provider=<provider>&provider_status=<linked|conflict|auth_required>&redirect=<safe-path>&message=<text>`
   for account-linking outcomes.
 - OAuth account-linking callbacks are browser navigations, so expected user-facing failures must redirect back to the
-  frontend callback instead of returning raw JSON. The account security page owns the final inline success/error copy.
+  frontend callback instead of returning raw JSON. The account security page owns the final Reka Dialog or inline
+  success/error copy.
 - Env keys: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `LINUXDO_CLIENT_ID`,
   `LINUXDO_CLIENT_SECRET`, optional `LINUXDO_AUTHORIZE_URL`, `LINUXDO_TOKEN_URL`, `LINUXDO_USER_URL`.
 
@@ -306,6 +310,6 @@ for binding a provider from the frontend.
 Correct:
 
 ```javascript
-const response = await createOAuthLinkUrl('github', '/account/security')
+const response = await createOAuthLinkUrl('github', '/account/security', { selectAccount: true })
 window.location.href = response.url
 ```

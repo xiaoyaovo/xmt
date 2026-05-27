@@ -107,8 +107,8 @@ export const useAuthStore = defineStore('auth', {
       window.location.href = linuxdoLoginUrl(redirect)
     },
 
-    async linkProvider(provider, redirect = '/account/security') {
-      const response = await createOAuthLinkUrl(provider, redirect)
+    async linkProvider(provider, redirect = '/account/security', options = {}) {
+      const response = await createOAuthLinkUrl(provider, redirect, options)
       window.location.href = response.url
     },
 

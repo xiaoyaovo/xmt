@@ -43,13 +43,16 @@ export function unlinkAuthAccount(provider) {
   return request.delete(`/auth/accounts/${encodeURIComponent(provider)}`)
 }
 
-export function createOAuthLinkUrl(provider, redirect = '/account/security') {
+export function createOAuthLinkUrl(provider, redirect = '/account/security', options = {}) {
   const search = new URLSearchParams()
   if (redirect) {
     search.set('redirect', redirect)
   }
   if (window.location.origin) {
     search.set('frontend_origin', window.location.origin)
+  }
+  if (provider === 'github' && options.selectAccount) {
+    search.set('prompt', 'select_account')
   }
 
   return request.get(`/auth/${provider}/link?${search.toString()}`)

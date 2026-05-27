@@ -255,15 +255,17 @@ def _linuxdo_profile_values(profile: dict) -> dict:
     }
 
 
-def _github_authorize_url(request: Request, state: str) -> str:
-    query = urlencode(
-        {
-            "client_id": settings.github_client_id,
-            "redirect_uri": str(request.url_for("github_callback")),
-            "scope": "read:user user:email",
-            "state": state,
-        }
-    )
+def _github_authorize_url(request: Request, state: str, *, prompt: str | None = None) -> str:
+    query_params = {
+        "client_id": settings.github_client_id,
+        "redirect_uri": str(request.url_for("github_callback")),
+        "scope": "read:user user:email",
+        "state": state,
+    }
+    if prompt == "select_account":
+        query_params["prompt"] = prompt
+
+    query = urlencode(query_params)
     return f"https://github.com/login/oauth/authorize?{query}"
 
 
@@ -411,6 +413,7 @@ async def github_link(
     request: Request,
     redirect: str = "/account/security",
     frontend_origin: str = "",
+    prompt: str = "",
     user: User = Depends(require_current_user),
 ) -> RedirectResponse:
     if not settings.github_client_id:
@@ -423,7 +426,8 @@ async def github_link(
         frontend_origin=safe_frontend_origin,
         user_id=user.id,
     )
-    return OAuthUrlResponse(url=_github_authorize_url(request, state))
+    github_prompt = "select_account" if prompt == "select_account" else None
+    return OAuthUrlResponse(url=_github_authorize_url(request, state, prompt=github_prompt))
 
 
 @router.get("/linuxdo/login", summary="Start LinuxDo OAuth login")

@@ -72,12 +72,12 @@ async function loadAccounts() {
   }
 }
 
-async function linkProvider(provider) {
+async function linkProvider(provider, options = {}) {
   actionProvider.value = provider
   errorMessage.value = ''
   noticeMessage.value = ''
   try {
-    await auth.linkProvider(provider, '/account/security')
+    await auth.linkProvider(provider, '/account/security', options)
   } catch (error) {
     actionProvider.value = ''
     errorMessage.value = error.message || '无法开始绑定，请稍后重试'
@@ -112,7 +112,7 @@ async function handleDialogRetry() {
   const provider = linkResult.value.provider
   linkResultOpen.value = false
   if (provider) {
-    await linkProvider(provider)
+    await linkProvider(provider, { selectAccount: provider === 'github' })
   }
 }
 
