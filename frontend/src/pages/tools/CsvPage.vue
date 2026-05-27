@@ -967,10 +967,11 @@ onMounted(async () => {
 }
 
 .csv-text-editor :deep(.csv-text-editor-base) {
-  background: #0f1723;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--brand-color-surface, #ffffff);
+  border: 1px solid var(--brand-color-border, var(--shell-line));
   border-radius: var(--brand-radius-md, 16px);
-  color: #edf6ff;
+  caret-color: var(--brand-color-accent, var(--shell-navy));
+  color: var(--brand-color-text, var(--shell-ink));
   font: 0.9rem/1.65 "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
   height: 100%;
   margin-top: 0;
@@ -988,7 +989,23 @@ onMounted(async () => {
 }
 
 .csv-text-editor :deep(.csv-text-editor-base::placeholder) {
-  color: rgba(237, 246, 255, 0.45);
+  color: var(--brand-color-muted, var(--shell-muted));
+  opacity: 0.72;
+}
+
+:global(html.dark) .csv-text-editor :deep(.csv-text-editor-base),
+:global(html[data-brand-theme='terminal']) .csv-text-editor :deep(.csv-text-editor-base),
+:global(html[data-brand-theme='spotify']) .csv-text-editor :deep(.csv-text-editor-base) {
+  background: var(--brand-color-surface-2, #0f1723);
+  border-color: var(--brand-color-border, rgba(255, 255, 255, 0.08));
+  color: var(--brand-color-text, #edf6ff);
+}
+
+:global(html.dark) .csv-text-editor :deep(.csv-text-editor-base::placeholder),
+:global(html[data-brand-theme='terminal']) .csv-text-editor :deep(.csv-text-editor-base::placeholder),
+:global(html[data-brand-theme='spotify']) .csv-text-editor :deep(.csv-text-editor-base::placeholder) {
+  color: var(--brand-color-muted, rgba(237, 246, 255, 0.45));
+  opacity: 0.76;
 }
 
 .csv-edit-panel-drag .csv-text-editor :deep(.csv-text-editor-base) {
