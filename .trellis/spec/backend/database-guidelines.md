@@ -237,9 +237,9 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
   `frontend_origin`, `exp`, and for binding, `user_id`. Do not trust unsigned `state` for account linking.
 - Binding start endpoints require Bearer auth and return `{ "url": "<provider authorize URL>" }`; the browser cannot
   navigate directly to these endpoints because top-level navigation does not include the Authorization header.
-- GitHub binding retry may pass `prompt=select_account` to the start endpoint; the backend should forward only this
-  known GitHub prompt to the authorize URL so "换一个账号绑定" opens GitHub's account picker instead of silently reusing
-  the current GitHub session.
+- GitHub account-linking from the account security page should pass `prompt=select_account` to the start endpoint; the
+  backend should forward only this known GitHub prompt to the authorize URL so binding opens GitHub's account picker
+  instead of silently reusing the current GitHub session.
 - Frontend auth callback receives `/#/auth/callback?access_token=<jwt>&redirect=<safe-path>` for login and
   `/#/auth/callback?provider=<provider>&provider_status=<linked|conflict|auth_required>&redirect=<safe-path>&message=<text>`
   for account-linking outcomes.

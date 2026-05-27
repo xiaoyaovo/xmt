@@ -77,7 +77,10 @@ async function linkProvider(provider, options = {}) {
   errorMessage.value = ''
   noticeMessage.value = ''
   try {
-    await auth.linkProvider(provider, '/account/security', options)
+    await auth.linkProvider(provider, '/account/security', {
+      ...options,
+      selectAccount: provider === 'github' || options.selectAccount
+    })
   } catch (error) {
     actionProvider.value = ''
     errorMessage.value = error.message || '无法开始绑定，请稍后重试'
@@ -112,7 +115,7 @@ async function handleDialogRetry() {
   const provider = linkResult.value.provider
   linkResultOpen.value = false
   if (provider) {
-    await linkProvider(provider, { selectAccount: provider === 'github' })
+    await linkProvider(provider)
   }
 }
 
