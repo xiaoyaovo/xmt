@@ -1,6 +1,21 @@
 from datetime import datetime
+import re
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import AfterValidator, BaseModel, Field
+
+
+_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def _validate_email(value: str) -> str:
+    normalized = value.strip().lower()
+    if not _EMAIL_RE.fullmatch(normalized):
+        raise ValueError("邮箱格式不正确")
+    return normalized
+
+
+EmailStr = Annotated[str, AfterValidator(_validate_email)]
 
 
 class UserResponse(BaseModel):
@@ -36,7 +51,7 @@ class AuthMeResponse(BaseModel):
 
 
 class PasswordLoginRequest(BaseModel):
-    username: str
+    email: EmailStr
     password: str
 
 
@@ -48,3 +63,29 @@ class LoginResponse(BaseModel):
 
 class OAuthUrlResponse(BaseModel):
     url: str
+
+
+class RegisterRequestCodeIn(BaseModel):
+    email: EmailStr
+
+
+class RegisterIn(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
+    password: str = Field(min_length=8, max_length=128)
+    username: str | None = Field(default=None, max_length=64)
+
+
+class PasswordForgotIn(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetIn(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class GenericOkResponse(BaseModel):
+    ok: bool = True
+    message: str

@@ -11,8 +11,28 @@ export function logout() {
   return request.post('/auth/logout')
 }
 
-export function passwordLogin({ username, password }) {
-  return request.post('/auth/login', { username, password })
+export function passwordLogin({ email, password }) {
+  return request.post('/auth/login', { email, password })
+}
+
+export function requestRegisterCode(email) {
+  return request.post('/auth/register/request-code', { email })
+}
+
+export function registerWithCode({ email, code, password, username }) {
+  const payload = { email, code, password }
+  if (username) {
+    payload.username = username
+  }
+  return request.post('/auth/register', payload)
+}
+
+export function requestPasswordResetCode(email) {
+  return request.post('/auth/password/forgot', { email })
+}
+
+export function resetPassword({ email, code, new_password }) {
+  return request.post('/auth/password/reset', { email, code, new_password })
 }
 
 export function listAuthAccounts() {

@@ -14,20 +14,30 @@ from app.schemas.auth import (
     AuthAccountListResponse,
     AuthAccountResponse,
     AuthMeResponse,
+    GenericOkResponse,
     LoginResponse,
     OAuthUrlResponse,
+    PasswordForgotIn,
     PasswordLoginRequest,
+    PasswordResetIn,
+    RegisterIn,
+    RegisterRequestCodeIn,
     UserResponse,
 )
 from app.services.auth_service import (
     AUTH_PROVIDERS,
     authenticate_password_user,
     create_login_token,
+    create_verification_code,
     get_or_create_oauth_user,
     link_oauth_account,
     list_auth_accounts,
+    register_with_code,
+    request_password_reset,
+    reset_password,
     unlink_auth_account,
 )
+from app.services.email_service import send_verification_code
 from app.services.jwt_service import create_signed_payload, decode_signed_payload
 from app.settings.config import settings
 
@@ -260,10 +270,66 @@ def _linuxdo_authorize_url(request: Request, state: str) -> str:
     return f"{settings.linuxdo_authorize_url}?{query}"
 
 
-@router.post("/login", response_model=LoginResponse, summary="Login with username and password")
+@router.post("/login", response_model=LoginResponse, summary="Login with email and password")
 async def password_login(payload: PasswordLoginRequest) -> LoginResponse:
-    user = await authenticate_password_user(payload.username, payload.password)
+    user = await authenticate_password_user(payload.email, payload.password)
     return LoginResponse(access_token=create_login_token(user), user=serialize_user(user))
+
+
+@router.post(
+    "/register/request-code",
+    response_model=GenericOkResponse,
+    summary="Send a registration verification code",
+)
+async def register_request_code(payload: RegisterRequestCodeIn) -> GenericOkResponse:
+    try:
+        code = await create_verification_code(payload.email, "register")
+        await send_verification_code(to=payload.email, code=code)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            raise
+        # Don't leak email-delivery details to clients.
+        return GenericOkResponse(message="如该邮箱可注册,验证码已发送")
+
+    return GenericOkResponse(message="如该邮箱可注册,验证码已发送")
+
+
+@router.post("/register", response_model=LoginResponse, summary="Complete registration with code")
+async def register(payload: RegisterIn) -> LoginResponse:
+    user = await register_with_code(
+        email=payload.email,
+        code=payload.code,
+        password=payload.password,
+        username=payload.username,
+    )
+    return LoginResponse(access_token=create_login_token(user), user=serialize_user(user))
+
+
+@router.post(
+    "/password/forgot",
+    response_model=GenericOkResponse,
+    summary="Request a password reset verification code",
+)
+async def password_forgot(payload: PasswordForgotIn) -> GenericOkResponse:
+    try:
+        await request_password_reset(payload.email)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+            raise
+        # Anti-enumeration: hide all other errors behind a generic success.
+        return GenericOkResponse(message="如该邮箱已注册,验证码已发送")
+
+    return GenericOkResponse(message="如该邮箱已注册,验证码已发送")
+
+
+@router.post(
+    "/password/reset",
+    response_model=GenericOkResponse,
+    summary="Reset password with verification code",
+)
+async def password_reset(payload: PasswordResetIn) -> GenericOkResponse:
+    await reset_password(email=payload.email, code=payload.code, new_password=payload.new_password)
+    return GenericOkResponse(message="密码已重置,请使用新密码登录")
 
 
 @router.get("/github/login", summary="Start GitHub OAuth login")

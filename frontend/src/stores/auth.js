@@ -11,6 +11,10 @@ import {
   loginPageUrl,
   logout as requestLogout,
   passwordLogin,
+  registerWithCode,
+  requestPasswordResetCode,
+  requestRegisterCode,
+  resetPassword,
   setAccessToken
 } from 'src/lib/auth'
 
@@ -69,6 +73,26 @@ export const useAuthStore = defineStore('auth', {
       this.accessToken = response.access_token
       setAccessToken(response.access_token)
       return response
+    },
+
+    async requestRegisterCode(email) {
+      return requestRegisterCode(email)
+    },
+
+    async register({ email, code, password, username }) {
+      const response = await registerWithCode({ email, code, password, username })
+      this.user = response.user || null
+      this.accessToken = response.access_token
+      setAccessToken(response.access_token)
+      return response
+    },
+
+    async requestPasswordResetCode(email) {
+      return requestPasswordResetCode(email)
+    },
+
+    async resetPassword(payload) {
+      return resetPassword(payload)
     },
 
     openLoginPage(redirect) {

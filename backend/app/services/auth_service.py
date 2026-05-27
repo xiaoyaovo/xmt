@@ -1,41 +1,68 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+import hashlib
+import hmac
+import secrets
 
 from fastapi import HTTPException, status
 
 from app.models.user import User
 from app.models.user_auth_account import UserAuthAccount
+from app.models.verification_code import VerificationCode
 from app.services.jwt_service import create_access_token
-from app.services.password_service import verify_password
+from app.services.password_service import hash_password, verify_password
 
 AUTH_PROVIDERS = ("password", "github", "linuxdo")
+
+CODE_TTL_MINUTES = 10
+CODE_MAX_ATTEMPTS = 5
+RESEND_INTERVAL_SECONDS = 60
+HOURLY_SEND_LIMIT = 5
+DAILY_SEND_LIMIT = 10
+VALID_PURPOSES = ("register", "password_reset")
 
 
 def now_naive_utc() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-async def authenticate_password_user(username: str, password: str) -> User:
-    normalized_username = username.strip()
-    if not normalized_username or not password:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="请输入账号和密码")
+def _normalize_email(email: str) -> str:
+    return email.strip().lower()
 
-    account = await UserAuthAccount.get_or_none(provider="password", provider_user_id=normalized_username).prefetch_related(
-        "user"
-    )
+
+def _hash_code(code: str) -> str:
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()
+
+
+def _verify_code_hash(code: str, code_hash: str) -> bool:
+    return hmac.compare_digest(_hash_code(code), code_hash)
+
+
+def _generate_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+async def authenticate_password_user(email: str, password: str) -> User:
+    normalized_email = _normalize_email(email)
+    if not normalized_email or not password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="请输入邮箱和密码")
+
+    account = await UserAuthAccount.get_or_none(
+        provider="password", provider_user_id=normalized_email
+    ).prefetch_related("user")
     if account and verify_password(password, account.password_hash):
         await mark_login_used(account)
         return account.user
 
-    legacy_user = await User.get_or_none(auth_provider="password", username=normalized_username)
+    legacy_user = await User.get_or_none(auth_provider="password", email=normalized_email)
     if not legacy_user or not verify_password(password, legacy_user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="账号或密码错误")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="邮箱或密码错误")
 
     account = await ensure_auth_account(
         legacy_user,
         provider="password",
-        provider_user_id=normalized_username,
-        provider_username=normalized_username,
-        provider_email=legacy_user.email,
+        provider_user_id=normalized_email,
+        provider_username=legacy_user.username,
+        provider_email=normalized_email,
         avatar_url=legacy_user.avatar_url,
         password_hash=legacy_user.password_hash,
     )
@@ -121,9 +148,12 @@ async def get_or_create_oauth_user(
         user.username = username
         user.avatar_url = avatar_url
         user.email = email
+        user.email_verified = True
         if github_id is not None:
             user.github_id = github_id
-        await user.save(update_fields=["username", "avatar_url", "email", "github_id", "updated_at"])
+        await user.save(
+            update_fields=["username", "avatar_url", "email", "email_verified", "github_id", "updated_at"]
+        )
         await ensure_auth_account(
             user,
             provider=provider,
@@ -148,6 +178,7 @@ async def get_or_create_oauth_user(
             username=username,
             avatar_url=avatar_url,
             email=email,
+            email_verified=True,
             last_login_at=now_naive_utc(),
         )
     else:
@@ -158,6 +189,7 @@ async def get_or_create_oauth_user(
         user.username = username
         user.avatar_url = avatar_url
         user.email = email
+        user.email_verified = True
         user.last_login_at = now_naive_utc()
         await user.save(
             update_fields=[
@@ -167,6 +199,7 @@ async def get_or_create_oauth_user(
                 "username",
                 "avatar_url",
                 "email",
+                "email_verified",
                 "last_login_at",
                 "updated_at",
             ]
@@ -238,3 +271,185 @@ async def unlink_auth_account(user: User, provider: str) -> None:
     if provider == "github" and user.github_id == account.provider_user_id:
         user.github_id = None
         await user.save(update_fields=["github_id", "updated_at"])
+
+
+async def _enforce_send_rate_limits(email: str, purpose: str) -> None:
+    now = now_naive_utc()
+    last = (
+        await VerificationCode.filter(email=email, purpose=purpose)
+        .order_by("-created_at")
+        .first()
+    )
+    if last and (now - last.created_at) < timedelta(seconds=RESEND_INTERVAL_SECONDS):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="发送过于频繁,请稍后再试",
+        )
+
+    hourly_count = await VerificationCode.filter(
+        email=email,
+        purpose=purpose,
+        created_at__gte=now - timedelta(hours=1),
+    ).count()
+    if hourly_count >= HOURLY_SEND_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="该邮箱发送次数过多,请稍后再试",
+        )
+
+    daily_count = await VerificationCode.filter(
+        email=email,
+        purpose=purpose,
+        created_at__gte=now - timedelta(days=1),
+    ).count()
+    if daily_count >= DAILY_SEND_LIMIT:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="该邮箱今日发送次数已达上限",
+        )
+
+
+async def create_verification_code(email: str, purpose: str) -> str:
+    if purpose not in VALID_PURPOSES:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码用途无效")
+
+    normalized = _normalize_email(email)
+    await _enforce_send_rate_limits(normalized, purpose)
+
+    code = _generate_code()
+    expires_at = now_naive_utc() + timedelta(minutes=CODE_TTL_MINUTES)
+    await VerificationCode.create(
+        email=normalized,
+        code_hash=_hash_code(code),
+        purpose=purpose,
+        expires_at=expires_at,
+    )
+    return code
+
+
+async def verify_code(email: str, code: str, purpose: str) -> VerificationCode:
+    normalized = _normalize_email(email)
+    now = now_naive_utc()
+    record = (
+        await VerificationCode.filter(
+            email=normalized,
+            purpose=purpose,
+            consumed_at__isnull=True,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+    if not record:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码无效或已过期")
+
+    if record.expires_at < now:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码无效或已过期")
+
+    if record.attempts >= CODE_MAX_ATTEMPTS:
+        record.consumed_at = now
+        await record.save(update_fields=["consumed_at", "updated_at"])
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码错误次数过多,请重新申请")
+
+    if not _verify_code_hash(code, record.code_hash):
+        record.attempts += 1
+        update_fields = ["attempts", "updated_at"]
+        if record.attempts >= CODE_MAX_ATTEMPTS:
+            record.consumed_at = now
+            update_fields.append("consumed_at")
+        await record.save(update_fields=update_fields)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码错误")
+
+    return record
+
+
+async def _consume_code(record: VerificationCode) -> None:
+    record.consumed_at = now_naive_utc()
+    await record.save(update_fields=["consumed_at", "updated_at"])
+
+
+async def register_with_code(
+    *,
+    email: str,
+    code: str,
+    password: str,
+    username: str | None = None,
+) -> User:
+    normalized = _normalize_email(email)
+
+    existing_account = await UserAuthAccount.get_or_none(
+        provider="password", provider_user_id=normalized
+    )
+    if existing_account:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="该邮箱已注册")
+
+    record = await verify_code(normalized, code, "register")
+
+    now = now_naive_utc()
+    display_username = (username or "").strip() or normalized.split("@", 1)[0]
+    password_hash = hash_password(password)
+
+    user = await User.create(
+        auth_provider="password",
+        provider_user_id=normalized,
+        username=display_username,
+        email=normalized,
+        email_verified=True,
+        password_hash=password_hash,
+        last_login_at=now,
+    )
+    await ensure_auth_account(
+        user,
+        provider="password",
+        provider_user_id=normalized,
+        provider_username=display_username,
+        provider_email=normalized,
+        password_hash=password_hash,
+    )
+    await _consume_code(record)
+    return user
+
+
+async def request_password_reset(email: str) -> None:
+    normalized = _normalize_email(email)
+    # Always create the code row so timing/rate-limit behavior is identical
+    # regardless of whether the email is registered (anti-enumeration).
+    code = await create_verification_code(normalized, "password_reset")
+
+    user_exists = await User.filter(email=normalized).exists() or await UserAuthAccount.filter(
+        provider="password", provider_user_id=normalized
+    ).exists()
+    if not user_exists:
+        return
+
+    # Import locally to avoid import cycles at module load time.
+    from app.services.email_service import send_password_reset_code
+
+    await send_password_reset_code(to=normalized, code=code)
+
+
+async def reset_password(*, email: str, code: str, new_password: str) -> None:
+    normalized = _normalize_email(email)
+    record = await verify_code(normalized, code, "password_reset")
+
+    account = await UserAuthAccount.get_or_none(
+        provider="password", provider_user_id=normalized
+    ).prefetch_related("user")
+    user = account.user if account else await User.get_or_none(email=normalized)
+    if not user:
+        # Consume the code anyway to avoid abuse, then return a generic error.
+        await _consume_code(record)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="验证码无效或已过期")
+
+    password_hash = hash_password(new_password)
+    user.password_hash = password_hash
+    await user.save(update_fields=["password_hash", "updated_at"])
+
+    await ensure_auth_account(
+        user,
+        provider="password",
+        provider_user_id=normalized,
+        provider_username=user.username,
+        provider_email=normalized,
+        password_hash=password_hash,
+    )
+    await _consume_code(record)

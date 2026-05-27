@@ -11,6 +11,7 @@ class User(BaseModel):
     password_hash = fields.CharField(max_length=255, null=True)
     avatar_url = fields.CharField(max_length=1024, null=True)
     email = fields.CharField(max_length=320, null=True)
+    email_verified = fields.BooleanField(default=False)
     last_login_at = fields.DatetimeField(null=True)
 
     class Meta:

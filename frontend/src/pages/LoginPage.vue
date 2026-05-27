@@ -10,12 +10,15 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 
-const username = shallowRef('')
+const email = shallowRef('')
 const password = shallowRef('')
 const passwordVisible = shallowRef(false)
 const loading = shallowRef(false)
 const providerLoading = shallowRef('')
 const errorMessage = shallowRef('')
+const noticeMessage = shallowRef(
+  route.query.reset === '1' ? '密码已重置，请用新密码登录。' : ''
+)
 
 const targetPath = computed(() => {
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
@@ -26,12 +29,12 @@ const targetPath = computed(() => {
   return '/tools'
 })
 
-const hasCredentials = computed(() => username.value.trim() && password.value)
+const hasCredentials = computed(() => email.value.trim() && password.value)
 const canSubmit = computed(() => !loading.value)
 
 async function submitPasswordLogin() {
   if (!hasCredentials.value) {
-    errorMessage.value = '请输入账号和密码'
+    errorMessage.value = '请输入邮箱和密码'
     return
   }
 
@@ -39,7 +42,7 @@ async function submitPasswordLogin() {
   errorMessage.value = ''
   try {
     await auth.loginWithPassword({
-      username: username.value,
+      email: email.value.trim(),
       password: password.value
     })
     await router.replace(targetPath.value)
@@ -86,14 +89,14 @@ function startProviderLogin(provider) {
           </div>
 
           <label class="login-field">
-            <span class="login-field-label">账号</span>
+            <span class="login-field-label">邮箱</span>
             <input
-              v-model="username"
+              v-model="email"
               class="login-input"
-              autocomplete="username"
-              name="username"
-              placeholder="输入账号"
-              type="text"
+              autocomplete="email"
+              name="email"
+              placeholder="输入邮箱"
+              type="email"
             >
           </label>
 
@@ -119,6 +122,12 @@ function startProviderLogin(provider) {
           </label>
 
           <p
+            v-if="noticeMessage"
+            class="login-notice"
+          >
+            {{ noticeMessage }}
+          </p>
+          <p
             v-if="errorMessage"
             class="login-error"
           >
@@ -132,6 +141,21 @@ function startProviderLogin(provider) {
           >
             {{ loading ? '登录中...' : '登录' }}
           </button>
+
+          <div class="login-aux">
+            <RouterLink
+              class="login-aux-link"
+              to="/register"
+            >
+              还没有账号？注册
+            </RouterLink>
+            <RouterLink
+              class="login-aux-link"
+              to="/forgot-password"
+            >
+              忘记密码？
+            </RouterLink>
+          </div>
         </form>
 
         <div class="login-divider">
@@ -305,6 +329,17 @@ function startProviderLogin(provider) {
   padding: 10px 12px;
 }
 
+.login-notice {
+  background: rgba(38, 194, 129, 0.12);
+  border: 1px solid rgba(38, 194, 129, 0.24);
+  border-radius: var(--brand-radius-md, 16px);
+  color: #137a4d;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  margin: 0;
+  padding: 10px 12px;
+}
+
 .login-submit {
   align-items: center;
   background: var(--brand-color-accent, var(--shell-navy));
@@ -328,6 +363,27 @@ function startProviderLogin(provider) {
 .login-submit:disabled {
   cursor: not-allowed;
   opacity: 0.58;
+}
+
+.login-aux {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.login-aux-link {
+  color: rgba(15, 23, 35, 0.66);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.login-aux-link:hover,
+.login-aux-link:focus-visible {
+  color: var(--shell-navy);
+  text-decoration: underline;
 }
 
 .login-divider {

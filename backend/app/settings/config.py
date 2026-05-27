@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     linuxdo_user_url: str = Field(default="https://connect.linux.do/api/user", alias="LINUXDO_USER_URL")
     jwt_secret: str = Field(default="change-me-in-production", alias="JWT_SECRET")
     frontend_url: str = Field(default="http://localhost:9002", alias="FRONTEND_URL")
+
+    resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
+    mail_from_email: str = Field(default="", alias="MAIL_FROM_EMAIL")
+    mail_from_name: str = Field(default="Xinming Tools", alias="MAIL_FROM_NAME")
     csv_storage_dir: str = Field(default=str(BACKEND_DIR / "storage" / "csv"), alias="CSV_STORAGE_DIR")
     csv_max_upload_mb: int = Field(default=20, alias="CSV_MAX_UPLOAD_MB")
     csv_retention_days: int = Field(default=30, alias="CSV_RETENTION_DAYS")

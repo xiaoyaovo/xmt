@@ -72,7 +72,11 @@ declare global {
   const reactive: typeof import('vue').reactive
   const readonly: typeof import('vue').readonly
   const ref: typeof import('vue').ref
+  const registerWithCode: typeof import('./lib/auth.js').registerWithCode
   const request: typeof import('./lib/index.js').request
+  const requestPasswordResetCode: typeof import('./lib/auth.js').requestPasswordResetCode
+  const requestRegisterCode: typeof import('./lib/auth.js').requestRegisterCode
+  const resetPassword: typeof import('./lib/auth.js').resetPassword
   const resolveComponent: typeof import('vue').resolveComponent
   const saveSyncItem: typeof import('./lib/accountSync.js').saveSyncItem
   const setAccessToken: typeof import('./lib/auth.js').setAccessToken
