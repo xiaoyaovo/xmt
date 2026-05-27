@@ -22,7 +22,17 @@ const targetPath = computed(() => {
 
 onMounted(async () => {
   if (typeof route.query.provider_status === 'string') {
-    await router.replace(targetPath.value)
+    const nextQuery = {
+      provider_status: route.query.provider_status
+    }
+    if (typeof route.query.provider === 'string') {
+      nextQuery.provider = route.query.provider
+    }
+    if (typeof route.query.message === 'string') {
+      nextQuery.message = route.query.message
+    }
+
+    await router.replace({ path: targetPath.value, query: nextQuery })
     return
   }
 

@@ -1,11 +1,14 @@
 <script setup>
 import { computed, onMounted, shallowRef } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 import AuthAccountRow from 'src/components/account/AuthAccountRow.vue'
 import { listAuthAccounts, unlinkAuthAccount } from 'src/lib/auth'
 import { useAuthStore } from 'src/stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
 const accounts = shallowRef([])
 const loading = shallowRef(false)
@@ -14,10 +17,38 @@ const errorMessage = shallowRef('')
 const noticeMessage = shallowRef('')
 
 const accountCount = computed(() => accounts.value.filter((account) => account.linked).length)
+const providerLabels = {
+  github: 'GitHub',
+  linuxdo: 'LinuxDo'
+}
+
+function providerLabel(provider) {
+  return providerLabels[provider] || '第三方账号'
+}
+
+function readProviderCallback() {
+  const providerStatus = typeof route.query.provider_status === 'string' ? route.query.provider_status : ''
+  if (!providerStatus) return
+
+  const provider = typeof route.query.provider === 'string' ? route.query.provider : ''
+  const label = providerLabel(provider)
+  const message = typeof route.query.message === 'string' ? route.query.message : ''
+
+  if (providerStatus === 'linked') {
+    noticeMessage.value = `${label} 已绑定到当前账号。`
+  } else if (providerStatus === 'conflict') {
+    errorMessage.value = message || `${label} 已经绑定到另一个账号。请先登录那个账号解绑，或换一个账号继续绑定。`
+  } else if (providerStatus === 'auth_required') {
+    errorMessage.value = message || '登录状态已失效，请重新登录后再绑定账号。'
+  } else {
+    errorMessage.value = message || `${label} 绑定没有完成，请稍后重试。`
+  }
+
+  router.replace({ path: route.path })
+}
 
 async function loadAccounts() {
   loading.value = true
-  errorMessage.value = ''
   try {
     if (!auth.initialized) {
       await auth.refreshMe()
@@ -39,6 +70,7 @@ async function loadAccounts() {
 async function linkProvider(provider) {
   actionProvider.value = provider
   errorMessage.value = ''
+  noticeMessage.value = ''
   try {
     await auth.linkProvider(provider, '/account/security')
   } catch (error) {
@@ -67,6 +99,7 @@ async function unlinkProvider(provider) {
 }
 
 onMounted(async () => {
+  readProviderCallback()
   await loadAccounts()
 })
 </script>
@@ -96,8 +129,21 @@ onMounted(async () => {
         正在读取绑定状态
       </div>
 
+      <p
+        v-if="noticeMessage"
+        class="account-security-notice"
+      >
+        {{ noticeMessage }}
+      </p>
+      <p
+        v-if="errorMessage"
+        class="account-security-error"
+      >
+        {{ errorMessage }}
+      </p>
+
       <div
-        v-else-if="!auth.authenticated"
+        v-if="auth.initialized && !auth.loading && !loading && !auth.authenticated"
         class="account-security-state"
       >
         登录后管理账号绑定。
@@ -110,20 +156,7 @@ onMounted(async () => {
         </button>
       </div>
 
-      <template v-else>
-        <p
-          v-if="noticeMessage"
-          class="account-security-notice"
-        >
-          {{ noticeMessage }}
-        </p>
-        <p
-          v-if="errorMessage"
-          class="account-security-error"
-        >
-          {{ errorMessage }}
-        </p>
-
+      <template v-if="auth.initialized && !auth.loading && !loading && auth.authenticated">
         <div class="account-security-list">
           <AuthAccountRow
             v-for="account in accounts"

@@ -237,7 +237,11 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
   `frontend_origin`, `exp`, and for binding, `user_id`. Do not trust unsigned `state` for account linking.
 - Binding start endpoints require Bearer auth and return `{ "url": "<provider authorize URL>" }`; the browser cannot
   navigate directly to these endpoints because top-level navigation does not include the Authorization header.
-- Frontend auth callback receives `/#/auth/callback?access_token=<jwt>&redirect=<safe-path>`.
+- Frontend auth callback receives `/#/auth/callback?access_token=<jwt>&redirect=<safe-path>` for login and
+  `/#/auth/callback?provider=<provider>&provider_status=<linked|conflict|auth_required>&redirect=<safe-path>&message=<text>`
+  for account-linking outcomes.
+- OAuth account-linking callbacks are browser navigations, so expected user-facing failures must redirect back to the
+  frontend callback instead of returning raw JSON. The account security page owns the final inline success/error copy.
 - Env keys: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `LINUXDO_CLIENT_ID`,
   `LINUXDO_CLIENT_SECRET`, optional `LINUXDO_AUTHORIZE_URL`, `LINUXDO_TOKEN_URL`, `LINUXDO_USER_URL`.
 
@@ -248,7 +252,9 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
 - OAuth provider missing credentials -> `500 <Provider> OAuth is not configured`.
 - OAuth token response without `access_token` -> `400 <Provider> login failed`.
 - OAuth profile without stable id -> `400 <Provider> user profile is invalid`.
-- Binding a provider already linked to a different user -> `409 该登录方式已绑定到其他账号`.
+- Binding a provider already linked to a different user through the service/API boundary -> `409 该登录方式已绑定到其他账号`.
+- Binding a provider already linked to a different user through OAuth callback -> redirect with
+  `provider_status=conflict` and a user-facing `message`.
 - Unbinding the last login method -> `400 至少保留一种登录方式`.
 - Unbinding password login -> `400 暂不支持解绑账号密码登录`.
 
@@ -267,6 +273,7 @@ Do not use `datetime.now(UTC).replace(tzinfo=None)` for ORM datetime fields in t
 - Verify `POST /api/v1/auth/login` returns `401` instead of `500` after migrations are applied.
 - Verify `GET /api/v1/auth/accounts` returns `password`, `github`, and `linuxdo` entries for authenticated users.
 - Verify the frontend login page handles normalized request errors without exposing provider internals.
+- Verify OAuth linking conflicts land on `/account/security` with a friendly inline message, not a backend JSON page.
 
 ### 7. Wrong vs Correct
 

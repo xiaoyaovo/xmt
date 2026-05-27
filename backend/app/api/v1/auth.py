@@ -185,9 +185,19 @@ def _callback_redirect(user: User, state: str) -> RedirectResponse:
     )
 
 
-def _link_callback_redirect(state: str, *, status_value: str = "linked", message: str | None = None) -> RedirectResponse:
+def _link_callback_redirect(
+    state: str,
+    *,
+    provider: str,
+    status_value: str = "linked",
+    message: str | None = None,
+) -> RedirectResponse:
     state_payload = _parse_oauth_state(state)
-    query_payload = {"provider_status": status_value, "redirect": state_payload["redirect"]}
+    query_payload = {
+        "provider": provider,
+        "provider_status": status_value,
+        "redirect": state_payload["redirect"],
+    }
     if message:
         query_payload["message"] = message
     query = urlencode(query_payload)
@@ -373,9 +383,24 @@ async def github_callback(code: str, state: str = "/tools") -> RedirectResponse:
     if state_payload.get("purpose") == "link":
         user = await User.get_or_none(id=int(state_payload.get("user_id", 0)))
         if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
-        await link_oauth_account(user, **profile_values)
-        return _link_callback_redirect(state)
+            return _link_callback_redirect(
+                state,
+                provider="github",
+                status_value="auth_required",
+                message="登录状态已失效，请重新登录后再绑定 GitHub。",
+            )
+        try:
+            await link_oauth_account(user, **profile_values)
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_409_CONFLICT:
+                return _link_callback_redirect(
+                    state,
+                    provider="github",
+                    status_value="conflict",
+                    message="这个 GitHub 已经绑定到另一个账号。请先登录那个账号解绑，或换一个 GitHub 账号。",
+                )
+            raise
+        return _link_callback_redirect(state, provider="github")
 
     user = await get_or_create_oauth_user(**profile_values)
     return _callback_redirect(user, state)
@@ -441,9 +466,24 @@ async def linuxdo_callback(request: Request, code: str, state: str = "/tools") -
     if state_payload.get("purpose") == "link":
         user = await User.get_or_none(id=int(state_payload.get("user_id", 0)))
         if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
-        await link_oauth_account(user, **profile_values)
-        return _link_callback_redirect(state)
+            return _link_callback_redirect(
+                state,
+                provider="linuxdo",
+                status_value="auth_required",
+                message="登录状态已失效，请重新登录后再绑定 LinuxDo。",
+            )
+        try:
+            await link_oauth_account(user, **profile_values)
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_409_CONFLICT:
+                return _link_callback_redirect(
+                    state,
+                    provider="linuxdo",
+                    status_value="conflict",
+                    message="这个 LinuxDo 已经绑定到另一个账号。请先登录那个账号解绑，或换一个 LinuxDo 账号。",
+                )
+            raise
+        return _link_callback_redirect(state, provider="linuxdo")
 
     user = await get_or_create_oauth_user(**profile_values)
     return _callback_redirect(user, state)
