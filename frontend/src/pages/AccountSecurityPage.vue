@@ -2,6 +2,7 @@
 import { computed, onMounted, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import AccountLinkResultDialog from 'src/components/account/AccountLinkResultDialog.vue'
 import AuthAccountRow from 'src/components/account/AuthAccountRow.vue'
 import { listAuthAccounts, unlinkAuthAccount } from 'src/lib/auth'
 import { useAuthStore } from 'src/stores/auth'
@@ -15,6 +16,13 @@ const loading = shallowRef(false)
 const actionProvider = shallowRef('')
 const errorMessage = shallowRef('')
 const noticeMessage = shallowRef('')
+const linkResultOpen = shallowRef(false)
+const linkResult = shallowRef({
+  provider: '',
+  providerLabel: '第三方账号',
+  status: '',
+  message: ''
+})
 
 const accountCount = computed(() => accounts.value.filter((account) => account.linked).length)
 const providerLabels = {
@@ -33,16 +41,13 @@ function readProviderCallback() {
   const provider = typeof route.query.provider === 'string' ? route.query.provider : ''
   const label = providerLabel(provider)
   const message = typeof route.query.message === 'string' ? route.query.message : ''
-
-  if (providerStatus === 'linked') {
-    noticeMessage.value = `${label} 已绑定到当前账号。`
-  } else if (providerStatus === 'conflict') {
-    errorMessage.value = message || `${label} 已经绑定到另一个账号。请先登录那个账号解绑，或换一个账号继续绑定。`
-  } else if (providerStatus === 'auth_required') {
-    errorMessage.value = message || '登录状态已失效，请重新登录后再绑定账号。'
-  } else {
-    errorMessage.value = message || `${label} 绑定没有完成，请稍后重试。`
+  linkResult.value = {
+    provider,
+    providerLabel: label,
+    status: providerStatus,
+    message
   }
+  linkResultOpen.value = true
 
   router.replace({ path: route.path })
 }
@@ -98,6 +103,19 @@ async function unlinkProvider(provider) {
   }
 }
 
+function handleDialogLogin() {
+  linkResultOpen.value = false
+  auth.openLoginPage('/account/security')
+}
+
+async function handleDialogRetry() {
+  const provider = linkResult.value.provider
+  linkResultOpen.value = false
+  if (provider) {
+    await linkProvider(provider)
+  }
+}
+
 onMounted(async () => {
   readProviderCallback()
   await loadAccounts()
@@ -130,13 +148,13 @@ onMounted(async () => {
       </div>
 
       <p
-        v-if="noticeMessage"
+        v-if="noticeMessage && !linkResultOpen"
         class="account-security-notice"
       >
         {{ noticeMessage }}
       </p>
       <p
-        v-if="errorMessage"
+        v-if="errorMessage && !linkResultOpen"
         class="account-security-error"
       >
         {{ errorMessage }}
@@ -168,6 +186,15 @@ onMounted(async () => {
           />
         </div>
       </template>
+
+      <AccountLinkResultDialog
+        v-model:open="linkResultOpen"
+        :status="linkResult.status"
+        :provider-label="linkResult.providerLabel"
+        :message="linkResult.message"
+        @login="handleDialogLogin"
+        @retry="handleDialogRetry"
+      />
     </section>
   </div>
 </template>
