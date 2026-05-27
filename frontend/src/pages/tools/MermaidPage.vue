@@ -1,6 +1,6 @@
 <script setup>
 import mermaid from 'mermaid'
-import { computed, nextTick, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, shallowRef, useTemplateRef, watch } from 'vue'
 
 import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
@@ -63,6 +63,7 @@ const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 
 let renderTimer = 0
 let renderSequence = 0
+let themeObserver = null
 
 const sourceLines = computed(() => source.value.split('\n').length)
 const sourceCharacters = computed(() => source.value.length)
@@ -110,20 +111,63 @@ const sourceMetaText = computed(() => [
   `${sourceCharacters.value} 字符`
 ].join(' · '))
 
+function readThemeToken(name, fallback) {
+  if (typeof window === 'undefined') return fallback
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+}
+
+function isDarkTheme() {
+  const theme = document.documentElement.dataset.brandTheme
+  return document.documentElement.classList.contains('dark') || theme === 'terminal' || theme === 'spotify'
+}
+
 function configureMermaid() {
+  const accent = readThemeToken('--brand-color-accent', '#102542')
+  const border = readThemeToken('--brand-color-border', 'rgba(16, 37, 66, 0.12)')
+  const muted = readThemeToken('--brand-color-muted', '#5f6b7a')
+  const surface = readThemeToken('--brand-color-surface', '#ffffff')
+  const surface2 = readThemeToken('--brand-color-surface-2', '#eef3f8')
+  const text = readThemeToken('--brand-color-text', '#0f1723')
+
   mermaid.initialize({
+    darkMode: isDarkTheme(),
     startOnLoad: false,
     securityLevel: 'strict',
     theme: 'base',
     themeVariables: {
-      primaryColor: '#eef6ff',
-      primaryTextColor: '#102542',
-      primaryBorderColor: '#7fb2d9',
-      lineColor: '#47627f',
-      secondaryColor: '#fff7ed',
-      tertiaryColor: '#f7fbff',
-      fontFamily: 'Avenir Next, Segoe UI, sans-serif'
+      background: surface,
+      clusterBkg: surface,
+      clusterBorder: border,
+      darkMode: isDarkTheme(),
+      edgeLabelBackground: surface,
+      fontFamily: readThemeToken('--brand-font-family', 'Avenir Next, Segoe UI, sans-serif'),
+      lineColor: muted,
+      mainBkg: surface,
+      noteBkgColor: surface2,
+      noteBorderColor: border,
+      noteTextColor: text,
+      primaryBorderColor: accent,
+      primaryColor: surface2,
+      primaryTextColor: text,
+      secondaryBorderColor: border,
+      secondaryColor: surface,
+      secondaryTextColor: text,
+      tertiaryBorderColor: border,
+      tertiaryColor: surface2,
+      tertiaryTextColor: text,
+      textColor: text
     }
+  })
+}
+
+function watchThemeChanges() {
+  themeObserver = new MutationObserver(() => {
+    configureMermaid()
+    renderDiagram()
+  })
+  themeObserver.observe(document.documentElement, {
+    attributeFilter: ['class', 'data-brand-theme'],
+    attributes: true
   })
 }
 
@@ -351,8 +395,14 @@ watch(source, scheduleRender)
 
 onMounted(async () => {
   configureMermaid()
+  watchThemeChanges()
   await accountSync.loadItems()
   await renderDiagram()
+})
+
+onUnmounted(() => {
+  window.clearTimeout(renderTimer)
+  themeObserver?.disconnect()
 })
 </script>
 
@@ -379,7 +429,7 @@ onMounted(async () => {
 
             <div class="mermaid-toolbar-actions">
               <UButton
-                class="mermaid-primary-action"
+                class="mermaid-primary-action brand-action-button"
                 color="primary"
                 :label="accountSync.auth.authenticated ? '保存' : '登录后保存'"
                 :loading="accountSync.saving.value"
@@ -495,6 +545,24 @@ onMounted(async () => {
                   </div>
                 </template>
               </UPopover>
+
+              <UButton
+                class="mermaid-ghost-action"
+                color="neutral"
+                :label="copied ? '已复制' : '复制源码'"
+                type="button"
+                variant="subtle"
+                @click="copySource"
+              />
+              <UButton
+                class="mermaid-ghost-action"
+                color="neutral"
+                label="下载 SVG"
+                type="button"
+                variant="subtle"
+                :disabled="!canDownload"
+                @click="downloadSvg"
+              />
             </div>
 
             <div class="mermaid-example-strip">
@@ -507,6 +575,7 @@ onMounted(async () => {
                 :active="activeExampleName === example.name"
                 active-color="primary"
                 active-variant="solid"
+                :class="{ 'mermaid-example-item-active': activeExampleName === example.name }"
                 type="button"
                 variant="subtle"
                 @click="useExample(example)"
@@ -538,33 +607,14 @@ onMounted(async () => {
           </div>
 
           <article class="mermaid-panel mermaid-editor-panel">
-            <div class="mermaid-preview-header">
-              <div class="mermaid-actions">
-                <UButton
-                  class="mermaid-ghost-action"
-                  color="neutral"
-                  :label="copied ? '已复制' : '复制源码'"
-                  type="button"
-                  variant="subtle"
-                  @click="copySource"
-                />
-                <UButton
-                  class="mermaid-ghost-action"
-                  color="neutral"
-                  label="下载 SVG"
-                  type="button"
-                  variant="subtle"
-                  :disabled="!canDownload"
-                  @click="downloadSvg"
-                />
-              </div>
-            </div>
-
             <UTextarea
               v-model="source"
               class="mermaid-editor"
+              placeholder="粘贴 Mermaid 源码"
               spellcheck="false"
               aria-label="Mermaid source"
+              :rows="18"
+              :ui="{ base: 'mermaid-editor-base' }"
             />
           </article>
         </template>
@@ -646,12 +696,12 @@ onMounted(async () => {
 }
 
 .mermaid-table-status {
-  color: rgba(15, 23, 35, 0.62);
+  color: var(--brand-color-muted, var(--shell-muted));
   font-size: 0.9rem;
 }
 
 .mermaid-toolbar-block {
-  border: 1px solid var(--shell-line);
+  border: 1px solid var(--brand-color-border, var(--shell-line));
   border-radius: var(--brand-radius-md, 16px);
   min-width: 280px;
   padding: 14px;
@@ -684,7 +734,7 @@ onMounted(async () => {
 }
 
 .mermaid-source-meta {
-  color: rgba(15, 23, 35, 0.62);
+  color: var(--brand-color-muted, var(--shell-muted));
   font-size: 0.88rem;
   margin: 12px 0 0;
 }
@@ -708,7 +758,7 @@ onMounted(async () => {
 }
 
 .mermaid-archive-count {
-  color: rgba(15, 23, 35, 0.62);
+  color: var(--brand-color-muted, var(--shell-muted));
   font-size: 0.88rem;
 }
 
@@ -723,10 +773,10 @@ onMounted(async () => {
 }
 
 .mermaid-example-item {
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid var(--shell-line);
+  background: var(--brand-color-surface, rgba(255, 255, 255, 0.62));
+  border: 1px solid var(--brand-color-border, var(--shell-line));
   border-radius: var(--brand-radius-pill, 999px);
-  color: var(--shell-navy);
+  color: var(--brand-color-text, var(--shell-navy));
   cursor: pointer;
   font: inherit;
   font-size: 0.82rem;
@@ -736,7 +786,8 @@ onMounted(async () => {
 }
 
 .mermaid-example-item:hover {
-  border-color: rgba(16, 37, 66, 0.18);
+  background: var(--brand-color-surface-2, rgba(255, 255, 255, 0.9));
+  border-color: var(--brand-color-accent, rgba(16, 37, 66, 0.18));
 }
 
 .mermaid-example-item:focus-visible {
@@ -747,7 +798,7 @@ onMounted(async () => {
 .mermaid-example-item-active {
   background: var(--brand-color-accent, #102542);
   border-color: var(--brand-color-accent, #102542);
-  color: #ffffff;
+  color: var(--ui-text-inverted, #ffffff);
 }
 
 .mermaid-example-item-active:hover {
@@ -758,10 +809,10 @@ onMounted(async () => {
 .mermaid-primary-action,
 .mermaid-ghost-action {
   align-items: center;
-  background: rgba(255, 255, 255, 0.62);
-  border: 1px solid var(--shell-line);
+  background: var(--brand-color-surface, rgba(255, 255, 255, 0.62));
+  border: 1px solid var(--brand-color-border, var(--shell-line));
   border-radius: var(--brand-radius-pill, 999px);
-  color: var(--shell-navy);
+  color: var(--brand-color-text, var(--shell-navy));
   cursor: pointer;
   display: inline-flex;
   font: inherit;
@@ -776,12 +827,12 @@ onMounted(async () => {
 .mermaid-primary-action {
   background: var(--brand-color-accent, #102542);
   border-color: var(--brand-color-accent, #102542);
-  color: #ffffff;
+  color: var(--ui-text-inverted, #ffffff);
 }
 
 .mermaid-ghost-action:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(16, 37, 66, 0.18);
+  background: var(--brand-color-surface-2, rgba(255, 255, 255, 0.9));
+  border-color: var(--brand-color-accent, rgba(16, 37, 66, 0.18));
 }
 
 .mermaid-primary-action:disabled,
@@ -797,21 +848,52 @@ onMounted(async () => {
 }
 
 .mermaid-editor {
-  background: #0f1723;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--brand-radius-md, 16px);
-  color: #edf6ff;
-  font: 0.95rem/1.65 "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
-  margin-top: 16px;
-  min-height: 520px;
-  outline: none;
-  padding: 18px;
-  resize: vertical;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 560px;
   width: 100%;
 }
 
-.mermaid-editor:focus {
+.mermaid-editor :deep(.mermaid-editor-base) {
+  background: var(--brand-color-surface, #ffffff);
+  border: 1px solid var(--brand-color-border, var(--shell-line));
+  border-radius: var(--brand-radius-md, 16px);
+  caret-color: var(--brand-color-accent, var(--shell-navy));
+  color: var(--brand-color-text, var(--shell-ink));
+  font: 0.9rem/1.65 "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+  height: 100%;
+  margin-top: 0;
+  min-height: 560px;
+  outline: none;
+  padding: 18px;
+  resize: vertical;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+  width: 100%;
+}
+
+.mermaid-editor :deep(.mermaid-editor-base:focus-visible) {
+  border-color: var(--brand-color-accent, #102542);
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
+}
+
+.mermaid-editor :deep(.mermaid-editor-base::placeholder) {
+  color: var(--brand-color-muted, var(--shell-muted));
+  opacity: 0.72;
+}
+
+:global(html.dark) .mermaid-editor :deep(.mermaid-editor-base),
+:global(html[data-brand-theme='terminal']) .mermaid-editor :deep(.mermaid-editor-base),
+:global(html[data-brand-theme='spotify']) .mermaid-editor :deep(.mermaid-editor-base) {
+  background: var(--brand-color-surface-2, #0f1723);
+  border-color: var(--brand-color-border, rgba(255, 255, 255, 0.08));
+  color: var(--brand-color-text, #edf6ff);
+}
+
+:global(html.dark) .mermaid-editor :deep(.mermaid-editor-base::placeholder),
+:global(html[data-brand-theme='terminal']) .mermaid-editor :deep(.mermaid-editor-base::placeholder),
+:global(html[data-brand-theme='spotify']) .mermaid-editor :deep(.mermaid-editor-base::placeholder) {
+  color: var(--brand-color-muted, rgba(237, 246, 255, 0.45));
+  opacity: 0.76;
 }
 
 .mermaid-render-error {
@@ -821,15 +903,15 @@ onMounted(async () => {
 
 .mermaid-preview-canvas {
   align-items: center;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(247, 251, 255, 0.76));
-  border: 1px solid var(--shell-line);
+  background: var(--brand-color-surface, #ffffff);
+  border: 1px solid var(--brand-color-border, var(--shell-line));
   border-radius: var(--brand-radius-md, 16px);
-  color: rgba(15, 23, 35, 0.58);
+  color: var(--brand-color-muted, rgba(15, 23, 35, 0.58));
   display: flex;
   flex: 1;
   justify-content: center;
-  margin-top: 16px;
-  min-height: 520px;
+  margin-top: 18px;
+  min-height: 560px;
   overflow: auto;
   padding: 24px;
   text-align: center;
@@ -843,24 +925,26 @@ onMounted(async () => {
 
 .mermaid-preview-empty {
   align-items: center;
-  background: rgba(16, 37, 66, 0.06);
-  border: 1px solid rgba(16, 37, 66, 0.08);
+  background: var(--brand-color-surface, rgba(16, 37, 66, 0.06));
+  border: 1px solid var(--brand-color-border, rgba(16, 37, 66, 0.08));
   border-radius: var(--brand-radius-md, 16px);
   display: flex;
   justify-content: center;
   margin-top: 18px;
-  min-height: 340px;
+  min-height: 560px;
   padding: 24px;
 }
 
 .mermaid-empty-hint {
-  color: rgba(15, 23, 35, 0.6);
+  color: var(--brand-color-muted, rgba(15, 23, 35, 0.6));
   font-size: 0.95rem;
   margin: 0;
 }
 
 @media (max-width: 1023px) {
   .mermaid-editor,
+  .mermaid-editor :deep(.mermaid-editor-base),
+  .mermaid-preview-empty,
   .mermaid-preview-canvas {
     min-height: 420px;
   }
@@ -880,6 +964,12 @@ onMounted(async () => {
   .mermaid-toolbar-block {
     min-width: 0;
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mermaid-editor :deep(.mermaid-editor-base) {
+    transition: none;
   }
 }
 </style>
