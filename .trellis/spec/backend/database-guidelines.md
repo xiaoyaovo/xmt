@@ -77,6 +77,7 @@ When changing models:
 
 - Command: `cd backend && uv run aerich heads`
 - Command: `cd backend && uv run aerich history`
+- Command: `cd backend && uv run aerich fix-migrations`
 - DB check: `SHOW COLUMNS FROM \`<table>\`;`
 - DB state table: `aerich(version, app, content)`
 
@@ -85,11 +86,13 @@ When changing models:
 - Every migration that can be the latest file in `backend/migrations/models/` must expose a valid `MODELS_STATE` string for Aerich 0.6+.
 - The `aerich` table must record only migrations whose SQL effects are already present in the database.
 - If a migration's SQL was applied manually, record it with `aerich upgrade --fake` only after verifying the schema matches.
+- `aerich fix-migrations` only repairs migrations that have matching records in the `aerich` table. If the broken latest migration is still pending, generate and append `MODELS_STATE` before running `aerich upgrade`.
 
 #### 4. Validation & Error Matrix
 
 - `Unknown column` during ORM select -> compare model fields against `SHOW COLUMNS`.
 - `Old format of migration file detected` -> latest migration file lacks a valid `MODELS_STATE`.
+- `fix-migrations` reports `No matching record ... Skipping` -> the pending migration is not in `aerich`; repair the file, then run `aerich heads` again.
 - Pending migration creates a table/index that already exists -> the schema was applied but the `aerich` record is missing; verify schema before faking.
 - `aerich heads` returns no rows -> Aerich believes all migration records are current.
 
@@ -139,6 +142,29 @@ PY
 ```
 
 Then either run the missing migration normally, or manually add the verified missing schema and use `uv run aerich upgrade --fake` to repair Aerich bookkeeping.
+
+If the pending migration itself is missing `MODELS_STATE`, generate the state from current Tortoise models and validate it before upgrading:
+
+```bash
+cd backend
+uv run python - <<'PY'
+import asyncio
+from tortoise import Tortoise
+from aerich.utils import compress_dict, decompress_dict, get_models_describe
+from app.db.config import TORTOISE_ORM
+
+async def main():
+    await Tortoise.init(config=TORTOISE_ORM)
+    try:
+        state = compress_dict(get_models_describe("models"))
+        decompress_dict(state)
+        print(state)
+    finally:
+        await Tortoise.close_connections()
+
+asyncio.run(main())
+PY
+```
 
 ## Runtime File Storage
 
