@@ -65,6 +65,18 @@ Do not replace this with `app.add_middleware(CORSMiddleware, ...)` unless you ve
 
 The backend currently returns a mix of English auth/config messages and Chinese user-facing CSV messages. When adding feature-specific user-facing errors, match the surrounding route or service. Shared infrastructure messages can stay English.
 
+## External API Proxies
+
+When the backend proxies a third-party API with server-side credentials, keep credentials in `Settings`, never in frontend code. Expected upstream failures should become concise client-facing `HTTPException`s:
+
+- Missing required local credentials: `500` with a setup-oriented message.
+- Invalid/expired upstream API key: `403` with a short message that does not expose the key.
+- Upstream rate limit: `429`.
+- Upstream lookup miss: `404` when the miss is the primary resource, or an empty fallback when the miss is optional metadata.
+- Network/connectivity failure: `502`.
+
+For Riot API / LoL endpoints, `Account-V1` and `Match-V5` lookup misses are primary failures, while missing Summoner-V4 or League-V4 metadata can degrade to an empty profile/ranked section.
+
 ## Avoid
 
 - Returning raw exception strings from unexpected errors.

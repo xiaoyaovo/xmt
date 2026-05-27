@@ -53,6 +53,7 @@ declare global {
   const listSyncItems: typeof import('./lib/accountSync.js').listSyncItems
   const loginPageUrl: typeof import('./lib/auth.js').loginPageUrl
   const logout: typeof import('./lib/auth.js').logout
+  const lolPlatformItems: typeof import('./lib/lol.js').lolPlatformItems
   const markRaw: typeof import('vue').markRaw
   const nextTick: typeof import('vue').nextTick
   const normalizeBrandTheme: typeof import('./lib/brandThemes.js').normalizeBrandTheme
@@ -88,6 +89,7 @@ declare global {
   const resetPassword: typeof import('./lib/auth.js').resetPassword
   const resolveComponent: typeof import('vue').resolveComponent
   const saveSyncItem: typeof import('./lib/accountSync.js').saveSyncItem
+  const searchLolProfile: typeof import('./lib/lol.js').searchLolProfile
   const setAccessToken: typeof import('./lib/auth.js').setAccessToken
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly

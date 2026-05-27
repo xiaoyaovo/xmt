@@ -25,12 +25,18 @@ export const homeRows = [
   },
   {
     index: 3,
+    title: 'LoL 战绩查询',
+    description: '输入 Riot ID 查段位和最近比赛，用后端代理保护 Riot API Key。',
+    to: '/tools/lol'
+  },
+  {
+    index: 4,
     title: 'Draw.io',
     description: '进入全屏流程图编辑器，编辑体验交给 draw.io，保存和历史交给 Xinming。',
     to: { path: '/tools/drawio/editor', query: { mode: 'diagram' } }
   },
   {
-    index: 4,
+    index: 5,
     title: '白板',
     description: '使用 draw.io 手绘风格白板做自由草图、头脑风暴和移动端手写。',
     to: { path: '/tools/drawio/editor', query: { mode: 'whiteboard' } }

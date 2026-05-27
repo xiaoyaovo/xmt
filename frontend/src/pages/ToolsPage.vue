@@ -22,13 +22,20 @@ const tools = [
   },
   {
     index: 3,
+    title: 'LoL 战绩查询',
+    description: '输入 Riot ID 查询段位和最近对局，支持国服外常见服务器。',
+    meta: '可用 · Riot API 代理查询',
+    to: '/tools/lol'
+  },
+  {
+    index: 4,
     title: 'Draw.io',
     description: '直接进入全屏流程图编辑器，保存由 Xinming 接管。',
     meta: '可用 · 全屏图表、账号同步',
     to: { path: '/tools/drawio/editor', query: { mode: 'diagram' } }
   },
   {
-    index: 4,
+    index: 5,
     title: '白板',
     description: '打开 draw.io 手绘风格白板，适合自由草图、头脑风暴和移动端手写。',
     meta: '可用 · 全屏白板、账号同步',

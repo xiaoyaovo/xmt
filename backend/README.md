@@ -40,4 +40,4 @@ uv run aerich init-db
 ## Routes
 
 - `GET /api/v1/health`
-
+- `GET /api/v1/lol/search` requires `RIOT_API_KEY` in `.env` and proxies Riot API requests from the backend.

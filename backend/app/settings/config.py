@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     csv_retention_days: int = Field(default=30, alias="CSV_RETENTION_DAYS")
     csv_user_max_files: int = Field(default=50, alias="CSV_USER_MAX_FILES")
     csv_user_max_storage_mb: int = Field(default=500, alias="CSV_USER_MAX_STORAGE_MB")
+    riot_api_key: str = Field(default="", alias="RIOT_API_KEY")
+    riot_request_timeout_seconds: float = Field(default=12.0, alias="RIOT_REQUEST_TIMEOUT_SECONDS")
 
     cors_origins: list[str] | str = Field(
         default=[
