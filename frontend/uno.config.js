@@ -38,6 +38,14 @@ const brandSafelist = [
 ]
 
 export default defineConfig({
+  content: {
+    pipeline: {
+      include: [
+        /\.(vue|svelte|[jt]sx|mdx?|astro|elm|php|phtml|html)($|\?)/,
+        'node_modules/@nuxt/ui/dist/**/*.{vue,js,mjs}'
+      ]
+    }
+  },
   presets: [
     presetUno(),
     presetAttributify(),

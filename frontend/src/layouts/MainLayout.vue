@@ -1,6 +1,9 @@
 <template>
   <div class="app-shell">
-    <header class="site-shell-header">
+    <header
+      v-if="!$route.meta?.hideLayoutHeader"
+      class="site-shell-header"
+    >
       <div class="site-shell-bar">
         <UButton
           to="/"

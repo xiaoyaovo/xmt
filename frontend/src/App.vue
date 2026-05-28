@@ -4,5 +4,7 @@ import 'uno.css'
 </script>
 
 <template>
-  <router-view />
+  <UApp :toaster="{ position: 'top-right' }">
+    <router-view />
+  </UApp>
 </template>

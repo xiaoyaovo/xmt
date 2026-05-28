@@ -2,8 +2,8 @@
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
-import ToolSaveDialog from 'src/components/tools/ToolSaveDialog.vue'
-import { useAccountSync } from 'src/composables/useAccountSync'
+import ToolVersionMenu from 'src/components/tools/ToolVersionMenu.vue'
+import { useToolVersions } from 'src/composables/useToolVersions'
 
 const drawioOrigin = 'https://drawio.cxmjtt.com'
 const drawioPath = '/drawio/'
@@ -64,92 +64,69 @@ const savedAt = shallowRef('')
 const iframeKey = shallowRef(0)
 const syncAfterNextExport = shallowRef(false)
 const syncingExport = shallowRef(false)
-const deletingArchiveKey = shallowRef('')
-const historyOpen = shallowRef(false)
-const diagramSync = useAccountSync('drawio')
-const whiteboardSync = useAccountSync('drawio-whiteboard')
-const saveDialogOpen = shallowRef(false)
-const saveDialogDefaults = shallowRef({ title: '', remark: '' })
-const pendingArchiveMeta = shallowRef({ title: '', remark: '' })
+const pendingArchiveMeta = shallowRef({ forceNew: false, title: '', remark: '' })
 let editorRevealTimer = null
 
 const editorMode = computed(() => resolveEditorMode())
 const editorModeLabel = computed(() => editorMode.value === 'whiteboard' ? '白板' : 'Draw.io')
-const accountSync = computed(() => editorMode.value === 'whiteboard' ? whiteboardSync : diagramSync)
+
+async function exportThenPersist({ forceNew, title, remark, persist }) {
+  if (!editorReady.value) {
+    return persist({ forceNew, title, remark })
+  }
+  pendingArchiveMeta.value = { forceNew, title, remark }
+  syncAfterNextExport.value = true
+  syncingExport.value = true
+  requestExport()
+  return null
+}
+
+function makeDrawioVersions(toolKey) {
+  return useToolVersions(toolKey, {
+    defaultTitlePrefix: 'Draw.io 图表',
+    updatedFrom: 'diagrams.net',
+    buildPayload: ({ archiveKey, remark, updatedFrom }) => ({
+      xml: savedXml.value,
+      xml_length: savedXml.value.length,
+      archive_key: archiveKey,
+      mode: editorMode.value,
+      updated_from: updatedFrom,
+      remark
+    }),
+    applyPayload: payload => {
+      if (typeof payload?.xml !== 'string' || !payload.xml.trim()) {
+        drawioError.value = '存档 XML 为空'
+        return false
+      }
+      savedXml.value = payload.xml
+      savedAt.value = ''
+      loadXml(payload.xml)
+      drawioError.value = ''
+      return true
+    },
+    saveStrategy: exportThenPersist
+  })
+}
+
+const diagramVersions = makeDrawioVersions('drawio')
+const whiteboardVersions = makeDrawioVersions('drawio-whiteboard')
+const versions = computed(() => editorMode.value === 'whiteboard' ? whiteboardVersions : diagramVersions)
+
 const starterXml = computed(() => resolveStarterXml(editorMode.value))
 const drawioEmbedUrl = computed(() => {
   const modeParams = editorMode.value === 'whiteboard' ? 'ui=min&sketch=1' : 'ui=min'
   return `${drawioOrigin}${drawioPath}?embed=1&proto=json&spin=1&${modeParams}&lang=zh&dark=0&libraries=1&saveAndExit=0&noSaveBtn=0&noExitBtn=1`
 })
 const xmlCharacters = computed(() => savedXml.value.length)
-const syncStatusText = computed(() => {
-  if (syncingExport.value) return '准备同步'
-  if (accountSync.value.saving.value) return '同步中'
-  if (accountSync.value.loading.value) return '读取中'
-  return ''
-})
-const archiveCountText = computed(() => {
-  if (accountSync.value.loading.value) return '读取中'
-  return accountSync.value.items.value.length ? String(accountSync.value.items.value.length) : ''
-})
-const historyTriggerLabel = computed(() => {
-  if (!accountSync.value.auth.initialized || accountSync.value.auth.loading) return '检查登录中'
-  if (!accountSync.value.auth.authenticated) return '未登录 · 登录后同步'
-  if (accountSync.value.loading.value) return '读取中'
-  const active = accountSync.value.activeItem.value
-  if (active) {
-    const activeLabel = (active.title || '').trim() || formatArchiveDate(active.updated_at)
-    return `历史 · ${activeLabel}`
-  }
-  if (!accountSync.value.items.value.length) return '无存档'
-  return `历史存档 · ${accountSync.value.items.value.length}`
-})
-const historyTriggerDisabled = computed(() => {
-  if (!accountSync.value.auth.initialized || accountSync.value.auth.loading) return true
-  if (!accountSync.value.auth.authenticated) return true
-  if (accountSync.value.loading.value) return false
-  return !accountSync.value.items.value.length
-})
-const syncButtonText = computed(() => {
-  if (syncingExport.value) return '准备保存...'
-  if (accountSync.value.saving.value) return '保存中...'
-  return accountSync.value.auth.authenticated ? '保存' : '登录后保存'
-})
-const syncButtonDisabled = computed(() => syncingExport.value || accountSync.value.saving.value)
 const editorMetaText = computed(() => {
   const parts = [`${xmlCharacters.value} 字符`]
   if (savedAt.value) parts.push(`已保存 ${savedAt.value}`)
   return parts.join(' · ')
 })
-
-function formatArchiveDate(value) {
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(value))
-}
-
-function createArchiveKey() {
-  const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
-  const suffix = Math.random().toString(36).slice(2, 8)
-  return `archive-${timestamp}-${suffix}`
-}
-
-function createArchiveTitle() {
-  return `Draw.io 图表 ${formatArchiveDate(new Date())}`
-}
-
-function archiveDisplayTitle(item) {
-  return (item?.title || '').trim() || `Draw.io 图表 ${formatArchiveDate(item.updated_at)}`
-}
-
-function archiveSecondaryLine(item) {
-  const remark = (item?.payload?.remark || '').trim()
-  const stamp = formatArchiveDate(item.updated_at)
-  return remark ? `${remark} · ${stamp}` : stamp
-}
+const syncStatusText = computed(() => {
+  if (syncingExport.value) return '准备同步'
+  return versions.value.syncStatusText.value
+})
 
 function sendDrawioMessage(message) {
   iframeRef.value?.contentWindow?.postMessage(JSON.stringify(message), drawioOrigin)
@@ -220,92 +197,6 @@ function handleIframeLoad() {
   scheduleEditorFallbackReveal()
 }
 
-async function persistSyncedDiagram(xml = savedXml.value, { title = '', remark = '' } = {}) {
-  const nextItemKey = createArchiveKey()
-  const trimmedTitle = (title || '').trim()
-  const trimmedRemark = (remark || '').trim()
-  const item = await accountSync.value.saveItem({
-    title: trimmedTitle || createArchiveTitle(),
-    nextItemKey,
-    payload: {
-      xml,
-      xml_length: xml.length,
-      archive_key: nextItemKey,
-      mode: editorMode.value,
-      updated_from: 'diagrams.net',
-      remark: trimmedRemark
-    }
-  })
-
-  if (item) {
-    drawioError.value = ''
-    sendSavedStatus()
-  }
-
-  return item
-}
-
-async function saveSyncedDiagram() {
-  if (!accountSync.value.auth.authenticated) {
-    const authenticated = await accountSync.value.ensureAuth()
-    if (!authenticated) {
-      accountSync.value.login()
-      return
-    }
-  }
-
-  const active = accountSync.value.activeItem.value
-  saveDialogDefaults.value = {
-    title: active?.title || '',
-    remark: active?.payload?.remark || ''
-  }
-  saveDialogOpen.value = true
-}
-
-async function handleSaveDialogConfirm({ title, remark }) {
-  pendingArchiveMeta.value = { title, remark }
-  saveDialogOpen.value = false
-
-  if (editorReady.value) {
-    syncAfterNextExport.value = true
-    syncingExport.value = true
-    requestExport()
-    return
-  }
-
-  await persistSyncedDiagram(savedXml.value, { title, remark })
-  pendingArchiveMeta.value = { title: '', remark: '' }
-}
-
-async function openArchive(item) {
-  const xml = item?.payload?.xml
-  if (typeof xml !== 'string' || !xml.trim()) {
-    drawioError.value = '存档 XML 为空'
-    return
-  }
-
-  accountSync.value.activeItem.value = item
-  savedXml.value = xml
-  savedAt.value = ''
-  loadXml(xml)
-  drawioError.value = ''
-  historyOpen.value = false
-}
-
-async function deleteSyncedDiagram(item) {
-  if (!item?.item_key) return
-
-  deletingArchiveKey.value = item.item_key
-  const deleted = await accountSync.value.deleteItem(item.item_key)
-  if (deleted) {
-    if (accountSync.value.activeItem.value?.item_key === item.item_key) {
-      accountSync.value.activeItem.value = null
-    }
-    drawioError.value = ''
-  }
-  deletingArchiveKey.value = ''
-}
-
 function resetDemo() {
   hideEditorUntilLoaded()
   scheduleEditorFallbackReveal()
@@ -332,6 +223,31 @@ function parseDrawioMessage(data) {
   }
 }
 
+async function persistFromExport() {
+  syncAfterNextExport.value = false
+  syncingExport.value = false
+  const meta = pendingArchiveMeta.value
+  pendingArchiveMeta.value = { forceNew: false, title: '', remark: '' }
+  const item = await versions.value.persist({
+    forceNew: meta.forceNew,
+    title: meta.title,
+    remark: meta.remark
+  })
+  if (item) {
+    drawioError.value = ''
+    sendSavedStatus()
+  }
+}
+
+async function persistAutoSave() {
+  if (!versions.value.auth.authenticated) return
+  const item = await versions.value.persist({})
+  if (item) {
+    drawioError.value = ''
+    sendSavedStatus()
+  }
+}
+
 function handleDrawioMessage(event) {
   if (event.origin !== drawioOrigin) return
 
@@ -354,13 +270,9 @@ function handleDrawioMessage(event) {
     }).format(new Date())
     drawioError.value = ''
     if (syncAfterNextExport.value) {
-      syncAfterNextExport.value = false
-      syncingExport.value = false
-      const meta = pendingArchiveMeta.value
-      pendingArchiveMeta.value = { title: '', remark: '' }
-      persistSyncedDiagram(xmlPayload, meta)
-    } else if (message.event === 'save' && accountSync.value.auth.authenticated) {
-      persistSyncedDiagram(xmlPayload)
+      persistFromExport()
+    } else if (message.event === 'save') {
+      persistAutoSave()
     }
     return
   }
@@ -376,8 +288,7 @@ function handleDrawioMessage(event) {
 onMounted(async () => {
   window.addEventListener('message', handleDrawioMessage)
   scheduleEditorFallbackReveal()
-  await accountSync.value.ensureAuth()
-  await accountSync.value.loadItems()
+  await versions.value.loadInitial()
 })
 
 onUnmounted(() => {
@@ -388,8 +299,6 @@ onUnmounted(() => {
 watch(editorMode, async () => {
   hideEditorUntilLoaded()
   scheduleEditorFallbackReveal()
-  historyOpen.value = false
-  deletingArchiveKey.value = ''
   savedXml.value = starterXml.value
   savedAt.value = ''
   iframeKey.value += 1
@@ -397,7 +306,7 @@ watch(editorMode, async () => {
   syncAfterNextExport.value = false
   syncingExport.value = false
   drawioError.value = ''
-  await accountSync.value.loadItems()
+  await versions.value.loadInitial()
 })
 </script>
 
@@ -419,14 +328,11 @@ watch(editorMode, async () => {
       </div>
 
       <div class="drawio-toolbar-main">
-        <UButton
-          class="drawio-primary-action brand-action-button"
-          color="primary"
-          :label="syncButtonText"
-          type="button"
-          :disabled="syncButtonDisabled"
-          @click="saveSyncedDiagram"
+        <ToolVersionMenu
+          :versions="versions"
+          :save-disabled="syncingExport"
         />
+
         <UButton
           class="drawio-ghost-action"
           color="neutral"
@@ -461,107 +367,16 @@ watch(editorMode, async () => {
           variant="subtle"
           @click="openStandalone"
         />
-
-        <UPopover
-          v-model:open="historyOpen"
-          :content="{ align: 'end', sideOffset: 8 }"
-        >
-          <UButton
-            class="drawio-ghost-action drawio-history-trigger"
-            color="neutral"
-            type="button"
-            variant="subtle"
-            :disabled="historyTriggerDisabled"
-            aria-label="历史存档"
-          >
-            <span>{{ historyTriggerLabel }}</span>
-            <span
-              class="drawio-history-trigger-caret"
-              aria-hidden="true"
-            >▾</span>
-          </UButton>
-
-          <template #content>
-            <div class="drawio-history-popover">
-              <div class="drawio-history-popover-head">
-                <div class="drawio-toolbar-head-left">
-                  <div class="section-kicker">历史</div>
-                  <span
-                    v-if="archiveCountText"
-                    class="drawio-archive-count"
-                  >· {{ archiveCountText }}</span>
-                </div>
-                <UButton
-                  class="drawio-ghost-action drawio-history-refresh"
-                  color="neutral"
-                  :label="accountSync.loading.value ? '刷新中' : '刷新'"
-                  :loading="accountSync.loading.value"
-                  size="sm"
-                  type="button"
-                  variant="subtle"
-                  :disabled="accountSync.loading.value"
-                  @click="accountSync.loadItems"
-                />
-              </div>
-
-              <div
-                v-if="accountSync.loading.value && !accountSync.items.value.length"
-                class="drawio-history-popover-empty"
-              >
-                读取中
-              </div>
-              <div
-                v-else-if="!accountSync.items.value.length"
-                class="drawio-history-popover-empty"
-              >
-                无存档
-              </div>
-              <div
-                v-else
-                class="drawio-archive-list"
-              >
-                <div
-                  v-for="item in accountSync.items.value"
-                  :key="item.item_key"
-                  class="drawio-archive-row"
-                  :class="{ 'drawio-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
-                >
-                  <UButton
-                    class="drawio-archive-open"
-                    color="neutral"
-                    type="button"
-                    variant="ghost"
-                    @click="openArchive(item)"
-                  >
-                    <span class="drawio-archive-title">{{ archiveDisplayTitle(item) }}</span>
-                    <span class="drawio-archive-meta">{{ archiveSecondaryLine(item) }}</span>
-                  </UButton>
-                  <UButton
-                    class="drawio-archive-delete"
-                    color="error"
-                    :label="deletingArchiveKey === item.item_key ? '...' : '×'"
-                    size="xs"
-                    type="button"
-                    variant="ghost"
-                    :disabled="deletingArchiveKey === item.item_key"
-                    :aria-label="`删除 ${archiveDisplayTitle(item)}`"
-                    @click.stop="deleteSyncedDiagram(item)"
-                  />
-                </div>
-              </div>
-            </div>
-          </template>
-        </UPopover>
       </div>
 
       <div class="drawio-toolbar-meta">
         <span>{{ editorMetaText }}</span>
         <span v-if="syncStatusText">{{ syncStatusText }}</span>
         <span
-          v-if="drawioError || accountSync.errorMessage.value"
+          v-if="drawioError || versions.errorMessage.value"
           class="drawio-inline-error"
         >
-          {{ drawioError || accountSync.errorMessage.value }}
+          {{ drawioError || versions.errorMessage.value }}
         </span>
       </div>
 
@@ -591,15 +406,6 @@ watch(editorMode, async () => {
         </div>
       </div>
     </main>
-
-    <ToolSaveDialog
-      v-model:open="saveDialogOpen"
-      :default-title="saveDialogDefaults.title"
-      :default-remark="saveDialogDefaults.remark"
-      :busy="accountSync.saving.value || syncingExport"
-      dialog-title="保存到云端存档"
-      @confirm="handleSaveDialogConfirm"
-    />
   </div>
 </template>
 
@@ -696,40 +502,6 @@ watch(editorMode, async () => {
   color: #8d1120;
 }
 
-.drawio-toolbar-head-left {
-  align-items: baseline;
-  display: flex;
-  gap: 6px;
-}
-
-.drawio-archive-count {
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.88rem;
-}
-
-.drawio-history-trigger {
-  display: inline-flex;
-  max-width: 320px;
-}
-
-.drawio-history-trigger > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.drawio-history-trigger-caret {
-  font-size: 0.78rem;
-  margin-left: 2px;
-}
-
-.drawio-history-refresh {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 0.82rem;
-}
-
-.drawio-primary-action,
 .drawio-ghost-action {
   align-items: center;
   border-radius: var(--brand-radius-md, 16px);
@@ -741,15 +513,6 @@ watch(editorMode, async () => {
   justify-content: center;
   min-height: 38px;
   padding: 0 14px;
-}
-
-.drawio-primary-action {
-  background: var(--brand-color-accent, #102542);
-  border: 1px solid var(--brand-color-accent, #102542);
-  color: #ffffff;
-}
-
-.drawio-ghost-action {
   background: rgba(255, 255, 255, 0.62);
   border: 1px solid var(--shell-line);
   color: var(--shell-navy);
@@ -765,12 +528,6 @@ watch(editorMode, async () => {
   opacity: 0.62;
 }
 
-.drawio-primary-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.drawio-primary-action:focus-visible,
 .drawio-ghost-action:focus-visible,
 .drawio-back-link:focus-visible {
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
@@ -875,7 +632,6 @@ watch(editorMode, async () => {
     gap: 6px;
   }
 
-  .drawio-primary-action,
   .drawio-ghost-action {
     min-height: 34px;
     padding: 0 10px;
@@ -884,168 +640,5 @@ watch(editorMode, async () => {
   .drawio-title {
     font-size: 1rem;
   }
-}
-</style>
-
-<style>
-.drawio-history-popover {
-  background: #ffffff;
-  border: 1px solid rgba(16, 37, 66, 0.1);
-  border-radius: var(--brand-radius-md, 16px);
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
-  color: var(--shell-navy, #102542);
-  min-width: 320px;
-  padding: 12px;
-  z-index: 90;
-}
-
-.drawio-history-popover:focus-visible {
-  outline: none;
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-}
-
-.drawio-history-popover-head {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-}
-
-.drawio-history-popover-empty {
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.9rem;
-  margin-top: 10px;
-  padding: 6px 4px;
-}
-
-.drawio-archive-list {
-  background: #ffffff;
-  border: 1px solid var(--shell-line, rgba(16, 37, 66, 0.12));
-  border-radius: var(--brand-radius-md, 16px);
-  display: flex;
-  flex-direction: column;
-  margin-top: 12px;
-  max-height: min(60vh, 360px);
-  overflow-y: auto;
-  scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
-  scrollbar-width: thin;
-}
-
-.drawio-archive-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.drawio-archive-list::-webkit-scrollbar-thumb {
-  background: rgba(16, 37, 66, 0.2);
-  border-radius: var(--brand-radius-pill, 999px);
-}
-
-.drawio-archive-row {
-  align-items: center;
-  background: transparent;
-  border-top: 1px solid rgba(16, 37, 66, 0.06);
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 32px;
-  padding: 4px 8px 4px 10px;
-  position: relative;
-  transition: background 120ms ease;
-}
-
-.drawio-archive-row:first-child {
-  border-top: 0;
-}
-
-.drawio-archive-row:hover,
-.drawio-archive-row:focus-within {
-  background: rgba(16, 37, 66, 0.04);
-}
-
-.drawio-archive-row-active {
-  background: rgba(16, 37, 66, 0.06);
-  box-shadow: inset 3px 0 0 0 var(--brand-color-accent, #102542);
-}
-
-.drawio-archive-open {
-  align-items: flex-start;
-  background: transparent;
-  border: 0;
-  color: inherit;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  font: inherit;
-  gap: 2px;
-  min-height: 28px;
-  min-width: 0;
-  padding: 2px 0;
-  text-align: left;
-  width: 100%;
-}
-
-.drawio-archive-open:focus-visible {
-  border-radius: var(--brand-radius-sm, 8px);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  outline: none;
-}
-
-.drawio-archive-title {
-  color: var(--shell-navy, #102542);
-  font-size: 0.88rem;
-  font-weight: 700;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.drawio-archive-meta {
-  color: rgba(15, 23, 35, 0.55);
-  font-size: 0.8rem;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.drawio-archive-delete {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
-  color: rgba(15, 23, 35, 0.4);
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-size: 1.05rem;
-  font-weight: 700;
-  height: 24px;
-  justify-content: center;
-  line-height: 1;
-  padding: 0;
-  transition: color 120ms ease, background 120ms ease;
-  width: 24px;
-}
-
-.drawio-archive-row:hover .drawio-archive-delete,
-.drawio-archive-row:focus-within .drawio-archive-delete {
-  color: var(--shell-coral, #ff7a59);
-}
-
-.drawio-archive-delete:hover {
-  background: rgba(255, 122, 89, 0.12);
-  color: var(--shell-coral, #ff7a59);
-}
-
-.drawio-archive-delete:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  color: var(--shell-coral, #ff7a59);
-  outline: none;
-}
-
-.drawio-archive-delete:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 </style>

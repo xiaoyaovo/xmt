@@ -20,10 +20,10 @@ class Settings(BaseSettings):
     app_version: str = Field(default="0.1.0", alias="APP_VERSION")
     app_env: str = Field(default="development", alias="APP_ENV")
     app_debug: bool = Field(default=True, alias="APP_DEBUG")
-    app_host: str = Field(default="127.0.0.1", alias="APP_HOST")
+    app_host: str = Field(default="localhost", alias="APP_HOST")
     app_port: int = Field(default=8000, alias="APP_PORT")
 
-    mysql_host: str = Field(default="127.0.0.1", alias="MYSQL_HOST")
+    mysql_host: str = Field(default="localhost", alias="MYSQL_HOST")
     mysql_port: int = Field(default=3306, alias="MYSQL_PORT")
     mysql_user: str = Field(default="root", alias="MYSQL_USER")
     mysql_password: str = Field(default="123456", alias="MYSQL_PASSWORD")
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     linuxdo_token_url: str = Field(default="https://connect.linux.do/oauth2/token", alias="LINUXDO_TOKEN_URL")
     linuxdo_user_url: str = Field(default="https://connect.linux.do/api/user", alias="LINUXDO_USER_URL")
     jwt_secret: str = Field(default="change-me-in-production", alias="JWT_SECRET")
-    frontend_url: str = Field(default="http://localhost:9002", alias="FRONTEND_URL")
+    frontend_url: str = Field(default="http://localhost:9200", alias="FRONTEND_URL")
 
     resend_api_key: str = Field(default="", alias="RESEND_API_KEY")
     mail_from_email: str = Field(default="", alias="MAIL_FROM_EMAIL")
@@ -55,8 +55,7 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] | str = Field(
         default=[
-            "http://localhost:9002",
-            "http://127.0.0.1:9002",
+            "http://localhost:9200",
         ],
         alias="CORS_ORIGINS",
     )

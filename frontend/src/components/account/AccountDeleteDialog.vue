@@ -33,7 +33,7 @@ function handleConfirm() {
     v-model:open="isOpen"
     title="删除当前账号"
     description="删除后将移除当前账号、全部登录方式、云端同步数据、CSV 历史与已上传文件。此操作无法恢复。"
-    :ui="{ content: 'max-w-lg' }"
+    :ui="{ content: 'max-w-[512px]' }"
   >
     <template #body>
       <UAlert

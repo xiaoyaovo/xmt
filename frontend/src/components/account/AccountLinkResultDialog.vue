@@ -64,7 +64,7 @@ function handleRetry() {
     v-model:open="isOpen"
     :title="dialogTitle"
     :description="dialogDescription"
-    :ui="{ content: 'max-w-lg' }"
+    :ui="{ content: 'max-w-[512px]' }"
   >
     <template #body>
       <UAlert

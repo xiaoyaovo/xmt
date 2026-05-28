@@ -2,11 +2,10 @@
 import mermaid from 'mermaid'
 import { computed, nextTick, onMounted, onUnmounted, shallowRef, useTemplateRef, watch } from 'vue'
 
-import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
-import ToolSaveDialog from 'src/components/tools/ToolSaveDialog.vue'
+import ToolVersionMenu from 'src/components/tools/ToolVersionMenu.vue'
 import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
-import { useAccountSync } from 'src/composables/useAccountSync'
+import { useToolVersions } from 'src/composables/useToolVersions'
 
 const defaultSource = `flowchart LR
   idea["写下想法"] --> shape{"选择图表"}
@@ -53,13 +52,7 @@ const renderError = shallowRef('')
 const actionError = shallowRef('')
 const copied = shallowRef(false)
 const rendering = shallowRef(false)
-const deletingArchiveKey = shallowRef('')
-const historyOpen = shallowRef(false)
 const previewRef = useTemplateRef('preview')
-const accountSync = useAccountSync('mermaid')
-const saveDialogOpen = shallowRef(false)
-const saveDialogMode = shallowRef('save')
-const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 
 let renderTimer = 0
 let renderSequence = 0
@@ -76,33 +69,6 @@ const renderStatusText = computed(() => {
   if (!trimmedSource.value) return '等待输入'
   return renderedSvg.value ? '预览就绪' : '待渲染'
 })
-const syncStatusText = computed(() => {
-  if (accountSync.saving.value) return '同步中'
-  if (accountSync.loading.value) return '读取中'
-  return ''
-})
-const archiveCountText = computed(() => {
-  if (accountSync.loading.value) return '读取中'
-  return accountSync.items.value.length ? String(accountSync.items.value.length) : ''
-})
-const historyTriggerLabel = computed(() => {
-  if (!accountSync.auth.initialized || accountSync.auth.loading) return '检查登录中'
-  if (!accountSync.auth.authenticated) return '未登录 · 登录后同步'
-  if (accountSync.loading.value) return '读取中'
-  const active = accountSync.activeItem.value
-  if (active) {
-    const activeLabel = (active.title || '').trim() || formatArchiveDate(active.updated_at)
-    return `历史 · ${activeLabel}`
-  }
-  if (!accountSync.items.value.length) return '无存档'
-  return `历史存档 · ${accountSync.items.value.length}`
-})
-const historyTriggerDisabled = computed(() => {
-  if (!accountSync.auth.initialized || accountSync.auth.loading) return true
-  if (!accountSync.auth.authenticated) return true
-  if (accountSync.loading.value) return false
-  return !accountSync.items.value.length
-})
 const activeExampleName = computed(() => {
   const activeExample = examples.find(example => example.source === source.value)
   return activeExample?.name || '自定义'
@@ -111,6 +77,28 @@ const sourceMetaText = computed(() => [
   `${sourceLines.value} 行`,
   `${sourceCharacters.value} 字符`
 ].join(' · '))
+
+const versions = useToolVersions('mermaid', {
+  defaultTitlePrefix: 'Mermaid 图表',
+  updatedFrom: 'mermaid-editor',
+  buildPayload: ({ archiveKey, remark, updatedFrom }) => ({
+    source: source.value,
+    line_count: sourceLines.value,
+    character_count: sourceCharacters.value,
+    archive_key: archiveKey,
+    updated_from: updatedFrom,
+    remark
+  }),
+  applyPayload: payload => {
+    if (typeof payload?.source !== 'string' || !payload.source.trim()) {
+      versions.errorMessage.value = '存档源码为空'
+      return false
+    }
+    source.value = payload.source
+    actionError.value = ''
+    return true
+  }
+})
 
 function readThemeToken(name, fallback) {
   if (typeof window === 'undefined') return fallback
@@ -184,7 +172,6 @@ function bindRenderedDiagram(result, sequence) {
   try {
     result.bindFunctions(previewElement)
   } catch (error) {
-    // Mermaid binding is optional for static diagrams and can throw on stale DOM nodes.
     void error
   }
 }
@@ -202,46 +189,6 @@ function formatMermaidError(error) {
   return rawMessage
     .replace(/^Error:\s*/i, '')
     .trim() || 'Mermaid 渲染失败，请检查语法。'
-}
-
-function formatArchiveDate(value) {
-  return new Intl.DateTimeFormat('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(new Date(value))
-}
-
-function createArchiveKey() {
-  const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
-  const suffix = Math.random().toString(36).slice(2, 8)
-  return `archive-${timestamp}-${suffix}`
-}
-
-function createArchiveTitle() {
-  return `Mermaid 图表 ${formatArchiveDate(new Date())}`
-}
-
-function createArchivePayload(itemKey, { remark = '' } = {}) {
-  return {
-    source: source.value,
-    line_count: sourceLines.value,
-    character_count: sourceCharacters.value,
-    archive_key: itemKey,
-    updated_from: 'mermaid-editor',
-    remark: remark || ''
-  }
-}
-
-function archiveDisplayTitle(item) {
-  return (item?.title || '').trim() || `Mermaid 图表 ${formatArchiveDate(item.updated_at)}`
-}
-
-function archiveSecondaryLine(item) {
-  const remark = (item?.payload?.remark || '').trim()
-  const stamp = formatArchiveDate(item.updated_at)
-  return remark ? `${remark} · ${stamp}` : stamp
 }
 
 async function renderDiagram() {
@@ -292,93 +239,6 @@ function resetSource() {
   actionError.value = ''
 }
 
-function openArchive(item) {
-  const syncedSource = item?.payload?.source
-  if (typeof syncedSource === 'string' && syncedSource.trim()) {
-    accountSync.activeItem.value = item
-    source.value = syncedSource
-    actionError.value = ''
-    historyOpen.value = false
-  } else {
-    actionError.value = '存档源码为空'
-  }
-}
-
-async function persistSyncedSource({ forceNew = false, title = '', remark = '' } = {}) {
-  const activeItemKey = accountSync.activeItem.value?.item_key
-  const nextItemKey = forceNew || !activeItemKey ? createArchiveKey() : activeItemKey
-  const isNewArchive = nextItemKey !== activeItemKey
-  const trimmedTitle = (title || '').trim()
-  const fallbackTitle = isNewArchive
-    ? createArchiveTitle()
-    : accountSync.activeItem.value?.title || createArchiveTitle()
-  const item = await accountSync.saveItem({
-    title: trimmedTitle || fallbackTitle,
-    nextItemKey,
-    payload: createArchivePayload(nextItemKey, { remark })
-  })
-  if (item) actionError.value = ''
-}
-
-function openSaveDialog(mode = 'save') {
-  saveDialogMode.value = mode
-  if (mode === 'save') {
-    const active = accountSync.activeItem.value
-    saveDialogDefaults.value = {
-      title: active?.title || '',
-      remark: active?.payload?.remark || ''
-    }
-  } else {
-    saveDialogDefaults.value = { title: '', remark: '' }
-  }
-  saveDialogOpen.value = true
-}
-
-async function saveSyncedSource() {
-  if (!accountSync.auth.authenticated) {
-    const authenticated = await accountSync.ensureAuth()
-    if (!authenticated) {
-      accountSync.login()
-      return
-    }
-  }
-  openSaveDialog('save')
-}
-
-async function saveSyncedSourceAsNew() {
-  if (!accountSync.auth.authenticated) {
-    const authenticated = await accountSync.ensureAuth()
-    if (!authenticated) {
-      accountSync.login()
-      return
-    }
-  }
-  openSaveDialog('save-as-new')
-}
-
-async function handleSaveDialogConfirm({ title, remark }) {
-  await persistSyncedSource({
-    forceNew: saveDialogMode.value === 'save-as-new',
-    title,
-    remark
-  })
-  saveDialogOpen.value = false
-}
-
-async function deleteSyncedSource(item) {
-  if (!item?.item_key) return
-
-  deletingArchiveKey.value = item.item_key
-  const deleted = await accountSync.deleteItem(item.item_key)
-  if (deleted) {
-    if (accountSync.activeItem.value?.item_key === item.item_key) {
-      accountSync.activeItem.value = null
-    }
-    actionError.value = ''
-  }
-  deletingArchiveKey.value = ''
-}
-
 async function copySource() {
   try {
     await navigator.clipboard.writeText(source.value)
@@ -414,7 +274,7 @@ watch(source, scheduleRender)
 onMounted(async () => {
   configureMermaid()
   watchThemeChanges()
-  await accountSync.loadItems()
+  await versions.loadInitial()
   await renderDiagram()
 })
 
@@ -439,32 +299,20 @@ onUnmounted(() => {
             <div class="mermaid-toolbar-head">
               <div class="section-kicker">保存</div>
               <span
-                v-if="syncStatusText"
+                v-if="versions.syncStatusText.value"
                 class="mermaid-table-status"
-              >{{ syncStatusText }}</span>
+              >{{ versions.syncStatusText.value }}</span>
             </div>
 
             <p class="mermaid-source-meta">{{ sourceMetaText }}</p>
 
             <div class="mermaid-toolbar-actions">
-              <UButton
-                class="mermaid-primary-action brand-action-button"
-                color="primary"
-                :label="accountSync.auth.authenticated ? '保存' : '登录后保存'"
-                :loading="accountSync.saving.value"
-                type="button"
-                :disabled="accountSync.saving.value"
-                @click="saveSyncedSource"
+              <ToolVersionMenu
+                :versions="versions"
+                save-dialog-title="保存到云端存档"
+                save-as-dialog-title="另存为新存档"
               />
-              <UButton
-                class="mermaid-ghost-action"
-                color="neutral"
-                label="另存为新存档"
-                type="button"
-                variant="subtle"
-                :disabled="accountSync.saving.value"
-                @click="saveSyncedSourceAsNew"
-              />
+
               <UButton
                 class="mermaid-ghost-action"
                 color="neutral"
@@ -473,97 +321,6 @@ onUnmounted(() => {
                 variant="subtle"
                 @click="resetSource"
               />
-
-              <UPopover
-                v-model:open="historyOpen"
-                :content="{ align: 'end', sideOffset: 8 }"
-              >
-                <UButton
-                  class="mermaid-ghost-action mermaid-history-trigger"
-                  color="neutral"
-                  type="button"
-                  variant="subtle"
-                  :disabled="historyTriggerDisabled"
-                  aria-label="历史存档"
-                >
-                  <span>{{ historyTriggerLabel }}</span>
-                  <span
-                    class="mermaid-history-trigger-caret"
-                    aria-hidden="true"
-                  >▾</span>
-                </UButton>
-
-                <template #content>
-                  <div class="mermaid-history-popover">
-                    <div class="mermaid-history-popover-head">
-                      <div class="mermaid-toolbar-head-left">
-                        <div class="section-kicker">历史</div>
-                        <span
-                          v-if="archiveCountText"
-                          class="mermaid-archive-count"
-                        >· {{ archiveCountText }}</span>
-                      </div>
-                      <UButton
-                        class="mermaid-ghost-action mermaid-history-refresh"
-                        color="neutral"
-                        :label="accountSync.loading.value ? '刷新中' : '刷新'"
-                        :loading="accountSync.loading.value"
-                        size="sm"
-                        type="button"
-                        variant="subtle"
-                        :disabled="accountSync.loading.value"
-                        @click="accountSync.loadItems"
-                      />
-                    </div>
-
-                    <div
-                      v-if="accountSync.loading.value && !accountSync.items.value.length"
-                      class="mermaid-history-popover-empty"
-                    >
-                      读取中
-                    </div>
-                    <div
-                      v-else-if="!accountSync.items.value.length"
-                      class="mermaid-history-popover-empty"
-                    >
-                      无存档
-                    </div>
-                    <div
-                      v-else
-                      class="mermaid-archive-list"
-                    >
-                      <div
-                        v-for="item in accountSync.items.value"
-                        :key="item.item_key"
-                        class="mermaid-archive-row"
-                        :class="{ 'mermaid-archive-row-active': accountSync.activeItem.value?.item_key === item.item_key }"
-                      >
-                        <UButton
-                          class="mermaid-archive-open"
-                          color="neutral"
-                          type="button"
-                          variant="ghost"
-                          @click="openArchive(item)"
-                        >
-                          <span class="mermaid-archive-title">{{ archiveDisplayTitle(item) }}</span>
-                          <span class="mermaid-archive-meta">{{ archiveSecondaryLine(item) }}</span>
-                        </UButton>
-                        <UButton
-                          class="mermaid-archive-delete"
-                          color="error"
-                          :label="deletingArchiveKey === item.item_key ? '...' : '×'"
-                          size="xs"
-                          type="button"
-                          variant="ghost"
-                          :disabled="deletingArchiveKey === item.item_key"
-                          :aria-label="`删除 ${archiveDisplayTitle(item)}`"
-                          @click.stop="deleteSyncedSource(item)"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </UPopover>
 
               <UButton
                 class="mermaid-ghost-action"
@@ -600,23 +357,15 @@ onUnmounted(() => {
                 @click="useExample(example)"
               />
             </div>
-
-            <AccountSyncPanel
-              class="mermaid-toolbar-sync"
-              :authenticated="accountSync.auth.authenticated"
-              :loading="accountSync.auth.loading"
-              :label="accountSync.syncLabel.value"
-              @login="accountSync.login"
-            />
           </section>
         </template>
 
         <template #source>
           <div
-            v-if="accountSync.errorMessage.value"
+            v-if="versions.errorMessage.value"
             class="csv-notice csv-notice-error"
           >
-            {{ accountSync.errorMessage.value }}
+            {{ versions.errorMessage.value }}
           </div>
           <div
             v-if="actionError"
@@ -676,15 +425,6 @@ onUnmounted(() => {
           </article>
         </template>
       </ToolWorkbench>
-
-      <ToolSaveDialog
-        v-model:open="saveDialogOpen"
-        :default-title="saveDialogDefaults.title"
-        :default-remark="saveDialogDefaults.remark"
-        :busy="accountSync.saving.value"
-        :dialog-title="saveDialogMode === 'save-as-new' ? '另存为新存档' : '保存到云端存档'"
-        @confirm="handleSaveDialogConfirm"
-      />
     </section>
   </div>
 </template>
@@ -730,28 +470,6 @@ onUnmounted(() => {
   flex: 1 1 100%;
 }
 
-.mermaid-history-trigger {
-  display: inline-flex;
-  max-width: 320px;
-}
-
-.mermaid-history-trigger > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mermaid-history-trigger-caret {
-  font-size: 0.78rem;
-  margin-left: 2px;
-}
-
-.mermaid-history-refresh {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 0.82rem;
-}
-
 .mermaid-source-meta {
   color: var(--brand-color-muted, var(--shell-muted));
   font-size: 0.88rem;
@@ -768,17 +486,6 @@ onUnmounted(() => {
 .mermaid-toolbar-head {
   align-items: center;
   justify-content: space-between;
-}
-
-.mermaid-toolbar-head-left {
-  align-items: baseline;
-  display: flex;
-  gap: 6px;
-}
-
-.mermaid-archive-count {
-  color: var(--brand-color-muted, var(--shell-muted));
-  font-size: 0.88rem;
 }
 
 .mermaid-toolbar-actions,
@@ -825,7 +532,6 @@ onUnmounted(() => {
   border-color: var(--brand-color-accent-hover, var(--brand-color-accent, #102542));
 }
 
-.mermaid-primary-action,
 .mermaid-ghost-action {
   align-items: center;
   background: var(--brand-color-surface, rgba(255, 255, 255, 0.62));
@@ -843,24 +549,16 @@ onUnmounted(() => {
   text-decoration: none;
 }
 
-.mermaid-primary-action {
-  background: var(--brand-color-accent, #102542);
-  border-color: var(--brand-color-accent, #102542);
-  color: var(--ui-text-inverted, #ffffff);
-}
-
 .mermaid-ghost-action:hover {
   background: var(--brand-color-surface-2, rgba(255, 255, 255, 0.9));
   border-color: var(--brand-color-accent, rgba(16, 37, 66, 0.18));
 }
 
-.mermaid-primary-action:disabled,
 .mermaid-ghost-action:disabled {
   cursor: not-allowed;
   opacity: 0.62;
 }
 
-.mermaid-primary-action:focus-visible,
 .mermaid-ghost-action:focus-visible {
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
   outline: none;
@@ -990,168 +688,5 @@ onUnmounted(() => {
   .mermaid-editor :deep(.mermaid-editor-base) {
     transition: none;
   }
-}
-</style>
-
-<style>
-.mermaid-history-popover {
-  background: #ffffff;
-  border: 1px solid rgba(16, 37, 66, 0.1);
-  border-radius: var(--brand-radius-md, 16px);
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
-  color: var(--shell-navy, #102542);
-  min-width: 320px;
-  padding: 12px;
-  z-index: 90;
-}
-
-.mermaid-history-popover:focus-visible {
-  outline: none;
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-}
-
-.mermaid-history-popover-head {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-}
-
-.mermaid-history-popover-empty {
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.9rem;
-  margin-top: 10px;
-  padding: 6px 4px;
-}
-
-.mermaid-archive-list {
-  background: #ffffff;
-  border: 1px solid var(--shell-line, rgba(16, 37, 66, 0.12));
-  border-radius: var(--brand-radius-md, 16px);
-  display: flex;
-  flex-direction: column;
-  margin-top: 12px;
-  max-height: min(60vh, 360px);
-  overflow-y: auto;
-  scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
-  scrollbar-width: thin;
-}
-
-.mermaid-archive-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.mermaid-archive-list::-webkit-scrollbar-thumb {
-  background: rgba(16, 37, 66, 0.2);
-  border-radius: var(--brand-radius-pill, 999px);
-}
-
-.mermaid-archive-row {
-  align-items: center;
-  background: transparent;
-  border-top: 1px solid rgba(16, 37, 66, 0.06);
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 32px;
-  padding: 4px 8px 4px 10px;
-  position: relative;
-  transition: background 120ms ease;
-}
-
-.mermaid-archive-row:first-child {
-  border-top: 0;
-}
-
-.mermaid-archive-row:hover,
-.mermaid-archive-row:focus-within {
-  background: rgba(16, 37, 66, 0.04);
-}
-
-.mermaid-archive-row-active {
-  background: rgba(16, 37, 66, 0.06);
-  box-shadow: inset 3px 0 0 0 var(--brand-color-accent, #102542);
-}
-
-.mermaid-archive-open {
-  align-items: flex-start;
-  background: transparent;
-  border: 0;
-  color: inherit;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  font: inherit;
-  gap: 2px;
-  min-height: 28px;
-  min-width: 0;
-  padding: 2px 0;
-  text-align: left;
-  width: 100%;
-}
-
-.mermaid-archive-open:focus-visible {
-  border-radius: var(--brand-radius-sm, 8px);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  outline: none;
-}
-
-.mermaid-archive-title {
-  color: var(--shell-navy, #102542);
-  font-size: 0.88rem;
-  font-weight: 700;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mermaid-archive-meta {
-  color: rgba(15, 23, 35, 0.55);
-  font-size: 0.8rem;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mermaid-archive-delete {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
-  color: rgba(15, 23, 35, 0.4);
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-size: 1.05rem;
-  font-weight: 700;
-  height: 24px;
-  justify-content: center;
-  line-height: 1;
-  padding: 0;
-  transition: color 120ms ease, background 120ms ease;
-  width: 24px;
-}
-
-.mermaid-archive-row:hover .mermaid-archive-delete,
-.mermaid-archive-row:focus-within .mermaid-archive-delete {
-  color: var(--shell-coral, #ff7a59);
-}
-
-.mermaid-archive-delete:hover {
-  background: rgba(255, 122, 89, 0.12);
-  color: var(--shell-coral, #ff7a59);
-}
-
-.mermaid-archive-delete:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  color: var(--shell-coral, #ff7a59);
-  outline: none;
-}
-
-.mermaid-archive-delete:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 </style>

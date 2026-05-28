@@ -78,7 +78,7 @@ function handleTitleKeydown(event) {
     v-model:open="isOpen"
     :title="dialogTitle"
     :description="dialogDescription"
-    :ui="{ content: 'max-w-md' }"
+    :ui="{ content: 'max-w-[448px]' }"
   >
     <template #body>
       <div class="tool-save-dialog-form">

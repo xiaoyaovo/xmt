@@ -135,7 +135,7 @@ onBeforeUnmount(stopCooldown)
     v-model:open="isOpen"
     title="绑定邮箱登录"
     description="验证邮箱并设置密码后，可用邮箱密码登录当前账号。"
-    :ui="{ content: 'max-w-lg' }"
+    :ui="{ content: 'max-w-[512px]' }"
   >
     <template #body>
       <div class="bind-email-dialog-copy">

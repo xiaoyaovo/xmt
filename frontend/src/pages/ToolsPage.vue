@@ -40,6 +40,13 @@ const tools = [
     description: '打开 draw.io 手绘风格白板，适合自由草图、头脑风暴和移动端手写。',
     meta: '可用 · 全屏白板、账号同步',
     to: { path: '/tools/drawio/editor', query: { mode: 'whiteboard' } }
+  },
+  {
+    index: 6,
+    title: 'XML 校验与格式化',
+    description: '粘贴或拖入 XML，本地校验语法、按缩进美化或一键压缩。',
+    meta: '可用 · 本地处理，不上传数据',
+    to: '/tools/xml'
   }
 ]
 </script>

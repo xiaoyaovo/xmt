@@ -27,7 +27,7 @@ cp .env.example .env
 3. Start the server:
 
 ```bash
-uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+uv run uvicorn app.main:app --reload --host localhost --port 8000
 ```
 
 4. Initialize Aerich metadata:

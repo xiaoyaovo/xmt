@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useToast } from '@nuxt/ui/composables/useToast'
 
 import AccountDeleteDialog from 'src/components/account/AccountDeleteDialog.vue'
 import AccountLinkResultDialog from 'src/components/account/AccountLinkResultDialog.vue'
@@ -12,12 +13,11 @@ import { useAuthStore } from 'src/stores/auth'
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 
 const accounts = shallowRef([])
 const loading = shallowRef(false)
 const actionProvider = shallowRef('')
-const errorMessage = shallowRef('')
-const noticeMessage = shallowRef('')
 const linkResultOpen = shallowRef(false)
 const deleteDialogOpen = shallowRef(false)
 const deletingAccount = shallowRef(false)
@@ -32,6 +32,22 @@ const linkResult = shallowRef({
   status: '',
   message: ''
 })
+
+function notifySuccess(title) {
+  toast.add({
+    title,
+    color: 'success',
+    icon: 'i-lucide-circle-check'
+  })
+}
+
+function notifyError(title) {
+  toast.add({
+    title,
+    color: 'error',
+    icon: 'i-lucide-circle-alert'
+  })
+}
 
 const accountCount = computed(() => accounts.value.filter((account) => account.linked).length)
 const providerLabels = {
@@ -50,6 +66,14 @@ function readProviderCallback() {
   const provider = typeof route.query.provider === 'string' ? route.query.provider : ''
   const label = providerLabel(provider)
   const message = typeof route.query.message === 'string' ? route.query.message : ''
+
+  router.replace({ path: route.path })
+
+  if (providerStatus === 'linked') {
+    notifySuccess(message || `${label} 已绑定`)
+    return
+  }
+
   linkResult.value = {
     provider,
     providerLabel: label,
@@ -57,8 +81,6 @@ function readProviderCallback() {
     message
   }
   linkResultOpen.value = true
-
-  router.replace({ path: route.path })
 }
 
 async function loadAccounts() {
@@ -75,7 +97,7 @@ async function loadAccounts() {
     const response = await listAuthAccounts()
     accounts.value = response.accounts || []
   } catch (error) {
-    errorMessage.value = error.message || '读取绑定状态失败'
+    notifyError(error.message || '读取绑定状态失败')
   } finally {
     loading.value = false
   }
@@ -90,8 +112,6 @@ async function linkProvider(provider, options = {}) {
   }
 
   actionProvider.value = provider
-  errorMessage.value = ''
-  noticeMessage.value = ''
   try {
     await auth.linkProvider(provider, '/account/security', {
       ...options,
@@ -99,7 +119,7 @@ async function linkProvider(provider, options = {}) {
     })
   } catch (error) {
     actionProvider.value = ''
-    errorMessage.value = error.message || '无法开始绑定，请稍后重试'
+    notifyError(error.message || '无法开始绑定，请稍后重试')
   }
 }
 
@@ -136,7 +156,7 @@ async function bindEmailLogin(payload) {
   try {
     await auth.bindEmailLogin(payload)
     bindEmailOpen.value = false
-    noticeMessage.value = '邮箱登录已绑定'
+    notifySuccess('邮箱登录已绑定')
     await auth.refreshMe()
     await loadAccounts()
   } catch (error) {
@@ -151,15 +171,13 @@ async function unlinkProvider(provider) {
   if (!account?.can_unlink) return
 
   actionProvider.value = provider
-  errorMessage.value = ''
-  noticeMessage.value = ''
   try {
     await unlinkAuthAccount(provider)
-    noticeMessage.value = '登录方式已解绑'
+    notifySuccess('登录方式已解绑')
     await auth.refreshMe()
     await loadAccounts()
   } catch (error) {
-    errorMessage.value = error.message || '解绑失败，请稍后重试'
+    notifyError(error.message || '解绑失败，请稍后重试')
   } finally {
     actionProvider.value = ''
   }
@@ -227,19 +245,6 @@ onMounted(async () => {
       >
         正在读取绑定状态
       </div>
-
-      <p
-        v-if="noticeMessage && !linkResultOpen"
-        class="account-security-notice"
-      >
-        {{ noticeMessage }}
-      </p>
-      <p
-        v-if="errorMessage && !linkResultOpen"
-        class="account-security-error"
-      >
-        {{ errorMessage }}
-      </p>
 
       <div
         v-if="auth.initialized && !auth.loading && !loading && !auth.authenticated"
@@ -426,9 +431,7 @@ onMounted(async () => {
   outline: none;
 }
 
-.account-security-state,
-.account-security-error,
-.account-security-notice {
+.account-security-state {
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(16, 37, 66, 0.1);
   border-radius: var(--brand-radius-md, 16px);
@@ -436,18 +439,6 @@ onMounted(async () => {
   line-height: 1.7;
   margin: 0;
   padding: 18px;
-}
-
-.account-security-error {
-  border-color: rgba(204, 45, 45, 0.2);
-  color: #9d2525;
-  margin-bottom: 14px;
-}
-
-.account-security-notice {
-  border-color: rgba(38, 194, 129, 0.22);
-  color: #137a4d;
-  margin-bottom: 14px;
 }
 
 .account-security-login {

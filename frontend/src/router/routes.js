@@ -12,10 +12,16 @@ const routes = [
       { path: 'tools/mermaid', component: () => import('pages/tools/MermaidPage.vue') },
       { path: 'tools/csv', component: () => import('pages/tools/CsvPage.vue') },
       { path: 'tools/lol', component: () => import('pages/tools/LolPage.vue') },
+      { path: 'tools/xml', component: () => import('pages/tools/XmlPage.vue') },
       { path: 'tools/drawio', redirect: { path: '/tools/drawio/editor', query: { mode: 'diagram' } } },
       { path: 'admin', component: () => import('pages/AdminPage.vue') },
       { path: 'ui-preview', component: () => import('pages/UiPreviewPage.vue') },
-      { path: 'auth/callback', component: () => import('pages/AuthCallbackPage.vue') }
+      { path: 'auth/callback', component: () => import('pages/AuthCallbackPage.vue') },
+      {
+        path: 'wedding',
+        component: () => import('pages/WeddingPage.vue'),
+        meta: { hideLayoutHeader: true }
+      }
     ]
   },
   {

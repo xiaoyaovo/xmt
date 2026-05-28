@@ -2,9 +2,8 @@
 import Papa from 'papaparse'
 import { computed, onMounted, shallowRef } from 'vue'
 
-import AccountSyncPanel from 'src/components/tools/AccountSyncPanel.vue'
 import ToolPageHeader from 'src/components/tools/ToolPageHeader.vue'
-import ToolSaveDialog from 'src/components/tools/ToolSaveDialog.vue'
+import ToolVersionMenu from 'src/components/tools/ToolVersionMenu.vue'
 import ToolWorkbench from 'src/components/tools/ToolWorkbench.vue'
 import { useAccountSync } from 'src/composables/useAccountSync'
 import { useCsvPreview } from 'src/composables/useCsvPreview'
@@ -38,6 +37,7 @@ const rowsPerPageItems = rowsPerPageOptions.map(option => ({
 }))
 const historyOpen = shallowRef(false)
 const saveDialogOpen = shallowRef(false)
+const saveDialogMode = shallowRef('save')
 const saveDialogDefaults = shallowRef({ title: '', remark: '' })
 const dragActive = shallowRef(false)
 
@@ -68,43 +68,6 @@ const saveMetaText = computed(() => {
   return parts.join(' · ')
 })
 
-const archiveCountText = computed(() => {
-  if (loadingFiles.value) return '读取中'
-  return files.value.length ? String(files.value.length) : ''
-})
-
-const historyTriggerLabel = computed(() => {
-  if (!auth.initialized || auth.loading) return '检查登录中'
-  if (!auth.authenticated) return '未登录 · 登录后同步'
-  if (loadingFiles.value) return '读取中'
-  if (activeSource.value === 'history' && activeFile.value) {
-    const fallback = activeFile.value.created_at ? formatDate(activeFile.value.created_at) : ''
-    const activeLabel = (activeFile.value.title || '').trim()
-      || activeFile.value.original_filename
-      || fallback
-    return `历史 · ${activeLabel}`
-  }
-  if (!files.value.length) return '无存档'
-  return `历史存档 · ${files.value.length}`
-})
-
-function csvFileDisplayTitle(file) {
-  return (file?.title || '').trim() || file?.original_filename || ''
-}
-
-function csvFileSecondaryLine(file) {
-  const remark = (file?.remark || '').trim()
-  const stamp = file?.created_at ? formatDate(file.created_at) : ''
-  return remark ? `${remark} · ${stamp}` : stamp
-}
-
-const historyTriggerDisabled = computed(() => {
-  if (!auth.initialized || auth.loading) return true
-  if (!auth.authenticated) return true
-  if (loadingFiles.value) return false
-  return !files.value.length
-})
-
 const canSaveCsv = computed(() => Boolean(activeFile.value && activeColumns.value.length))
 
 const csvTextPreview = computed(() => localPreview.sourceText.value)
@@ -113,12 +76,6 @@ const sourceLabel = computed(() => {
   if (activeSource.value === 'history') return '云端存档'
   if (activeSource.value === 'local') return '本地文件'
   return '等待选择'
-})
-
-const saveButtonText = computed(() => {
-  if (uploading.value) return '保存中...'
-  if (!auth.authenticated) return '登录后保存'
-  return localPreview.dirty.value ? '另存为新版本' : '保存为新版本'
 })
 
 function formatBytes(bytes) {
@@ -136,6 +93,119 @@ function formatDate(value) {
     hour: '2-digit',
     minute: '2-digit'
   }).format(new Date(value))
+}
+
+const csvVersions = {
+  auth,
+  items: computed(() => files.value.map(file => ({
+    item_key: String(file.id),
+    title: file.title,
+    payload: { remark: file.remark || '' },
+    updated_at: file.created_at,
+    _csvFile: file
+  }))),
+  activeItem: computed(() => {
+    if (!activeFile.value?.id) return null
+    return {
+      item_key: String(activeFile.value.id),
+      title: activeFile.value.title,
+      payload: { remark: activeFile.value.remark || '' },
+      updated_at: activeFile.value.created_at,
+      _csvFile: activeFile.value
+    }
+  }),
+  loading: loadingFiles,
+  saving: uploading,
+  errorMessage,
+  syncLabel: accountSync.syncLabel,
+  login: accountSync.login,
+  historyOpen,
+  saveDialogOpen,
+  saveDialogMode,
+  saveDialogDefaults,
+  deletingArchiveKey: computed(() => deletingId.value == null ? '' : String(deletingId.value)),
+  canOverwrite: computed(() => false),
+  syncStatusText: computed(() => {
+    if (uploading.value) return '保存中'
+    if (loadingFiles.value) return '读取中'
+    return ''
+  }),
+  archiveCountText: computed(() => {
+    if (loadingFiles.value) return '读取中'
+    return files.value.length ? String(files.value.length) : ''
+  }),
+  historyTriggerLabel: computed(() => {
+    if (!auth.initialized || auth.loading) return '检查登录中'
+    if (!auth.authenticated) return '未登录 · 登录后同步'
+    if (loadingFiles.value) return '读取中'
+    if (activeSource.value === 'history' && activeFile.value) {
+      const label = (activeFile.value.title || '').trim()
+        || activeFile.value.original_filename
+        || formatDate(activeFile.value.created_at)
+      return `历史 · ${label}`
+    }
+    if (!files.value.length) return '无存档'
+    return `历史存档 · ${files.value.length}`
+  }),
+  historyTriggerDisabled: computed(() => {
+    if (!auth.initialized || auth.loading) return true
+    if (!auth.authenticated) return true
+    if (loadingFiles.value) return false
+    return !files.value.length
+  }),
+  saveButtonLabel: computed(() => {
+    if (uploading.value) return '保存中...'
+    if (!auth.authenticated) return '登录后保存'
+    return localPreview.dirty.value ? '另存为新版本' : '保存为新版本'
+  }),
+  archiveDisplayTitle(item) {
+    const file = item?._csvFile
+    return (file?.title || '').trim() || file?.original_filename || ''
+  },
+  archiveSecondaryLine(item) {
+    const file = item?._csvFile
+    const remark = (file?.remark || '').trim()
+    const stamp = file?.created_at ? formatDate(file.created_at) : ''
+    return remark ? `${remark} · ${stamp}` : stamp
+  },
+  loadItems() {
+    return refreshFiles()
+  },
+  openVersion(item) {
+    if (!item?._csvFile) return false
+    selectHistoryFile(item._csvFile)
+    return true
+  },
+  removeVersion(item) {
+    if (!item?._csvFile) return false
+    return removeFile(item._csvFile)
+  },
+  async requestSave() {
+    if (!auth.authenticated) {
+      accountSync.login()
+      return
+    }
+    const active = activeSource.value === 'history' ? activeFile.value : null
+    saveDialogDefaults.value = {
+      title: active?.title || '',
+      remark: active?.remark || ''
+    }
+    saveDialogMode.value = 'save'
+    saveDialogOpen.value = true
+  },
+  async requestSaveAsNew() {
+    if (!auth.authenticated) {
+      accountSync.login()
+      return
+    }
+    saveDialogDefaults.value = { title: '', remark: '' }
+    saveDialogMode.value = 'save-as-new'
+    saveDialogOpen.value = true
+  },
+  async handleSaveDialogConfirm({ title, remark }) {
+    saveDialogOpen.value = false
+    await persistCsvVersion({ title, remark })
+  }
 }
 
 async function refreshFiles() {
@@ -256,27 +326,6 @@ async function persistCsvVersion({ title = '', remark = '' } = {}) {
   } finally {
     uploading.value = false
   }
-}
-
-async function saveLocalFile() {
-  if (!canSaveCsv.value) return
-
-  if (!auth.authenticated) {
-    accountSync.login()
-    return
-  }
-
-  const active = activeSource.value === 'history' ? activeFile.value : null
-  saveDialogDefaults.value = {
-    title: active?.title || '',
-    remark: active?.remark || ''
-  }
-  saveDialogOpen.value = true
-}
-
-async function handleSaveDialogConfirm({ title, remark }) {
-  await persistCsvVersion({ title, remark })
-  saveDialogOpen.value = false
 }
 
 async function handleFileInput(event) {
@@ -450,13 +499,9 @@ onMounted(async () => {
                   @change="handleFileInput"
                 >
               </UButton>
-              <UButton
-                class="csv-primary-action brand-action-button"
-                color="primary"
-                :label="saveButtonText"
-                type="button"
-                :disabled="!canSaveCsv || uploading || localPreview.loading.value"
-                @click="saveLocalFile"
+              <ToolVersionMenu
+                :versions="csvVersions"
+                :save-disabled="!canSaveCsv || uploading || localPreview.loading.value"
               />
               <UButton
                 class="csv-ghost-action"
@@ -467,106 +512,7 @@ onMounted(async () => {
                 :disabled="!activeFile || uploading || localPreview.loading.value"
                 @click="clearLocalPreview"
               />
-
-              <UPopover
-                v-model:open="historyOpen"
-                :content="{ align: 'end', sideOffset: 8 }"
-              >
-                <UButton
-                  class="csv-ghost-action csv-history-trigger"
-                  color="neutral"
-                  type="button"
-                  variant="subtle"
-                  :disabled="historyTriggerDisabled"
-                  aria-label="历史存档"
-                >
-                  <span>{{ historyTriggerLabel }}</span>
-                  <span
-                    class="csv-history-trigger-caret"
-                    aria-hidden="true"
-                  >▾</span>
-                </UButton>
-
-                <template #content>
-                  <div class="csv-history-popover">
-                    <div class="csv-history-popover-head">
-                      <div class="csv-toolbar-head-left">
-                        <div class="section-kicker">历史</div>
-                        <span
-                          v-if="archiveCountText"
-                          class="csv-archive-count"
-                        >· {{ archiveCountText }}</span>
-                      </div>
-                      <UButton
-                        class="csv-ghost-action csv-history-refresh"
-                        color="neutral"
-                        :label="loadingFiles ? '刷新中' : '刷新'"
-                        :loading="loadingFiles"
-                        size="sm"
-                        type="button"
-                        variant="subtle"
-                        :disabled="loadingFiles"
-                        @click="refreshFiles"
-                      />
-                    </div>
-
-                    <div
-                      v-if="loadingFiles && !files.length"
-                      class="csv-history-popover-empty"
-                    >
-                      读取中
-                    </div>
-                    <div
-                      v-else-if="!files.length"
-                      class="csv-history-popover-empty"
-                    >
-                      无存档
-                    </div>
-                    <div
-                      v-else
-                      class="csv-history-list"
-                    >
-                      <div
-                        v-for="file in files"
-                        :key="file.id"
-                        class="csv-history-row"
-                        :class="{ 'csv-history-row-active': activeSource === 'history' && activeFile?.id === file.id }"
-                      >
-                        <UButton
-                          class="csv-history-open"
-                          color="neutral"
-                          type="button"
-                          variant="ghost"
-                          @click="selectHistoryFile(file)"
-                        >
-                          <span class="csv-history-title">{{ csvFileDisplayTitle(file) }}</span>
-                          <span class="csv-history-meta">{{ csvFileSecondaryLine(file) }}</span>
-                        </UButton>
-                        <UButton
-                          class="csv-history-delete"
-                          color="error"
-                          :label="deletingId === file.id ? '...' : '×'"
-                          size="xs"
-                          type="button"
-                          variant="ghost"
-                          :disabled="deletingId === file.id"
-                          :aria-label="`删除 ${csvFileDisplayTitle(file)}`"
-                          @click.stop="removeFile(file)"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </UPopover>
             </div>
-
-            <AccountSyncPanel
-              class="csv-toolbar-sync"
-              :authenticated="accountSync.auth.authenticated"
-              :loading="accountSync.auth.loading"
-              :label="accountSync.syncLabel.value"
-              @login="accountSync.login"
-            />
           </section>
         </template>
 
@@ -712,14 +658,6 @@ onMounted(async () => {
         </template>
       </ToolWorkbench>
 
-      <ToolSaveDialog
-        v-model:open="saveDialogOpen"
-        :default-title="saveDialogDefaults.title"
-        :default-remark="saveDialogDefaults.remark"
-        :busy="uploading"
-        dialog-title="保存到云端存档"
-        @confirm="handleSaveDialogConfirm"
-      />
     </section>
   </div>
 </template>
@@ -776,28 +714,6 @@ onMounted(async () => {
   flex: 1 1 100%;
 }
 
-.csv-history-trigger {
-  display: inline-flex;
-  max-width: 320px;
-}
-
-.csv-history-trigger > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.csv-history-trigger-caret {
-  font-size: 0.78rem;
-  margin-left: 2px;
-}
-
-.csv-history-refresh {
-  min-height: 32px;
-  padding: 0 10px;
-  font-size: 0.82rem;
-}
-
 .csv-toolbar-head,
 .csv-toolbar-actions {
   align-items: center;
@@ -807,17 +723,6 @@ onMounted(async () => {
 
 .csv-toolbar-head {
   justify-content: space-between;
-}
-
-.csv-toolbar-head-left {
-  align-items: baseline;
-  display: flex;
-  gap: 6px;
-}
-
-.csv-archive-count {
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.88rem;
 }
 
 .csv-toolbar-status {
@@ -1040,164 +945,4 @@ onMounted(async () => {
 </style>
 
 <style>
-.csv-history-popover {
-  background: #ffffff;
-  border: 1px solid rgba(16, 37, 66, 0.1);
-  border-radius: var(--brand-radius-md, 16px);
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16);
-  color: var(--shell-navy, #102542);
-  min-width: 320px;
-  padding: 12px;
-  z-index: 90;
-}
-
-.csv-history-popover:focus-visible {
-  outline: none;
-  box-shadow: 0 18px 42px rgba(16, 37, 66, 0.16), var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-}
-
-.csv-history-popover-head {
-  align-items: center;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-}
-
-.csv-history-popover-empty {
-  color: rgba(15, 23, 35, 0.62);
-  font-size: 0.9rem;
-  margin-top: 10px;
-  padding: 6px 4px;
-}
-
-.csv-history-list {
-  background: #ffffff;
-  border: 1px solid var(--shell-line, rgba(16, 37, 66, 0.12));
-  border-radius: var(--brand-radius-md, 16px);
-  display: flex;
-  flex-direction: column;
-  margin-top: 12px;
-  max-height: min(60vh, 360px);
-  overflow-y: auto;
-  scrollbar-color: rgba(16, 37, 66, 0.24) transparent;
-  scrollbar-width: thin;
-}
-
-.csv-history-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.csv-history-list::-webkit-scrollbar-thumb {
-  background: rgba(16, 37, 66, 0.2);
-  border-radius: var(--brand-radius-pill, 999px);
-}
-
-.csv-history-row {
-  align-items: center;
-  background: transparent;
-  border-top: 1px solid rgba(16, 37, 66, 0.06);
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  min-height: 32px;
-  padding: 4px 8px 4px 10px;
-  position: relative;
-  transition: background 120ms ease;
-}
-
-.csv-history-row:first-child {
-  border-top: 0;
-}
-
-.csv-history-row:hover,
-.csv-history-row:focus-within {
-  background: rgba(16, 37, 66, 0.04);
-}
-
-.csv-history-row-active {
-  background: rgba(16, 37, 66, 0.06);
-  box-shadow: inset 3px 0 0 0 var(--brand-color-accent, #102542);
-}
-
-.csv-history-open {
-  align-items: flex-start;
-  background: transparent;
-  border: 0;
-  color: inherit;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  font: inherit;
-  gap: 2px;
-  min-height: 28px;
-  min-width: 0;
-  padding: 2px 0;
-  text-align: left;
-  width: 100%;
-}
-
-.csv-history-open:focus-visible {
-  border-radius: var(--brand-radius-sm, 8px);
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  outline: none;
-}
-
-.csv-history-title {
-  color: var(--shell-navy, #102542);
-  font-size: 0.88rem;
-  font-weight: 700;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.csv-history-meta {
-  color: rgba(15, 23, 35, 0.55);
-  font-size: 0.8rem;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.csv-history-delete {
-  align-items: center;
-  background: transparent;
-  border: 0;
-  border-radius: var(--brand-radius-pill, 999px);
-  color: rgba(15, 23, 35, 0.4);
-  cursor: pointer;
-  display: inline-flex;
-  font: inherit;
-  font-size: 1.05rem;
-  font-weight: 700;
-  height: 24px;
-  justify-content: center;
-  line-height: 1;
-  padding: 0;
-  transition: color 120ms ease, background 120ms ease;
-  width: 24px;
-}
-
-.csv-history-row:hover .csv-history-delete,
-.csv-history-row:focus-within .csv-history-delete {
-  color: var(--shell-coral, #ff7a59);
-}
-
-.csv-history-delete:hover {
-  background: rgba(255, 122, 89, 0.12);
-  color: var(--shell-coral, #ff7a59);
-}
-
-.csv-history-delete:focus-visible {
-  box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.16));
-  color: var(--shell-coral, #ff7a59);
-  outline: none;
-}
-
-.csv-history-delete:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
 </style>

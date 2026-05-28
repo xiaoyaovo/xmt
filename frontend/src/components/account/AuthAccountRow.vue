@@ -106,7 +106,6 @@ function handleAction() {
 
     <UButton
       class="auth-account-action"
-      :class="{ 'auth-account-action-danger': account.linked && account.can_unlink }"
       :color="account.linked && account.can_unlink ? 'error' : 'primary'"
       :label="actionLabel"
       :loading="busy"
@@ -209,34 +208,16 @@ function handleAction() {
 }
 
 .auth-account-action {
-  background: #ffffff;
-  border: 1px solid rgba(16, 37, 66, 0.12);
   border-radius: var(--brand-radius-md, 16px);
-  color: var(--shell-navy);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 850;
+  flex: 0 0 auto;
   min-width: 88px;
-  padding: 10px 14px;
+  padding-left: 18px;
+  padding-right: 18px;
 }
 
-.auth-account-action:hover,
 .auth-account-action:focus-visible {
-  border-color: rgba(16, 37, 66, 0.22);
   box-shadow: var(--brand-shadow-focus, 0 0 0 3px rgba(16, 37, 66, 0.12));
   outline: none;
-}
-
-.auth-account-action-danger:hover,
-.auth-account-action-danger:focus-visible {
-  border-color: rgba(204, 45, 45, 0.28);
-  color: #a52626;
-}
-
-.auth-account-action:disabled {
-  cursor: not-allowed;
-  opacity: 0.52;
 }
 
 @media (max-width: 620px) {

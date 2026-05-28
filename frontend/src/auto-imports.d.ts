@@ -12,11 +12,14 @@ declare global {
   const EffectScope: typeof import('vue').EffectScope
   const aboutSection: typeof import('./lib/siteHome.js').aboutSection
   const applyBrandTheme: typeof import('./lib/brandThemes.js').applyBrandTheme
+  const avatarColorFor: typeof import('./lib/commentUtils.js').avatarColorFor
+  const avatarInitial: typeof import('./lib/commentUtils.js').avatarInitial
   const bindEmailLogin: typeof import('./lib/auth.js').bindEmailLogin
   const brandThemeItems: typeof import('./lib/brandThemes.js').brandThemeItems
   const clearAccessToken: typeof import('./lib/auth.js').clearAccessToken
   const computed: typeof import('vue').computed
   const createApp: typeof import('vue').createApp
+  const createComment: typeof import('./lib/comments.js').createComment
   const createOAuthLinkUrl: typeof import('./lib/auth.js').createOAuthLinkUrl
   const createRequest: typeof import('./lib/index.js').createRequest
   const csvDownloadUrl: typeof import('./lib/csvFiles.js').csvDownloadUrl
@@ -28,7 +31,9 @@ declare global {
   const deleteCurrentUser: typeof import('./lib/auth.js').deleteCurrentUser
   const deleteSyncItem: typeof import('./lib/accountSync.js').deleteSyncItem
   const effectScope: typeof import('vue').effectScope
+  const formatRelativeTime: typeof import('./lib/commentUtils.js').formatRelativeTime
   const getAccessToken: typeof import('./lib/auth.js').getAccessToken
+  const getAnonId: typeof import('./lib/anonId.js').getAnonId
   const getCsvFile: typeof import('./lib/csvFiles.js').getCsvFile
   const getCsvRows: typeof import('./lib/csvFiles.js').getCsvRows
   const getCurrentInstance: typeof import('vue').getCurrentInstance
@@ -49,7 +54,9 @@ declare global {
   const isShallow: typeof import('vue').isShallow
   const linuxdoLoginUrl: typeof import('./lib/auth.js').linuxdoLoginUrl
   const listAuthAccounts: typeof import('./lib/auth.js').listAuthAccounts
+  const listComments: typeof import('./lib/comments.js').listComments
   const listCsvFiles: typeof import('./lib/csvFiles.js').listCsvFiles
+  const listReplies: typeof import('./lib/comments.js').listReplies
   const listSyncItems: typeof import('./lib/accountSync.js').listSyncItems
   const loginPageUrl: typeof import('./lib/auth.js').loginPageUrl
   const logout: typeof import('./lib/auth.js').logout
@@ -98,6 +105,7 @@ declare global {
   const toRef: typeof import('vue').toRef
   const toRefs: typeof import('vue').toRefs
   const toValue: typeof import('vue').toValue
+  const toggleLike: typeof import('./lib/comments.js').toggleLike
   const triggerRef: typeof import('vue').triggerRef
   const unlinkAuthAccount: typeof import('./lib/auth.js').unlinkAuthAccount
   const unref: typeof import('vue').unref
